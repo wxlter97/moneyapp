@@ -11,11 +11,11 @@ import {
 interface MonthSwitcherProps {
   value: YearMonth;
   onChange: (value: YearMonth) => void;
-  /** Impide navegar a meses futuros (default true). */
+  /** Impide navegar a meses futuros (default false: se permite planificar). */
   clampToCurrent?: boolean;
 }
 
-export function MonthSwitcher({ value, onChange, clampToCurrent = true }: MonthSwitcherProps) {
+export function MonthSwitcher({ value, onChange, clampToCurrent = false }: MonthSwitcherProps) {
   const next = addMonths(value, 1);
   const atCurrent = clampToCurrent && isSameOrAfter(next, addMonths(currentYearMonth(), 1));
 

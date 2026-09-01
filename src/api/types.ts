@@ -91,6 +91,7 @@ export interface Account {
   billing_cycle_day: number | null;
   payment_due_day: number | null;
   is_active: boolean;
+  is_default: boolean;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 }
@@ -118,7 +119,7 @@ export interface Liability {
   updated_at: ISODateTime;
 }
 
-export type DebtDirection = 'favor' | 'contra';
+export type DebtDirection = 'a_favor' | 'en_contra';
 
 export interface Debt {
   id: UUID;
@@ -135,6 +136,7 @@ export interface Debt {
 // Categorías / transacciones / presupuestos
 // ---------------------------------------------------------------------------
 export type CategoryType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'transfer';
 
 export interface Category {
   id: UUID;
@@ -155,12 +157,18 @@ export type TransactionSource =
 
 export interface Transaction {
   id: UUID;
+  type: TransactionType;
   account: UUID;
-  category: UUID;
+  /** Solo transferencias: cuenta destino. */
+  to_account: UUID | null;
+  /** null en transferencias. */
+  category: UUID | null;
   amount: Money;
   currency: string;
   description: string;
   date: ISODate;
+  /** Si false, el gasto no cuenta contra el presupuesto de su categoría. */
+  counts_toward_budget: boolean;
   source: TransactionSource;
   is_recurring: boolean;
   created_by: number | null;
@@ -168,14 +176,21 @@ export interface Transaction {
   updated_at: ISODateTime;
 }
 
-/** Payload de alta de transacción. El tipo ingreso/gasto lo aporta la categoría. */
+/**
+ * Payload de alta/edición de transacción.
+ * - income/expense: `category` requerida; `type` puede omitirse (se deduce).
+ * - transfer: `type: 'transfer'` + `to_account`; sin categoría.
+ */
 export interface TransactionInput {
+  type?: TransactionType;
   account: UUID;
-  category: UUID;
+  to_account?: UUID | null;
+  category?: UUID | null;
   amount: Money;
   date: ISODate;
   description?: string;
   currency?: string;
+  counts_toward_budget?: boolean;
 }
 
 export interface CategoryBudget {

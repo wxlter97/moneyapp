@@ -77,10 +77,13 @@ Hecho y probado contra el backend real:
 - Estructura + NativeWind (dark-first), cliente de API, estado global (auth + workspace).
 - **Login / registro / logout** (login por `username`; `/register` usa `POST /auth/register/`).
 - **5 pantallas**:
-  1. Historial mensual — selector de mes, resumen ingresos/gastos/neto (calculado
-     desde las transacciones del mes), lista con badge manual/correo.
+  1. Historial mensual — selector de mes (permite meses futuros), resumen
+     ingresos/gastos/neto, lista **agrupada por día** (hoy / ayer / "vie 29 ago").
   2. Dashboard — patrimonio neto, mes actual, cuentas, top presupuestos.
-  3. Agregar transacción (modal) — tipo→filtra categorías, cuenta, fecha, nota.
+  3. Agregar transacción (modal) — gasto / ingreso / **transferencia entre
+     cuentas**, monto con máscara estilo cajero, categoría, cuenta (preselecciona
+     la marcada por defecto), fecha (permite futuro), nota, y toggle
+     "cuenta para el presupuesto" en gastos.
   4. Presupuestos — totales del mes + barra por categoría + provisión acumulada.
   5. Cuentas y Patrimonio — desglose de patrimonio neto + listas de cuentas,
      activos, pasivos y deudas (a favor / en contra).
@@ -89,6 +92,7 @@ Hecho y probado contra el backend real:
   formulario en modo edición (PATCH) con confirmación en línea para borrar.
 - **Crear presupuesto (workspace)** desde el selector "Casa ▾" y desde el estado
   vacío; el nuevo queda activo automáticamente.
+- `AmountInput`: los dígitos se acumulan desde los centavos (123456 → 1234.56).
 - Selector de fecha con calendario propio (`DateField`), sin dependencias nativas.
 
 ### Nota sobre overlays

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { SectionList, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useTransactions } from '@/api/queries';
@@ -11,8 +11,8 @@ import { TransactionRow } from '@/components/TransactionRow';
 import { AddTransactionFab } from '@/components/AddTransactionFab';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
-import { currentYearMonth, monthRange } from '@/lib/date';
-import { summarizeByType } from '@/lib/transactions';
+import { currentYearMonth, formatDayHeader, monthRange } from '@/lib/date';
+import { groupByDay, summarizeByType } from '@/lib/transactions';
 
 export default function HistoryScreen() {
   const [month, setMonth] = useState(currentYearMonth);
@@ -22,12 +22,10 @@ export default function HistoryScreen() {
   const { map: categories } = useCategoryMap();
   const { map: accounts } = useAccountMap();
 
-  const totals = useMemo(
-    () => summarizeByType(txQuery.data ?? [], categories),
-    [txQuery.data, categories],
-  );
-
-  const currency = txQuery.data?.[0]?.currency ?? 'USD';
+  const items = txQuery.data ?? [];
+  const totals = useMemo(() => summarizeByType(items), [items]);
+  const sections = useMemo(() => groupByDay(items), [items]);
+  const currency = items[0]?.currency ?? 'USD';
 
   return (
     <Screen noPadding>
@@ -35,10 +33,11 @@ export default function HistoryScreen() {
         <ScreenHeader />
       </View>
 
-      <FlatList
-        data={txQuery.data ?? []}
+      <SectionList
+        sections={sections}
         keyExtractor={(t) => t.id}
         contentContainerClassName="px-4 pb-24"
+        stickySectionHeadersEnabled={false}
         ItemSeparatorComponent={() => <View className="h-px bg-border/60" />}
         ListHeaderComponent={
           <View className="gap-3 pb-2 pt-1">
@@ -48,16 +47,19 @@ export default function HistoryScreen() {
               expenses={totals.expenses}
               currency={currency}
             />
-            <Text className="pt-2 text-text-muted text-xs font-semibold uppercase tracking-wide">
-              Transacciones
-            </Text>
           </View>
         }
+        renderSectionHeader={({ section }) => (
+          <Text className="bg-bg pb-1 pt-4 text-text-muted text-xs font-semibold uppercase tracking-wide">
+            {formatDayHeader(section.date)}
+          </Text>
+        )}
         renderItem={({ item }) => (
           <TransactionRow
             txn={item}
-            category={categories.get(item.category)}
+            category={item.category ? categories.get(item.category) : undefined}
             account={accounts.get(item.account)}
+            toAccount={item.to_account ? accounts.get(item.to_account) : undefined}
             onPress={() => router.push(`/transaction/${item.id}`)}
           />
         )}

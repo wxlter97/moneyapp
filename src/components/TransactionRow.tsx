@@ -3,12 +3,12 @@ import { Pressable, Text, View } from 'react-native';
 import type { Account, Category, Transaction } from '@/api/types';
 import { Money } from '@/components/ui/Money';
 import { accountLabel } from '@/api/queries/lookups';
-import { formatShortDate } from '@/lib/date';
 
 interface TransactionRowProps {
   txn: Transaction;
   category?: Category;
   account?: Account;
+  toAccount?: Account;
   onPress?: () => void;
 }
 
@@ -19,9 +19,18 @@ const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
   installment: 'cuota',
 };
 
-export function TransactionRow({ txn, category, account, onPress }: TransactionRowProps) {
-  const isIncome = category?.type === 'income';
+export function TransactionRow({ txn, category, account, toAccount, onPress }: TransactionRowProps) {
+  const isTransfer = txn.type === 'transfer';
+  const isIncome = txn.type === 'income';
   const badge = SOURCE_LABEL[txn.source];
+
+  const title = isTransfer
+    ? 'Transferencia'
+    : txn.description || category?.name || 'Sin descripción';
+
+  const subtitle = isTransfer
+    ? `${accountLabel(account)} → ${accountLabel(toAccount)}`
+    : `${category?.name ?? '—'} · ${accountLabel(account)}`;
 
   return (
     <Pressable
@@ -32,11 +41,11 @@ export function TransactionRow({ txn, category, account, onPress }: TransactionR
     >
       <View className="flex-1">
         <Text className="text-text text-base" numberOfLines={1}>
-          {txn.description || category?.name || 'Sin descripción'}
+          {title}
         </Text>
         <View className="mt-0.5 flex-row items-center gap-1.5">
           <Text className="text-text-muted text-xs" numberOfLines={1}>
-            {formatShortDate(txn.date)} · {category?.name ?? '—'} · {accountLabel(account)}
+            {subtitle}
           </Text>
         </View>
       </View>
@@ -45,16 +54,23 @@ export function TransactionRow({ txn, category, account, onPress }: TransactionR
         <Money
           value={txn.amount}
           currency={txn.currency}
-          tone={isIncome ? 'income' : 'expense'}
+          tone={isTransfer ? 'muted' : isIncome ? 'income' : 'expense'}
           className="text-base font-semibold"
         />
-        {badge ? (
-          <View className="rounded-full bg-surface-2 px-2 py-0.5">
-            <Text className="text-text-muted text-[10px] uppercase tracking-wide">{badge}</Text>
-          </View>
-        ) : (
-          <Text className="text-text-muted text-[10px] uppercase tracking-wide">manual</Text>
-        )}
+        <View className="flex-row items-center gap-1">
+          {txn.type === 'expense' && !txn.counts_toward_budget ? (
+            <View className="rounded-full bg-surface-2 px-2 py-0.5">
+              <Text className="text-warning text-[10px] uppercase tracking-wide">s/pres.</Text>
+            </View>
+          ) : null}
+          {badge ? (
+            <View className="rounded-full bg-surface-2 px-2 py-0.5">
+              <Text className="text-text-muted text-[10px] uppercase tracking-wide">{badge}</Text>
+            </View>
+          ) : !isTransfer ? (
+            <Text className="text-text-muted text-[10px] uppercase tracking-wide">manual</Text>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );

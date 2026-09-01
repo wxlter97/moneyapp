@@ -15,8 +15,8 @@ export default function AccountsScreen() {
   const debts = useDebts();
 
   const currency = accounts.data?.[0]?.currency ?? 'USD';
-  const debtsFavor = (debts.data ?? []).filter((d) => d.direction === 'favor');
-  const debtsContra = (debts.data ?? []).filter((d) => d.direction === 'contra');
+  const debtsFavor = (debts.data ?? []).filter((d) => d.direction === 'a_favor');
+  const debtsContra = (debts.data ?? []).filter((d) => d.direction === 'en_contra');
 
   return (
     <View className="flex-1 bg-bg">

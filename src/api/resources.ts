@@ -75,12 +75,14 @@ export const categoryBudgets = {
 
 // --- transacciones -----------------------------------------------------
 export interface TransactionListParams {
-  /** Filtros por fecha. Requieren django-filter en el backend (ver README). */
   date_after?: string;
   date_before?: string;
+  type?: 'income' | 'expense' | 'transfer';
   account?: string;
+  to_account?: string;
   category?: string;
   source?: string;
+  counts_toward_budget?: boolean;
   limit?: number;
   offset?: number;
 }

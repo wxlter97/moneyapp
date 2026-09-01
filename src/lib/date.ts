@@ -52,3 +52,18 @@ export function formatShortDate(iso: ISODate): string {
   if (!y || !m || !d) return iso;
   return `${d} ${MONTHS_ES[m - 1]?.slice(0, 3) ?? ''}`;
 }
+
+const WEEKDAYS_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+/** "hoy" / "ayer" / "vie 29 ago" — encabezado de día en el historial. */
+export function formatDayHeader(iso: ISODate, now = new Date()): string {
+  if (iso === todayISO(now)) return 'hoy';
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (iso === todayISO(yesterday)) return 'ayer';
+
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  const wd = WEEKDAYS_ES[new Date(y, m - 1, d).getDay()] ?? '';
+  return `${wd} ${d} ${MONTHS_ES[m - 1]?.slice(0, 3) ?? ''}`;
+}
