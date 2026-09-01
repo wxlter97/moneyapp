@@ -2,12 +2,12 @@ import { Link } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
 import {
-  useAccounts,
   useBudgetReport,
   useDashboardSummary,
   useNetWorth,
+  useWallets,
 } from '@/api/queries';
-import { AccountRow } from '@/components/AccountRow';
+import { WalletRow } from '@/components/WalletRow';
 import { AddTransactionFab } from '@/components/AddTransactionFab';
 import { BudgetProgressRow } from '@/components/BudgetProgressRow';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -20,12 +20,13 @@ import { toNumber } from '@/lib/money';
 export default function DashboardScreen() {
   const netWorth = useNetWorth();
   const summary = useDashboardSummary();
-  const accounts = useAccounts();
+  const wallets = useWallets();
   const budget = useBudgetReport();
 
-  const currency = accounts.data?.[0]?.currency ?? 'USD';
+  const currency = wallets.data?.[0]?.currency ?? 'USD';
+  const spendingWallets = (wallets.data ?? []).filter((w) => w.purpose === 'spending');
   const loading =
-    netWorth.isLoading || summary.isLoading || accounts.isLoading || budget.isLoading;
+    netWorth.isLoading || summary.isLoading || wallets.isLoading || budget.isLoading;
   const anyError = netWorth.isError || summary.isError;
 
   return (
@@ -79,22 +80,22 @@ export default function DashboardScreen() {
               </View>
             ) : null}
 
-            {/* Cuentas */}
+            {/* Carteras de gasto */}
             <Card
-              title="Cuentas"
+              title="Carteras"
               action={
-                <Link href="/accounts" asChild>
+                <Link href="/wallets" asChild>
                   <Text className="text-primary text-xs">Ver todo</Text>
                 </Link>
               }
             >
-              {(accounts.data?.length ?? 0) === 0 ? (
-                <EmptyState title="Sin cuentas" />
+              {spendingWallets.length === 0 ? (
+                <EmptyState title="Sin carteras de gasto" />
               ) : (
-                accounts.data!.map((a, i) => (
-                  <View key={a.id}>
+                spendingWallets.map((w, i) => (
+                  <View key={w.id}>
                     {i > 0 ? <View className="h-px bg-border/60" /> : null}
-                    <AccountRow account={a} />
+                    <WalletRow wallet={w} />
                   </View>
                 ))
               )}

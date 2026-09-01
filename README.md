@@ -79,19 +79,22 @@ Hecho y probado contra el backend real:
 - **5 pantallas**:
   1. Historial mensual — selector de mes (permite meses futuros), resumen
      ingresos/gastos/neto, lista **agrupada por día** (hoy / ayer / "vie 29 ago").
-  2. Dashboard — patrimonio neto, mes actual, cuentas, top presupuestos.
+  2. Dashboard — patrimonio neto, mes actual, carteras de gasto, top presupuestos.
   3. Agregar transacción (modal) — gasto / ingreso / **transferencia entre
-     cuentas**, monto con máscara estilo cajero, categoría, cuenta (preselecciona
+     carteras**, monto con máscara estilo cajero, categoría, cartera (preselecciona
      la marcada por defecto), fecha (permite futuro), nota, y toggle
      "cuenta para el presupuesto" en gastos.
   4. Presupuestos — totales del mes + barra por categoría + provisión acumulada.
-  5. Cuentas y Patrimonio — desglose de patrimonio neto + listas de cuentas,
-     activos, pasivos y deudas (a favor / en contra).
+  5. **Carteras** — tarjeta deslizable (Valor neto total / Gasto / Ahorro / Deuda
+     / Activo) + lista de todas las carteras en árbol (padres con `aggregated_balance`,
+     hijos indentados), meta de ahorro con barra de progreso.
 - FAB "+" para alta rápida de transacción desde Historial y Dashboard.
-- **Editar / eliminar** transacción: tocar una fila del historial abre el mismo
+- **Editar / eliminar** transacción y **cartera**: tocar una fila abre el
   formulario en modo edición (PATCH) con confirmación en línea para borrar.
 - **Crear presupuesto (workspace)** desde el selector "Casa ▾" y desde el estado
   vacío; el nuevo queda activo automáticamente.
+- **Crear / editar cartera** (`WalletForm`, rutas `wallet/new` · `wallet/[id]`):
+  nombre, tipo, saldo/valor inicial, cartera padre, meta (ahorro), flag de neto.
 - `AmountInput`: los dígitos se acumulan desde los centavos (123456 → 1234.56).
 - Selector de fecha con calendario propio (`DateField`), sin dependencias nativas.
 

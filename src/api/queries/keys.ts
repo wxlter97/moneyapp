@@ -12,10 +12,8 @@ export const qk = {
   ws: (ws: string | null) => ({
     all: ['ws', ws] as const,
 
-    accounts: () => ['ws', ws, 'accounts'] as const,
-    assets: () => ['ws', ws, 'assets'] as const,
-    liabilities: () => ['ws', ws, 'liabilities'] as const,
-    debts: () => ['ws', ws, 'debts'] as const,
+    wallets: () => ['ws', ws, 'wallets'] as const,
+    wallet: (id: string) => ['ws', ws, 'wallet', id] as const,
     categories: () => ['ws', ws, 'categories'] as const,
 
     transactions: (params?: TransactionListParams) =>

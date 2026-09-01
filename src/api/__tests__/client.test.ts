@@ -37,7 +37,7 @@ describe('header X-Workspace-ID', () => {
     const { adapter, calls } = mockAdapter(() => ({ status: 200, data: { results: [] } }));
     api.defaults.adapter = adapter;
 
-    await api.get('/accounts/');
+    await api.get('/wallets/');
 
     expect(calls[0].headers.Authorization).toBe('Bearer ACCESS1');
     expect(calls[0].headers['X-Workspace-ID']).toBe('ws-123');
@@ -58,7 +58,7 @@ describe('header X-Workspace-ID', () => {
     const { adapter, calls } = mockAdapter(() => ({ status: 200 }));
     api.defaults.adapter = adapter;
 
-    await api.get('/accounts/', { skipWorkspace: true });
+    await api.get('/wallets/', { skipWorkspace: true });
 
     expect(calls[0].headers['X-Workspace-ID']).toBeUndefined();
   });
@@ -71,7 +71,7 @@ describe('refresh automático ante 401', () => {
       if (url.includes('/auth/token/refresh/')) {
         return { status: 200, data: { access: 'ACCESS2' } };
       }
-      if (url.includes('/accounts/') && firstCall) {
+      if (url.includes('/wallets/') && firstCall) {
         firstCall = false;
         return { status: 401 };
       }
@@ -79,10 +79,10 @@ describe('refresh automático ante 401', () => {
     });
     api.defaults.adapter = adapter;
 
-    const res = await api.get('/accounts/');
+    const res = await api.get('/wallets/');
 
     expect(res.data).toEqual({ ok: true });
-    const retry = calls.find((c, i) => i > 0 && c.url === '/accounts/');
+    const retry = calls.find((c, i) => i > 0 && c.url === '/wallets/');
     expect(retry.headers.Authorization).toBe('Bearer ACCESS2');
   });
 });

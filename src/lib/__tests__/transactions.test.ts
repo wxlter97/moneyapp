@@ -10,8 +10,8 @@ const txn = (
   ({
     id,
     type,
-    account: 'a',
-    to_account: null,
+    wallet: 'a',
+    to_wallet: null,
     category: type === 'transfer' ? null : 'c',
     amount,
     currency: 'USD',

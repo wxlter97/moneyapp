@@ -73,63 +73,71 @@ export interface Membership {
 }
 
 // ---------------------------------------------------------------------------
-// Cuentas / patrimonio
+// Carteras (Wallet) / patrimonio
 // ---------------------------------------------------------------------------
-export type AccountType = 'checking' | 'savings' | 'credit' | 'cash';
 export type Visibility = 'shared' | 'private';
 
-export interface Account {
+/** gasto · ahorro · deuda · activo */
+export type WalletPurpose = 'spending' | 'savings' | 'debt' | 'asset';
+
+export const WALLET_PURPOSES: WalletPurpose[] = ['spending', 'savings', 'debt', 'asset'];
+
+export const PURPOSE_LABEL: Record<WalletPurpose, string> = {
+  spending: 'Gasto',
+  savings: 'Ahorro',
+  debt: 'Deuda',
+  asset: 'Activo',
+};
+
+export interface Wallet {
   id: UUID;
   name: string;
-  type: AccountType;
+  purpose: WalletPurpose;
+  parent: UUID | null;
   currency: string;
   opening_balance: Money;
+  /** Saldo propio (sin hijos). */
   current_balance: Money;
-  visibility: Visibility;
-  owner: number | null;
+  /** Saldo propio + el de los descendientes. */
+  aggregated_balance: Money;
+  counts_toward_net_worth: boolean;
+  goal_amount: Money | null;
+  goal_date: ISODate | null;
+  monthly_contribution: Money | null;
+  /** current_balance / goal_amount, o null si no hay meta. */
+  progress_pct: number | null;
   card_last4: string | null;
   billing_cycle_day: number | null;
   payment_due_day: number | null;
+  interest_rate: string | null;
+  due_date: ISODate | null;
+  counterparty: string;
+  visibility: Visibility;
+  owner: number | null;
   is_active: boolean;
   is_default: boolean;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 }
 
-export interface Asset {
-  id: UUID;
+/** Payload de alta/edición de cartera. */
+export interface WalletInput {
   name: string;
-  type: string;
-  current_value: Money;
-  visibility: Visibility;
-  owner: number | null;
-  created_at: ISODateTime;
-  updated_at: ISODateTime;
-}
-
-export interface Liability {
-  id: UUID;
-  name: string;
-  type: string;
-  total_amount: Money;
-  remaining_amount: Money;
-  interest_rate: string | null;
-  due_date: ISODate | null;
-  created_at: ISODateTime;
-  updated_at: ISODateTime;
-}
-
-export type DebtDirection = 'a_favor' | 'en_contra';
-
-export interface Debt {
-  id: UUID;
-  direction: DebtDirection;
-  person: string;
-  amount: Money;
-  description: string;
-  is_settled: boolean;
-  created_at: ISODateTime;
-  updated_at: ISODateTime;
+  purpose: WalletPurpose;
+  parent?: UUID | null;
+  currency?: string;
+  opening_balance?: Money;
+  counts_toward_net_worth?: boolean;
+  goal_amount?: Money | null;
+  goal_date?: ISODate | null;
+  monthly_contribution?: Money | null;
+  card_last4?: string | null;
+  interest_rate?: string | null;
+  due_date?: ISODate | null;
+  counterparty?: string;
+  visibility?: Visibility;
+  is_active?: boolean;
+  is_default?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,9 +166,9 @@ export type TransactionSource =
 export interface Transaction {
   id: UUID;
   type: TransactionType;
-  account: UUID;
-  /** Solo transferencias: cuenta destino. */
-  to_account: UUID | null;
+  wallet: UUID;
+  /** Solo transferencias: cartera destino. */
+  to_wallet: UUID | null;
   /** null en transferencias. */
   category: UUID | null;
   amount: Money;
@@ -179,12 +187,12 @@ export interface Transaction {
 /**
  * Payload de alta/edición de transacción.
  * - income/expense: `category` requerida; `type` puede omitirse (se deduce).
- * - transfer: `type: 'transfer'` + `to_account`; sin categoría.
+ * - transfer: `type: 'transfer'` + `to_wallet`; sin categoría.
  */
 export interface TransactionInput {
   type?: TransactionType;
-  account: UUID;
-  to_account?: UUID | null;
+  wallet: UUID;
+  to_wallet?: UUID | null;
   category?: UUID | null;
   amount: Money;
   date: ISODate;
@@ -217,12 +225,8 @@ export interface MonthlySnapshot {
 // Reportes (agregaciones, solo lectura, workspace del header)
 // ---------------------------------------------------------------------------
 export interface NetWorthBreakdown {
-  accounts: Money;
-  assets: Money;
-  liabilities: Money;
-  debts_owed_to_us: Money;
-  debts_we_owe: Money;
   net: Money;
+  by_purpose: Record<WalletPurpose, Money>;
 }
 
 export interface BudgetRow {

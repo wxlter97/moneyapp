@@ -4,14 +4,14 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, Vi
 import { dismissModal } from '@/components/ui/ModalHeader';
 
 import {
-  useAccounts,
+  useWallets,
   useCategories,
   useCreateTransaction,
   useDeleteTransaction,
   useTransaction,
   useUpdateTransaction,
 } from '@/api/queries';
-import { accountLabel } from '@/api/queries/lookups';
+import { walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import type { TransactionInput, TransactionType } from '@/api/types';
 import { AmountInput } from '@/components/ui/AmountInput';
@@ -32,7 +32,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const editing = !!transactionId;
   const existing = useTransaction(transactionId);
 
-  const accountsQ = useAccounts();
+  const walletsQ = useWallets();
   const categoriesQ = useCategories();
   const create = useCreateTransaction();
   const update = useUpdateTransaction();
@@ -41,30 +41,30 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('0.00');
   const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [accountId, setAccountId] = useState<string | null>(null);
-  const [toAccountId, setToAccountId] = useState<string | null>(null);
+  const [walletId, setWalletId] = useState<string | null>(null);
+  const [toWalletId, setToWalletId] = useState<string | null>(null);
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState('');
   const [inBudget, setInBudget] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [prefilled, setPrefilled] = useState(false);
-  const [accountDefaulted, setAccountDefaulted] = useState(false);
+  const [walletDefaulted, setWalletDefaulted] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const isTransfer = type === 'transfer';
 
-  const defaultAccountId = useMemo(() => {
-    const list = accountsQ.data ?? [];
+  const defaultWalletId = useMemo(() => {
+    const list = walletsQ.data ?? [];
     return list.find((a) => a.is_default)?.id ?? list[0]?.id ?? null;
-  }, [accountsQ.data]);
+  }, [walletsQ.data]);
 
-  // Preselecciona la cuenta por defecto al crear (una sola vez, cuando cargan).
+  // Preselecciona la cartera por defecto al crear (una sola vez, cuando cargan).
   useEffect(() => {
-    if (editing || accountDefaulted || !defaultAccountId) return;
-    setAccountId(defaultAccountId);
-    setAccountDefaulted(true);
-  }, [editing, accountDefaulted, defaultAccountId]);
+    if (editing || walletDefaulted || !defaultWalletId) return;
+    setWalletId(defaultWalletId);
+    setWalletDefaulted(true);
+  }, [editing, walletDefaulted, defaultWalletId]);
 
   // Prefill de la transacción existente.
   useEffect(() => {
@@ -73,8 +73,8 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     setType(t.type);
     setAmount(String(Number(t.amount).toFixed(2)));
     setCategoryId(t.category);
-    setAccountId(t.account);
-    setToAccountId(t.to_account);
+    setWalletId(t.wallet);
+    setToWalletId(t.to_wallet);
     setDate(t.date);
     setNote(t.description ?? '');
     setInBudget(t.counts_toward_budget);
@@ -89,19 +89,19 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     [categoriesQ.data, type],
   );
 
-  const accountOptions = useMemo(
+  const walletOptions = useMemo(
     () =>
-      (accountsQ.data ?? []).map((a) => ({
+      (walletsQ.data ?? []).map((a) => ({
         value: a.id,
-        label: accountLabel(a),
+        label: walletLabel(a),
         hint: a.is_default ? 'por defecto' : a.visibility === 'private' ? 'privada' : undefined,
       })),
-    [accountsQ.data],
+    [walletsQ.data],
   );
 
-  const toAccountOptions = useMemo(
-    () => accountOptions.filter((o) => o.value !== accountId),
-    [accountOptions, accountId],
+  const toWalletOptions = useMemo(
+    () => walletOptions.filter((o) => o.value !== walletId),
+    [walletOptions, walletId],
   );
 
   const amountNum = Number(amount.replace(',', '.'));
@@ -109,31 +109,31 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const busy = create.isPending || update.isPending || remove.isPending;
   const canSubmit =
     amountValid &&
-    !!accountId &&
+    !!walletId &&
     !!date &&
-    (isTransfer ? !!toAccountId && toAccountId !== accountId : !!categoryId) &&
+    (isTransfer ? !!toWalletId && toWalletId !== walletId : !!categoryId) &&
     !busy;
 
   function onChangeType(next: TransactionType) {
     setType(next);
     setCategoryId(null);
-    if (next !== 'transfer') setToAccountId(null);
+    if (next !== 'transfer') setToWalletId(null);
   }
 
   async function onSubmit() {
-    if (!accountId) return;
+    if (!walletId) return;
     setFormError(null);
     setFields({});
 
     const payload: TransactionInput = {
       type,
-      account: accountId,
+      wallet: walletId,
       amount: amountNum.toFixed(2),
       date,
       description: note.trim() || undefined,
     };
     if (isTransfer) {
-      payload.to_account = toAccountId;
+      payload.to_wallet = toWalletId;
     } else {
       payload.category = categoryId;
       if (type === 'expense') payload.counts_toward_budget = inBudget;
@@ -189,20 +189,20 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
         {isTransfer ? (
           <>
             <Select
-              label="Cuenta origen"
-              value={accountId}
-              onChange={setAccountId}
-              options={accountOptions}
-              placeholder={accountsQ.isLoading ? 'Cargando…' : 'Selecciona una cuenta'}
-              error={fields.account}
+              label="Cartera origen"
+              value={walletId}
+              onChange={setWalletId}
+              options={walletOptions}
+              placeholder={walletsQ.isLoading ? 'Cargando…' : 'Selecciona una cartera'}
+              error={fields.wallet}
             />
             <Select
-              label="Cuenta destino"
-              value={toAccountId}
-              onChange={setToAccountId}
-              options={toAccountOptions}
-              placeholder="Selecciona la cuenta destino"
-              error={fields.to_account}
+              label="Cartera destino"
+              value={toWalletId}
+              onChange={setToWalletId}
+              options={toWalletOptions}
+              placeholder="Selecciona la cartera destino"
+              error={fields.to_wallet}
             />
           </>
         ) : (
@@ -220,12 +220,12 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
               error={fields.category}
             />
             <Select
-              label="Cuenta"
-              value={accountId}
-              onChange={setAccountId}
-              options={accountOptions}
-              placeholder={accountsQ.isLoading ? 'Cargando…' : 'Selecciona una cuenta'}
-              error={fields.account}
+              label="Cartera"
+              value={walletId}
+              onChange={setWalletId}
+              options={walletOptions}
+              placeholder={walletsQ.isLoading ? 'Cargando…' : 'Selecciona una cartera'}
+              error={fields.wallet}
             />
           </>
         )}

@@ -6,20 +6,19 @@
  */
 import { api } from './client';
 import type {
-  Account,
-  Asset,
   BudgetReport,
   CashflowPoint,
   Category,
   CategoryBudget,
   DashboardSummary,
-  Debt,
-  Liability,
   MonthlySnapshot,
   NetWorthBreakdown,
   Paginated,
   Transaction,
   TransactionInput,
+  Wallet,
+  WalletInput,
+  WalletPurpose,
   Workspace,
 } from './types';
 
@@ -49,18 +48,16 @@ export const workspaces = {
     api.post<Workspace>('/workspaces/', { name }, { skipWorkspace: true }).then((r) => r.data),
 };
 
-// --- cuentas / patrimonio -------------------------------------------------
-export const accounts = {
-  list: () => fetchAll<Account>('/accounts/'),
-};
-export const assets = {
-  list: () => fetchAll<Asset>('/assets/'),
-};
-export const liabilities = {
-  list: () => fetchAll<Liability>('/liabilities/'),
-};
-export const debts = {
-  list: () => fetchAll<Debt>('/debts/'),
+// --- carteras (wallets) -------------------------------------------------
+export const wallets = {
+  list: (params?: { purpose?: WalletPurpose; is_active?: boolean }) =>
+    fetchAll<Wallet>('/wallets/', params),
+  get: (id: string) => api.get<Wallet>(`/wallets/${id}/`).then((r) => r.data),
+  create: (input: WalletInput) =>
+    api.post<Wallet>('/wallets/', input).then((r) => r.data),
+  update: (id: string, input: Partial<WalletInput>) =>
+    api.patch<Wallet>(`/wallets/${id}/`, input).then((r) => r.data),
+  remove: (id: string) => api.delete(`/wallets/${id}/`).then(() => undefined),
 };
 
 // --- categorías / presupuestos ------------------------------------------
@@ -78,8 +75,8 @@ export interface TransactionListParams {
   date_after?: string;
   date_before?: string;
   type?: 'income' | 'expense' | 'transfer';
-  account?: string;
-  to_account?: string;
+  wallet?: string;
+  to_wallet?: string;
   category?: string;
   source?: string;
   counts_toward_budget?: boolean;

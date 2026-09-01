@@ -45,9 +45,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="accounts"
+        name="wallets"
         options={{
-          title: 'Patrimonio',
+          title: 'Carteras',
           tabBarIcon: ({ color }) => <TabIcon glyph="🏦" color={color} />,
         }}
       />

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
-import type { Account, Category } from '@/api/types';
-import { useAccounts, useCategories } from './index';
+import type { Category, Wallet } from '@/api/types';
+import { useCategories, useWallets } from './index';
 
 /** Mapa id -> Category, para resolver nombres en listas de transacciones. */
 export function useCategoryMap() {
@@ -14,19 +14,19 @@ export function useCategoryMap() {
   return { map, query: q };
 }
 
-export function useAccountMap() {
-  const q = useAccounts();
+export function useWalletMap() {
+  const q = useWallets();
   const map = useMemo(() => {
-    const m = new Map<string, Account>();
-    for (const a of q.data ?? []) m.set(a.id, a);
+    const m = new Map<string, Wallet>();
+    for (const w of q.data ?? []) m.set(w.id, w);
     return m;
   }, [q.data]);
   return { map, query: q };
 }
 
 /** "Visa ···· 4242" o el nombre a secas. */
-export function accountLabel(account: Account | undefined): string {
-  if (!account) return '—';
-  if (account.card_last4) return `${account.name} ···· ${account.card_last4}`;
-  return account.name;
+export function walletLabel(wallet: Wallet | undefined): string {
+  if (!wallet) return '—';
+  if (wallet.card_last4) return `${wallet.name} ···· ${wallet.card_last4}`;
+  return wallet.name;
 }

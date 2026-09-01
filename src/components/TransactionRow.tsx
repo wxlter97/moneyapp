@@ -1,14 +1,14 @@
 import { Pressable, Text, View } from 'react-native';
 
-import type { Account, Category, Transaction } from '@/api/types';
+import type { Category, Transaction, Wallet } from '@/api/types';
 import { Money } from '@/components/ui/Money';
-import { accountLabel } from '@/api/queries/lookups';
+import { walletLabel } from '@/api/queries/lookups';
 
 interface TransactionRowProps {
   txn: Transaction;
   category?: Category;
-  account?: Account;
-  toAccount?: Account;
+  wallet?: Wallet;
+  toWallet?: Wallet;
   onPress?: () => void;
 }
 
@@ -19,7 +19,7 @@ const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
   installment: 'cuota',
 };
 
-export function TransactionRow({ txn, category, account, toAccount, onPress }: TransactionRowProps) {
+export function TransactionRow({ txn, category, wallet, toWallet, onPress }: TransactionRowProps) {
   const isTransfer = txn.type === 'transfer';
   const isIncome = txn.type === 'income';
   const badge = SOURCE_LABEL[txn.source];
@@ -29,8 +29,8 @@ export function TransactionRow({ txn, category, account, toAccount, onPress }: T
     : txn.description || category?.name || 'Sin descripción';
 
   const subtitle = isTransfer
-    ? `${accountLabel(account)} → ${accountLabel(toAccount)}`
-    : `${category?.name ?? '—'} · ${accountLabel(account)}`;
+    ? `${walletLabel(wallet)} → ${walletLabel(toWallet)}`
+    : `${category?.name ?? '—'} · ${walletLabel(wallet)}`;
 
   return (
     <Pressable

@@ -3,7 +3,7 @@ import { SectionList, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useTransactions } from '@/api/queries';
-import { useAccountMap, useCategoryMap } from '@/api/queries/lookups';
+import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SummaryTriple } from '@/components/SummaryTriple';
@@ -20,7 +20,7 @@ export default function HistoryScreen() {
 
   const txQuery = useTransactions({ date_after: range.from, date_before: range.to });
   const { map: categories } = useCategoryMap();
-  const { map: accounts } = useAccountMap();
+  const { map: wallets } = useWalletMap();
 
   const items = txQuery.data ?? [];
   const totals = useMemo(() => summarizeByType(items), [items]);
@@ -58,8 +58,8 @@ export default function HistoryScreen() {
           <TransactionRow
             txn={item}
             category={item.category ? categories.get(item.category) : undefined}
-            account={accounts.get(item.account)}
-            toAccount={item.to_account ? accounts.get(item.to_account) : undefined}
+            wallet={wallets.get(item.wallet)}
+            toWallet={item.to_wallet ? wallets.get(item.to_wallet) : undefined}
             onPress={() => router.push(`/transaction/${item.id}`)}
           />
         )}

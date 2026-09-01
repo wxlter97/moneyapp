@@ -10,7 +10,7 @@ import {
 } from '@tanstack/react-query';
 
 import * as res from '@/api/resources';
-import type { TransactionInput } from '@/api/types';
+import type { TransactionInput, WalletInput } from '@/api/types';
 import { currentYearMonth, type YearMonth } from '@/lib/date';
 import { useWorkspaceStore } from '@/store/workspace';
 import { qk } from './keys';
@@ -49,33 +49,48 @@ export function useCreateWorkspace() {
   });
 }
 
-// --- cuentas / patrimonio --------------------------------------------
-export function useAccounts() {
+// --- carteras (wallets) --------------------------------------------
+export function useWallets() {
   const ws = useActiveWs();
   return useQuery({
-    queryKey: qk.ws(ws).accounts(),
-    queryFn: res.accounts.list,
+    queryKey: qk.ws(ws).wallets(),
+    queryFn: () => res.wallets.list(),
     enabled: !!ws,
   });
 }
 
-export function useAssets() {
-  const ws = useActiveWs();
-  return useQuery({ queryKey: qk.ws(ws).assets(), queryFn: res.assets.list, enabled: !!ws });
-}
-
-export function useLiabilities() {
+export function useWallet(id: string | undefined) {
   const ws = useActiveWs();
   return useQuery({
-    queryKey: qk.ws(ws).liabilities(),
-    queryFn: res.liabilities.list,
-    enabled: !!ws,
+    queryKey: qk.ws(ws).wallet(id ?? ''),
+    queryFn: () => res.wallets.get(id!),
+    enabled: !!ws && !!id,
   });
 }
 
-export function useDebts() {
-  const ws = useActiveWs();
-  return useQuery({ queryKey: qk.ws(ws).debts(), queryFn: res.debts.list, enabled: !!ws });
+export function useCreateWallet() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (input: WalletInput) => res.wallets.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateWallet() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<WalletInput> }) =>
+      res.wallets.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteWallet() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.wallets.remove(id),
+    onSuccess: invalidate,
+  });
 }
 
 export function useCategories() {
