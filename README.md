@@ -110,6 +110,20 @@ Expo Router.
 Pruebas: `npm test` (Jest, 17 tests sobre `lib/` y el cliente de API).
 `npm run typecheck` para `tsc --noEmit`.
 
+## Deploy
+
+Frontend en **Vercel**, backend en **Cloud Run**, DB en **Neon** (sin Celery).
+Guía completa: [`../budget/DEPLOY.md`](../budget/DEPLOY.md).
+
+- `vercel.json` fija el build (`expo export -p web` → `dist/`) y el rewrite SPA
+  (`/(.*)` → `/index.html`), necesario con `web.output: "single"`.
+- `EXPO_PUBLIC_API_URL` se define en el panel de Vercel (Settings → Environment
+  Variables); se embebe en el bundle en el build.
+- Lo normal es conectar el repo en el panel de Vercel: cada push a `main`
+  redeploya, sin workflow propio.
+- `npm run deploy:web` → `vercel deploy --prod` para un deploy manual.
+- `npm run build:web` → export local a `dist/` (para inspeccionar el bundle).
+
 Pendiente: gestión de miembros del workspace; pulido visual de alta fidelidad;
 más tests (componentes con React Native Testing Library — pendiente de afinar el
 setup con RN 0.86 / React 19).

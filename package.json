@@ -49,6 +49,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:web": "expo export -p web",
+    "deploy:web": "npx vercel deploy --prod",
     "lint": "expo lint",
     "test": "jest",
     "typecheck": "tsc --noEmit"
