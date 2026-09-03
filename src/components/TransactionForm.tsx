@@ -85,9 +85,12 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const categoryOptions = useMemo(
     () =>
       (categoriesQ.data ?? [])
-        .filter((c) => c.type === type)
-        .map((c) => ({ value: c.id, label: c.name })),
-    [categoriesQ.data, type],
+        .filter((c) => (isTransfer ? true : c.type === type))
+        .map((c) => ({
+          value: c.id,
+          label: c.parent ? `  ${c.name}` : c.name,
+        })),
+    [categoriesQ.data, type, isTransfer],
   );
 
   const walletOptions = useMemo(
@@ -135,6 +138,8 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     };
     if (isTransfer) {
       payload.to_wallet = toWalletId;
+      payload.category = categoryId || null;
+      if (categoryId) payload.counts_toward_budget = inBudget;
     } else {
       payload.category = categoryId;
       if (type === 'expense') payload.counts_toward_budget = inBudget;
@@ -205,6 +210,18 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
               placeholder="Selecciona la cartera destino"
               error={fields.to_wallet}
             />
+            <Select
+              label="Categoría (opcional)"
+              value={categoryId}
+              onChange={setCategoryId}
+              options={[{ value: '', label: 'Sin categoría' }, ...categoryOptions]}
+              placeholder="Sin categoría"
+              error={fields.category}
+            />
+            <Text className="text-text-muted -mt-2 text-xs">
+              Con categoría, la transferencia puede contar para ese presupuesto
+              (p. ej. mover dinero a Ahorro).
+            </Text>
           </>
         ) : (
           <>
@@ -252,7 +269,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           error={fields.description}
         />
 
-        {type === 'expense' ? (
+        {type === 'expense' || (isTransfer && categoryId) ? (
           <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5">
             <View className="flex-1 pr-2">
               <Text className="text-text text-sm">Cuenta para el presupuesto</Text>
