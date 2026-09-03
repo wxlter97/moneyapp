@@ -1,13 +1,15 @@
 import { Text, type TextProps } from 'react-native';
 
 import type { Money as MoneyValue } from '@/api/types';
-import { formatMoney, formatSigned, toNumber } from '@/lib/money';
+import { formatMoney, formatParens, formatSigned, toNumber } from '@/lib/money';
 
 interface MoneyProps extends TextProps {
   value: MoneyValue | number | null | undefined;
   currency?: string;
   /** Colorea según signo (verde/rojo) y muestra +/-. */
   signed?: boolean;
+  /** Estilo Buddy: negativos entre paréntesis "($15.99)". */
+  parens?: boolean;
   /** Fuerza un color semántico independientemente del signo. */
   tone?: 'income' | 'expense' | 'default' | 'muted';
   className?: string;
@@ -17,12 +19,17 @@ export function Money({
   value,
   currency = 'USD',
   signed = false,
+  parens = false,
   tone = 'default',
   className = '',
   ...rest
 }: MoneyProps) {
   const n = typeof value === 'number' ? value : toNumber(value);
-  const text = signed ? formatSigned(n, currency) : formatMoney(n, currency);
+  const text = parens
+    ? formatParens(n, currency)
+    : signed
+      ? formatSigned(n, currency)
+      : formatMoney(n, currency);
 
   let color = 'text-text';
   if (tone === 'muted') color = 'text-text-muted';
