@@ -50,11 +50,11 @@ export function useCreateWorkspace() {
 }
 
 // --- carteras (wallets) --------------------------------------------
-export function useWallets() {
+export function useWallets(params?: res.WalletListParams) {
   const ws = useActiveWs();
   return useQuery({
-    queryKey: qk.ws(ws).wallets(),
-    queryFn: () => res.wallets.list(),
+    queryKey: qk.ws(ws).wallets(params),
+    queryFn: () => res.wallets.list(params),
     enabled: !!ws,
   });
 }
@@ -93,6 +93,30 @@ export function useDeleteWallet() {
   });
 }
 
+export function useArchiveWallet() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.wallets.archive(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUnarchiveWallet() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.wallets.unarchive(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReorderWallets() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (ids: string[]) => res.wallets.reorder(ids),
+    onSuccess: invalidate,
+  });
+}
+
 export function useCategories() {
   const ws = useActiveWs();
   return useQuery({
@@ -123,6 +147,31 @@ export function useDeleteCategory() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({
     mutationFn: (id: string) => res.categories.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletedCategories() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).categoriesDeleted(),
+    queryFn: res.categories.deleted,
+    enabled: !!ws,
+  });
+}
+
+export function useRestoreCategory() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.categories.restore(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReorderCategories() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (ids: string[]) => res.categories.reorder(ids),
     onSuccess: invalidate,
   });
 }
@@ -224,6 +273,16 @@ export function useCashflow(months = 6) {
   return useQuery({
     queryKey: qk.ws(ws).reportCashflow(months),
     queryFn: () => res.reports.cashflow(months),
+    enabled: !!ws,
+  });
+}
+
+/** Recurrentes + cuotas próximas (default: hoy → fin de mes). */
+export function useScheduled(range?: { since?: string; until?: string }) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).reportScheduled(range),
+    queryFn: () => res.reports.scheduled(range),
     enabled: !!ws,
   });
 }

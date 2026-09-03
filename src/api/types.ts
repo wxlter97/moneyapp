@@ -89,10 +89,23 @@ export const PURPOSE_LABEL: Record<WalletPurpose, string> = {
   asset: 'Activo',
 };
 
+/** Subtipo de cartera (estilo Buddy): banco · crédito · efectivo · personalizada */
+export type WalletKind = 'bank' | 'credit' | 'cash' | 'custom';
+
+export const WALLET_KINDS: WalletKind[] = ['bank', 'credit', 'cash', 'custom'];
+
+export const WALLET_KIND_LABEL: Record<WalletKind, string> = {
+  bank: 'Banco',
+  credit: 'Crédito',
+  cash: 'Efectivo',
+  custom: 'Personalizada',
+};
+
 export interface Wallet {
   id: UUID;
   name: string;
   purpose: WalletPurpose;
+  kind: WalletKind;
   parent: UUID | null;
   currency: string;
   opening_balance: Money;
@@ -101,6 +114,8 @@ export interface Wallet {
   /** Saldo propio + el de los descendientes. */
   aggregated_balance: Money;
   counts_toward_net_worth: boolean;
+  /** Límite de la tarjeta de crédito (solo `kind: 'credit'`). */
+  credit_limit: Money | null;
   goal_amount: Money | null;
   goal_date: ISODate | null;
   monthly_contribution: Money | null;
@@ -115,6 +130,9 @@ export interface Wallet {
   visibility: Visibility;
   owner: number | null;
   is_active: boolean;
+  /** Archivada: oculta de la lista, pero sigue contando al patrimonio. */
+  is_archived: boolean;
+  sort_order: number;
   is_default: boolean;
   created_at: ISODateTime;
   updated_at: ISODateTime;
@@ -124,10 +142,12 @@ export interface Wallet {
 export interface WalletInput {
   name: string;
   purpose: WalletPurpose;
+  kind?: WalletKind;
   parent?: UUID | null;
   currency?: string;
   opening_balance?: Money;
   counts_toward_net_worth?: boolean;
+  credit_limit?: Money | null;
   goal_amount?: Money | null;
   goal_date?: ISODate | null;
   monthly_contribution?: Money | null;
@@ -139,6 +159,7 @@ export interface WalletInput {
   counterparty?: string;
   visibility?: Visibility;
   is_active?: boolean;
+  is_archived?: boolean;
   is_default?: boolean;
 }
 
@@ -154,7 +175,11 @@ export interface Category {
   icon: string;
   color: string;
   type: CategoryType;
+  /** null = es un GRUPO (bucket de presupuesto); con valor = subcategoría. */
   parent: UUID | null;
+  /** true cuando `parent` es null. */
+  is_group: boolean;
+  sort_order: number;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 }
@@ -166,6 +191,7 @@ export interface CategoryInput {
   icon?: string;
   color?: string;
   parent?: UUID | null;
+  sort_order?: number;
 }
 
 export type TransactionSource =
@@ -249,11 +275,41 @@ export interface BudgetRow {
   provision: Money;
 }
 
+/** Fila agregada por grupo de presupuesto (categoría sin padre). */
+export interface BudgetGroup {
+  /** null cuando el grupo es una categoría suelta sin subcategorías. */
+  group: UUID | null;
+  group_name: string;
+  budgeted: Money;
+  spent: Money;
+  remaining: Money;
+  rows: BudgetRow[];
+}
+
 export interface BudgetReport {
   year: number;
   month: number;
   rows: BudgetRow[];
+  groups: BudgetGroup[];
   totals: { budgeted: Money; spent: Money; remaining: Money };
+}
+
+// ---------------------------------------------------------------------------
+// Programado (recurrentes + cuotas próximas, sin materializar)
+// ---------------------------------------------------------------------------
+export type ScheduledKind = 'recurring' | 'installment';
+
+export interface ScheduledItem {
+  date: ISODate;
+  kind: ScheduledKind;
+  /** id del RecurringExpense o InstallmentPurchase de origen. */
+  source_id: UUID;
+  description: string;
+  amount: Money;
+  category: UUID | null;
+  category_name: string | null;
+  wallet: UUID;
+  wallet_name: string;
 }
 
 export interface CashflowPoint {
