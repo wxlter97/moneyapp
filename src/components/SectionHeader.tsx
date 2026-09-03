@@ -41,7 +41,7 @@ export function SectionHeader({
       style={{ paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: 14 }}
     >
       <View className="w-full max-w-[560px] self-center">
-        <ScreenHeader />
+        <ScreenHeader tone="light" />
         <View className="flex-row items-end justify-between">
           <Text className="text-2xl font-bold text-white">{title ?? s.label}</Text>
           {right}

@@ -10,7 +10,7 @@ import { useWorkspaceStore } from '@/store/workspace';
  * El panel se expande en el flujo normal (empuja el contenido), sin Modal
  * ni posicionamiento absoluto — evita problemas de z-index en web.
  */
-export function WorkspaceSwitcher() {
+export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'default' }) {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeId = useWorkspaceStore((s) => s.activeId);
   const setActiveId = useWorkspaceStore((s) => s.setActiveId);
@@ -47,8 +47,14 @@ export function WorkspaceSwitcher() {
         className="flex-row items-center gap-1 self-start py-0.5 active:opacity-70"
         accessibilityRole="button"
       >
-        <Text className="text-text text-lg font-semibold">{active?.name ?? '—'}</Text>
-        <Text className="text-text-muted text-lg">{open ? '▴' : '▾'}</Text>
+        <Text
+          className={`text-lg font-semibold ${tone === 'light' ? 'text-white' : 'text-text'}`}
+        >
+          {active?.name ?? '—'}
+        </Text>
+        <Text className={`text-lg ${tone === 'light' ? 'text-white/70' : 'text-text-muted'}`}>
+          {open ? '▴' : '▾'}
+        </Text>
       </Pressable>
 
       {open ? (
