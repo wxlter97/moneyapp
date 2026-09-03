@@ -14,5 +14,5 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={status === 'authenticated' ? '/history' : '/login'} />;
+  return <Redirect href={status === 'authenticated' ? '/dashboard' : '/login'} />;
 }

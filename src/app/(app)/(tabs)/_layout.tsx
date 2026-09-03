@@ -51,9 +51,6 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <TabIcon glyph="🧰" color={color} />,
         }}
       />
-      {/* `history` sigue existiendo como ruta (se integra como subtab de
-          Vista general en Fase 3), pero ya no ocupa un lugar en la barra. */}
-      <Tabs.Screen name="history" options={{ href: null }} />
     </Tabs>
   );
 }
