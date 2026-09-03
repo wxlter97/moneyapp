@@ -18,3 +18,43 @@ export const colors = {
 
 /** Ancho máximo del contenido en pantallas grandes (web desktop). */
 export const MAX_CONTENT_WIDTH = 560;
+
+// ---------------------------------------------------------------------------
+// Acentos por sección (estilo Buddy)
+// ---------------------------------------------------------------------------
+export type SectionKey = 'overview' | 'budget' | 'wallets';
+
+interface Section {
+  key: SectionKey;
+  label: string;
+  /** Tinte plano (iconos, chips, indicadores). */
+  tint: string;
+  /** Paradas del degradado de cabecera `[from, to]`. */
+  gradient: readonly [string, string];
+}
+
+export const sections: Record<SectionKey, Section> = {
+  overview: {
+    key: 'overview',
+    label: 'Vista general',
+    tint: '#7C5CFC',
+    gradient: ['#5B3FD6', '#9B7BFF'],
+  },
+  budget: {
+    key: 'budget',
+    label: 'Presupuesto',
+    tint: '#2FBF71',
+    gradient: ['#1F9D5B', '#3ED88A'],
+  },
+  wallets: {
+    key: 'wallets',
+    label: 'Carteras',
+    tint: '#F0568F',
+    gradient: ['#D63D77', '#FF7FB0'],
+  },
+} as const;
+
+/** Degradado `[from, to]` de una sección, listo para un `LinearGradient`. */
+export function sectionGradient(key: SectionKey): readonly [string, string] {
+  return sections[key].gradient;
+}

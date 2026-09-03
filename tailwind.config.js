@@ -19,6 +19,13 @@ module.exports = {
         income: '#3ECF8E',
         expense: '#FF6B6B',
         warning: '#F5A623',
+
+        // Acentos por sección (estilo Buddy): Vista general púrpura,
+        // Presupuesto verde, Carteras rosa. `from`/`to` son las paradas
+        // del degradado de cabecera; `DEFAULT` el tinte plano.
+        overview: { DEFAULT: '#7C5CFC', from: '#5B3FD6', to: '#9B7BFF' },
+        budget: { DEFAULT: '#2FBF71', from: '#1F9D5B', to: '#3ED88A' },
+        walletsAccent: { DEFAULT: '#F0568F', from: '#D63D77', to: '#FF7FB0' },
       },
     },
   },
