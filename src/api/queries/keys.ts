@@ -25,6 +25,9 @@ export const qk = {
     categoryBudgets: (ym?: YearMonth) =>
       ['ws', ws, 'category-budgets', ym ?? {}] as const,
 
+    recurringExpenses: () => ['ws', ws, 'recurring-expenses'] as const,
+    recurringExpense: (id: string) => ['ws', ws, 'recurring-expense', id] as const,
+
     monthlySnapshots: () => ['ws', ws, 'monthly-snapshots'] as const,
 
     reportNetWorth: () => ['ws', ws, 'reports', 'net-worth'] as const,

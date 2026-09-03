@@ -251,6 +251,68 @@ export interface CategoryBudget {
   updated_at: ISODateTime;
 }
 
+// ---------------------------------------------------------------------------
+// Gastos / ingresos recurrentes
+// ---------------------------------------------------------------------------
+export type RecurrenceFrequency =
+  | 'weekly'
+  | 'biweekly'
+  | 'every_3_weeks'
+  | 'every_4_weeks'
+  | 'monthly'
+  | 'every_2_months'
+  | 'every_3_months'
+  | 'every_4_months'
+  | 'every_6_months'
+  | 'yearly';
+
+export const RECURRENCE_FREQUENCIES: RecurrenceFrequency[] = [
+  'weekly',
+  'biweekly',
+  'every_3_weeks',
+  'every_4_weeks',
+  'monthly',
+  'every_2_months',
+  'every_3_months',
+  'every_4_months',
+  'every_6_months',
+  'yearly',
+];
+
+export const RECURRENCE_LABEL: Record<RecurrenceFrequency, string> = {
+  weekly: 'Cada semana',
+  biweekly: 'Cada dos semanas',
+  every_3_weeks: 'Cada tres semanas',
+  every_4_weeks: 'Cada cuatro semanas',
+  monthly: 'Cada mes',
+  every_2_months: 'Cada dos meses',
+  every_3_months: 'Cada tres meses',
+  every_4_months: 'Cada cuatro meses',
+  every_6_months: 'Cada seis meses',
+  yearly: 'Cada año',
+};
+
+export interface RecurringExpense {
+  id: UUID;
+  category: UUID;
+  wallet: UUID;
+  amount: Money;
+  frequency: RecurrenceFrequency;
+  next_due_date: ISODate;
+  is_active: boolean;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+}
+
+export interface RecurringExpenseInput {
+  category: UUID;
+  wallet: UUID;
+  amount: Money;
+  frequency: RecurrenceFrequency;
+  next_due_date: ISODate;
+  is_active?: boolean;
+}
+
 export interface MonthlySnapshot {
   id: UUID;
   month: number;

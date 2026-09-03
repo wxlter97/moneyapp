@@ -20,7 +20,12 @@ const TOOLS: Tool[] = [
     hint: 'Grupos y subcategorías',
     onPress: () => router.push('/categories'),
   },
-  { glyph: '🔁', label: 'Recurrentes', hint: 'Gastos e ingresos fijos', soon: true },
+  {
+    glyph: '🔁',
+    label: 'Recurrentes',
+    hint: 'Gastos e ingresos fijos',
+    onPress: () => router.push('/recurring'),
+  },
   { glyph: '📤', label: 'Exportar datos', hint: 'Descarga en CSV', soon: true },
   { glyph: '♻️', label: 'Restablecer', hint: 'Borrar todos los datos', soon: true },
 ];

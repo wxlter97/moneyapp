@@ -15,6 +15,8 @@ import type {
   MonthlySnapshot,
   NetWorthBreakdown,
   Paginated,
+  RecurringExpense,
+  RecurringExpenseInput,
   ScheduledItem,
   Transaction,
   TransactionInput,
@@ -97,6 +99,19 @@ export const categories = {
 export const categoryBudgets = {
   list: (params?: { year?: number; month?: number }) =>
     fetchAll<CategoryBudget>('/category-budgets/', params),
+};
+
+// --- recurrentes -------------------------------------------------------
+export const recurringExpenses = {
+  list: () => fetchAll<RecurringExpense>('/recurring-expenses/'),
+  get: (id: string) =>
+    api.get<RecurringExpense>(`/recurring-expenses/${id}/`).then((r) => r.data),
+  create: (input: RecurringExpenseInput) =>
+    api.post<RecurringExpense>('/recurring-expenses/', input).then((r) => r.data),
+  update: (id: string, input: Partial<RecurringExpenseInput>) =>
+    api.patch<RecurringExpense>(`/recurring-expenses/${id}/`, input).then((r) => r.data),
+  remove: (id: string) =>
+    api.delete(`/recurring-expenses/${id}/`).then(() => undefined),
 };
 
 // --- transacciones -----------------------------------------------------

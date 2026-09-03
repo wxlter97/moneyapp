@@ -10,7 +10,12 @@ import {
 } from '@tanstack/react-query';
 
 import * as res from '@/api/resources';
-import type { CategoryInput, TransactionInput, WalletInput } from '@/api/types';
+import type {
+  CategoryInput,
+  RecurringExpenseInput,
+  TransactionInput,
+  WalletInput,
+} from '@/api/types';
 import { currentYearMonth, type YearMonth } from '@/lib/date';
 import { useWorkspaceStore } from '@/store/workspace';
 import { qk } from './keys';
@@ -227,6 +232,50 @@ export function useCategoryBudgets(ym: YearMonth = currentYearMonth()) {
     queryKey: qk.ws(ws).categoryBudgets(ym),
     queryFn: () => res.categoryBudgets.list(ym),
     enabled: !!ws,
+  });
+}
+
+// --- recurrentes -------------------------------------------------
+export function useRecurringExpenses() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).recurringExpenses(),
+    queryFn: res.recurringExpenses.list,
+    enabled: !!ws,
+  });
+}
+
+export function useRecurringExpense(id: string | undefined) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).recurringExpense(id ?? ''),
+    queryFn: () => res.recurringExpenses.get(id!),
+    enabled: !!ws && !!id,
+  });
+}
+
+export function useCreateRecurringExpense() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (input: RecurringExpenseInput) => res.recurringExpenses.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateRecurringExpense() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<RecurringExpenseInput> }) =>
+      res.recurringExpenses.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteRecurringExpense() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.recurringExpenses.remove(id),
+    onSuccess: invalidate,
   });
 }
 
