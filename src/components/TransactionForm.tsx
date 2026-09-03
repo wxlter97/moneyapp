@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { dismissModal } from '@/components/ui/ModalHeader';
@@ -15,19 +15,22 @@ import {
 import { walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import type { TransactionInput, TransactionType } from '@/api/types';
-import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
+import { NumPad } from '@/components/ui/NumPad';
+import { PickerRow } from '@/components/ui/PickerRow';
 import { Segmented } from '@/components/ui/Segmented';
-import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { colors } from '@/theme';
 import { todayISO } from '@/lib/date';
+import { formatMoney, toNumber } from '@/lib/money';
 
 interface TransactionFormProps {
   transactionId?: string;
 }
+
+type OpenRow = 'category' | 'from' | 'to' | null;
 
 export function TransactionForm({ transactionId }: TransactionFormProps) {
   const editing = !!transactionId;
@@ -52,6 +55,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const [prefilled, setPrefilled] = useState(false);
   const [walletDefaulted, setWalletDefaulted] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [openRow, setOpenRow] = useState<OpenRow>(null);
 
   const isTransfer = type === 'transfer';
 
@@ -60,14 +64,12 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     return list.find((a) => a.is_default)?.id ?? list[0]?.id ?? null;
   }, [walletsQ.data]);
 
-  // Preselecciona la cartera por defecto al crear (una sola vez, cuando cargan).
   useEffect(() => {
     if (editing || walletDefaulted || !defaultWalletId) return;
     setWalletId(defaultWalletId);
     setWalletDefaulted(true);
   }, [editing, walletDefaulted, defaultWalletId]);
 
-  // Prefill de la transacción existente.
   useEffect(() => {
     if (!editing || prefilled || !existing.data || !categoriesQ.data) return;
     const t = existing.data;
@@ -118,10 +120,23 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     (isTransfer ? !!toWalletId && toWalletId !== walletId : !!categoryId) &&
     !busy;
 
+  const currency = walletsQ.data?.[0]?.currency ?? 'USD';
+  const showBudgetSwitch = type === 'expense' || (isTransfer && !!categoryId);
+
   function onChangeType(next: TransactionType) {
     setType(next);
     setCategoryId(null);
+    setOpenRow(null);
     if (next !== 'transfer') setToWalletId(null);
+  }
+
+  function toggleRow(row: Exclude<OpenRow, null>) {
+    setOpenRow((cur) => (cur === row ? null : row));
+  }
+
+  function swapWallets() {
+    setWalletId(toWalletId);
+    setToWalletId(walletId);
   }
 
   async function onSubmit() {
@@ -168,12 +183,16 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
 
   if (editing && existing.isLoading) return <LoadingState />;
 
+  const amountColor =
+    type === 'income' ? colors.income : type === 'expense' ? colors.expense : colors.text;
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1"
-    >
-      <ScrollView contentContainerClassName="gap-4 py-3" keyboardShouldPersistTaps="handled">
+    <View className="flex-1">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="gap-4 py-3"
+        keyboardShouldPersistTaps="handled"
+      >
         <Segmented
           value={type}
           onChange={onChangeType}
@@ -184,80 +203,94 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           ]}
         />
 
-        <AmountInput
-          label="Monto"
-          value={amount}
-          onChangeText={setAmount}
-          error={fields.amount}
-          autoFocus={!editing}
-        />
+        <View className="items-center py-2">
+          <Text className="text-3xl font-bold" style={{ color: amountColor }}>
+            {formatMoney(amountNum || 0, currency)}
+          </Text>
+          {fields.amount ? (
+            <Text className="text-expense mt-1 text-xs">{fields.amount}</Text>
+          ) : null}
+        </View>
 
-        {isTransfer ? (
-          <>
-            <Select
-              label="Cartera origen"
-              value={walletId}
-              onChange={setWalletId}
-              options={walletOptions}
-              placeholder={walletsQ.isLoading ? 'Cargando…' : 'Selecciona una cartera'}
-              error={fields.wallet}
-            />
-            <Select
-              label="Cartera destino"
-              value={toWalletId}
-              onChange={setToWalletId}
-              options={toWalletOptions}
-              placeholder="Selecciona la cartera destino"
-              error={fields.to_wallet}
-            />
-            <Select
-              label="Categoría (opcional)"
-              value={categoryId}
-              onChange={setCategoryId}
-              options={[{ value: '', label: 'Sin categoría' }, ...categoryOptions]}
-              placeholder="Sin categoría"
-              error={fields.category}
-            />
-            <Text className="text-text-muted -mt-2 text-xs">
-              Con categoría, la transferencia puede contar para ese presupuesto
-              (p. ej. mover dinero a Ahorro).
-            </Text>
-          </>
-        ) : (
-          <>
-            <View className="gap-1">
-              <Select
-                label="Categoría"
-                value={categoryId}
-                onChange={setCategoryId}
-                options={categoryOptions}
-                placeholder={
-                  categoriesQ.isLoading
-                    ? 'Cargando…'
-                    : categoryOptions.length === 0
-                      ? `Sin categorías de ${type === 'income' ? 'ingreso' : 'gasto'}`
-                      : `Categoría de ${type === 'income' ? 'ingreso' : 'gasto'}`
-                }
-                error={fields.category}
+        {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
+
+        <View className="gap-1">
+          <PickerRow
+            label={isTransfer ? 'Categoría (opcional)' : 'Categoría'}
+            options={
+              isTransfer
+                ? [{ value: '', label: 'Sin categoría' }, ...categoryOptions]
+                : categoryOptions
+            }
+            value={categoryId}
+            onChange={(v) => {
+              setCategoryId(v || null);
+              setOpenRow(null);
+            }}
+            open={openRow === 'category'}
+            onToggle={() => toggleRow('category')}
+            placeholder={
+              categoriesQ.isLoading
+                ? 'Cargando…'
+                : !isTransfer && categoryOptions.length === 0
+                  ? `Sin categorías de ${type === 'income' ? 'ingreso' : 'gasto'}`
+                  : 'Elegir'
+            }
+            error={fields.category}
+          />
+
+          <PickerRow
+            label={isTransfer ? 'Desde' : 'Cartera'}
+            options={walletOptions}
+            value={walletId}
+            onChange={(v) => {
+              setWalletId(v);
+              setOpenRow(null);
+            }}
+            open={openRow === 'from'}
+            onToggle={() => toggleRow('from')}
+            placeholder={walletsQ.isLoading ? 'Cargando…' : 'Elegir'}
+            error={fields.wallet}
+          />
+
+          {isTransfer ? (
+            <>
+              <View className="items-center py-1">
+                <Pressable
+                  onPress={swapWallets}
+                  accessibilityLabel="Intercambiar carteras"
+                  accessibilityRole="button"
+                  className="h-8 w-8 items-center justify-center rounded-full border border-border bg-surface active:opacity-70"
+                >
+                  <Text className="text-text">⇅</Text>
+                </Pressable>
+              </View>
+              <PickerRow
+                label="A"
+                options={toWalletOptions}
+                value={toWalletId}
+                onChange={(v) => {
+                  setToWalletId(v);
+                  setOpenRow(null);
+                }}
+                open={openRow === 'to'}
+                onToggle={() => toggleRow('to')}
+                placeholder="Elegir"
+                error={fields.to_wallet}
               />
-              <Pressable
-                onPress={() => router.push(`/category/new?type=${type}`)}
-                className="self-start py-1 active:opacity-60"
-                accessibilityRole="button"
-              >
-                <Text className="text-primary text-xs font-semibold">+ Nueva categoría</Text>
-              </Pressable>
-            </View>
-            <Select
-              label="Cartera"
-              value={walletId}
-              onChange={setWalletId}
-              options={walletOptions}
-              placeholder={walletsQ.isLoading ? 'Cargando…' : 'Selecciona una cartera'}
-              error={fields.wallet}
-            />
-          </>
-        )}
+            </>
+          ) : null}
+        </View>
+
+        {!isTransfer ? (
+          <Pressable
+            onPress={() => router.push(`/category/new?type=${type}`)}
+            className="self-start py-1 active:opacity-60"
+            accessibilityRole="button"
+          >
+            <Text className="text-primary text-xs font-semibold">+ Nueva categoría</Text>
+          </Pressable>
+        ) : null}
 
         <DateField label="Fecha" value={date} onChange={setDate} error={fields.date} />
 
@@ -269,7 +302,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           error={fields.description}
         />
 
-        {type === 'expense' || (isTransfer && categoryId) ? (
+        {showBudgetSwitch ? (
           <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5">
             <View className="flex-1 pr-2">
               <Text className="text-text text-sm">Cuenta para el presupuesto</Text>
@@ -287,8 +320,6 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
             />
           </View>
         ) : null}
-
-        {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
 
         <Button
           label={editing ? 'Guardar cambios' : 'Guardar'}
@@ -328,6 +359,8 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           </View>
         ) : null}
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      <NumPad value={amount} onChange={setAmount} />
+    </View>
   );
 }
