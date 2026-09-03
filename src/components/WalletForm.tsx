@@ -50,7 +50,12 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [goalAmount, setGoalAmount] = useState('0.00');
   const [goalDate, setGoalDate] = useState('');
   const [monthly, setMonthly] = useState('0.00');
+  const [debtTotal, setDebtTotal] = useState('0.00');
+  const [interestRate, setInterestRate] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [cardLast4, setCardLast4] = useState('');
+  const [billingDay, setBillingDay] = useState('');
+  const [paymentDueDay, setPaymentDueDay] = useState('');
   const [counterparty, setCounterparty] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -71,7 +76,12 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setGoalAmount(w.goal_amount ? toNumber(w.goal_amount).toFixed(2) : '0.00');
     setGoalDate(w.goal_date ?? '');
     setMonthly(w.monthly_contribution ? toNumber(w.monthly_contribution).toFixed(2) : '0.00');
+    setDebtTotal(w.purpose === 'debt' && w.goal_amount ? toNumber(w.goal_amount).toFixed(2) : '0.00');
+    setInterestRate(w.interest_rate ? toNumber(w.interest_rate).toString() : '');
+    setDueDate(w.due_date ?? '');
     setCardLast4(w.card_last4 ?? '');
+    setBillingDay(w.billing_cycle_day ? String(w.billing_cycle_day) : '');
+    setPaymentDueDay(w.payment_due_day ? String(w.payment_due_day) : '');
     setCounterparty(w.counterparty ?? '');
     setPrefilled(true);
   }, [editing, prefilled, existing.data]);
@@ -86,6 +96,13 @@ export function WalletForm({ walletId }: WalletFormProps) {
 
   const isDebt = purpose === 'debt';
   const isSavings = purpose === 'savings';
+  const isSpending = purpose === 'spending';
+  const cardEligible = isSpending || isDebt;
+
+  function parseDay(value: string): number | null {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) && n >= 1 && n <= 31 ? n : null;
+  }
   const amountNum = toNumber(amount);
   const busy = create.isPending || update.isPending || remove.isPending;
   const canSubmit = name.trim().length > 0 && !busy;
@@ -100,6 +117,13 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setFields({});
 
     const signed = isDebt && !debtOwedToUs ? -amountNum : amountNum;
+    const goalAmountValue = isSavings
+      ? toNumber(goalAmount) > 0
+        ? toNumber(goalAmount).toFixed(2)
+        : null
+      : isDebt && toNumber(debtTotal) > 0
+        ? toNumber(debtTotal).toFixed(2)
+        : null;
     const payload: WalletInput = {
       name: name.trim(),
       purpose,
@@ -107,11 +131,15 @@ export function WalletForm({ walletId }: WalletFormProps) {
       opening_balance: signed.toFixed(2),
       counts_toward_net_worth: countsNet,
       is_default: isDefault,
-      goal_amount: isSavings && toNumber(goalAmount) > 0 ? toNumber(goalAmount).toFixed(2) : null,
+      goal_amount: goalAmountValue,
       goal_date: isSavings && goalDate ? goalDate : null,
       monthly_contribution:
         isSavings && toNumber(monthly) > 0 ? toNumber(monthly).toFixed(2) : null,
-      card_last4: isDebt && cardLast4.trim() ? cardLast4.trim() : null,
+      interest_rate: isDebt && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
+      due_date: isDebt && dueDate ? dueDate : null,
+      card_last4: cardEligible && cardLast4.trim() ? cardLast4.trim() : null,
+      billing_cycle_day: cardEligible ? parseDay(billingDay) : null,
+      payment_due_day: cardEligible ? parseDay(paymentDueDay) : null,
       counterparty: isDebt ? counterparty.trim() : '',
     };
 
@@ -208,6 +236,39 @@ export function WalletForm({ walletId }: WalletFormProps) {
 
         {isDebt ? (
           <>
+            <AmountInput
+              label="Monto total de la deuda (opcional)"
+              value={debtTotal}
+              onChangeText={setDebtTotal}
+            />
+            {toNumber(debtTotal) > amountNum && !debtOwedToUs ? (
+              <Text className="text-text-muted -mt-2 text-xs">
+                Aportado / pagado hasta ahora:{' '}
+                {(toNumber(debtTotal) - amountNum).toFixed(2)}
+              </Text>
+            ) : null}
+            <TextField
+              label="Tasa de interés % (opcional)"
+              value={interestRate}
+              onChangeText={(t) => setInterestRate(t.replace(/[^0-9.]/g, ''))}
+              keyboardType="decimal-pad"
+              placeholder="12.5"
+            />
+            <DateField
+              label="Fecha de vencimiento (opcional)"
+              value={dueDate || '2026-12-31'}
+              onChange={setDueDate}
+            />
+            <TextField
+              label="Persona / entidad (opcional)"
+              value={counterparty}
+              onChangeText={setCounterparty}
+            />
+          </>
+        ) : null}
+
+        {cardEligible ? (
+          <>
             <TextField
               label="Últimos 4 dígitos (tarjeta, opcional)"
               value={cardLast4}
@@ -215,11 +276,26 @@ export function WalletForm({ walletId }: WalletFormProps) {
               keyboardType="number-pad"
               placeholder="4242"
             />
-            <TextField
-              label="Persona / entidad (opcional)"
-              value={counterparty}
-              onChangeText={setCounterparty}
-            />
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <TextField
+                  label="Día de corte (opcional)"
+                  value={billingDay}
+                  onChangeText={(t) => setBillingDay(t.replace(/\D/g, '').slice(0, 2))}
+                  keyboardType="number-pad"
+                  placeholder="15"
+                />
+              </View>
+              <View className="flex-1">
+                <TextField
+                  label="Día de pago (opcional)"
+                  value={paymentDueDay}
+                  onChangeText={(t) => setPaymentDueDay(t.replace(/\D/g, '').slice(0, 2))}
+                  keyboardType="number-pad"
+                  placeholder="5"
+                />
+              </View>
+            </View>
           </>
         ) : null}
 

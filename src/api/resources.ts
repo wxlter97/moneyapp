@@ -10,6 +10,7 @@ import type {
   CashflowPoint,
   Category,
   CategoryBudget,
+  CategoryInput,
   DashboardSummary,
   MonthlySnapshot,
   NetWorthBreakdown,
@@ -63,6 +64,11 @@ export const wallets = {
 // --- categorías / presupuestos ------------------------------------------
 export const categories = {
   list: () => fetchAll<Category>('/categories/'),
+  create: (input: CategoryInput) =>
+    api.post<Category>('/categories/', input).then((r) => r.data),
+  update: (id: string, input: Partial<CategoryInput>) =>
+    api.patch<Category>(`/categories/${id}/`, input).then((r) => r.data),
+  remove: (id: string) => api.delete(`/categories/${id}/`).then(() => undefined),
 };
 
 export const categoryBudgets = {

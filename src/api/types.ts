@@ -132,6 +132,8 @@ export interface WalletInput {
   goal_date?: ISODate | null;
   monthly_contribution?: Money | null;
   card_last4?: string | null;
+  billing_cycle_day?: number | null;
+  payment_due_day?: number | null;
   interest_rate?: string | null;
   due_date?: ISODate | null;
   counterparty?: string;
@@ -155,6 +157,15 @@ export interface Category {
   parent: UUID | null;
   created_at: ISODateTime;
   updated_at: ISODateTime;
+}
+
+/** Payload de alta/edición de categoría. */
+export interface CategoryInput {
+  name: string;
+  type: CategoryType;
+  icon?: string;
+  color?: string;
+  parent?: UUID | null;
 }
 
 export type TransactionSource =

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { dismissModal } from '@/components/ui/ModalHeader';
 
@@ -207,18 +208,29 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           </>
         ) : (
           <>
-            <Select
-              label="Categoría"
-              value={categoryId}
-              onChange={setCategoryId}
-              options={categoryOptions}
-              placeholder={
-                categoriesQ.isLoading
-                  ? 'Cargando…'
-                  : `Categoría de ${type === 'income' ? 'ingreso' : 'gasto'}`
-              }
-              error={fields.category}
-            />
+            <View className="gap-1">
+              <Select
+                label="Categoría"
+                value={categoryId}
+                onChange={setCategoryId}
+                options={categoryOptions}
+                placeholder={
+                  categoriesQ.isLoading
+                    ? 'Cargando…'
+                    : categoryOptions.length === 0
+                      ? `Sin categorías de ${type === 'income' ? 'ingreso' : 'gasto'}`
+                      : `Categoría de ${type === 'income' ? 'ingreso' : 'gasto'}`
+                }
+                error={fields.category}
+              />
+              <Pressable
+                onPress={() => router.push(`/category/new?type=${type}`)}
+                className="self-start py-1 active:opacity-60"
+                accessibilityRole="button"
+              >
+                <Text className="text-primary text-xs font-semibold">+ Nueva categoría</Text>
+              </Pressable>
+            </View>
             <Select
               label="Cartera"
               value={walletId}

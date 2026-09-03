@@ -10,7 +10,7 @@ import {
 } from '@tanstack/react-query';
 
 import * as res from '@/api/resources';
-import type { TransactionInput, WalletInput } from '@/api/types';
+import type { CategoryInput, TransactionInput, WalletInput } from '@/api/types';
 import { currentYearMonth, type YearMonth } from '@/lib/date';
 import { useWorkspaceStore } from '@/store/workspace';
 import { qk } from './keys';
@@ -99,6 +99,31 @@ export function useCategories() {
     queryKey: qk.ws(ws).categories(),
     queryFn: res.categories.list,
     enabled: !!ws,
+  });
+}
+
+export function useCreateCategory() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (input: CategoryInput) => res.categories.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateCategory() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<CategoryInput> }) =>
+      res.categories.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteCategory() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.categories.remove(id),
+    onSuccess: invalidate,
   });
 }
 

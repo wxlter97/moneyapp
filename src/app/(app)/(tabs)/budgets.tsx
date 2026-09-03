@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { useBudgetReport } from '@/api/queries';
 import { BudgetProgressRow } from '@/components/BudgetProgressRow';
@@ -19,6 +20,13 @@ export default function BudgetsScreen() {
     <View className="flex-1 bg-bg">
       <ScrollView contentContainerClassName="px-4 pb-24 self-center w-full max-w-[560px] gap-4">
         <ScreenHeader />
+        <Pressable
+          onPress={() => router.push('/categories')}
+          className="self-end rounded-lg border border-border px-3 py-1.5 active:opacity-70"
+          accessibilityRole="button"
+        >
+          <Text className="text-primary text-sm font-semibold">Gestionar categorías</Text>
+        </Pressable>
         <MonthSwitcher value={month} onChange={setMonth} />
 
         {budget.isLoading ? (

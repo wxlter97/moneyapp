@@ -133,6 +133,18 @@ export default function AppLayout() {
         name="wallet/[id]"
         options={{ presentation: 'modal', headerShown: false }}
       />
+      <Stack.Screen
+        name="categories"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="category/new"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="category/[id]"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
     </Stack>
   );
 }
