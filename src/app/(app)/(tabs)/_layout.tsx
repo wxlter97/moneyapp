@@ -7,7 +7,7 @@ function TabIcon({ glyph, color }: { glyph: string; color: ColorValue }) {
   return <Text style={{ fontSize: 18, color }}>{glyph}</Text>;
 }
 
-export const unstable_settings = { initialRouteName: 'history' };
+export const unstable_settings = { initialRouteName: 'dashboard' };
 
 export default function TabsLayout() {
   return (
@@ -24,23 +24,16 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="history"
-        options={{
-          title: 'Historial',
-          tabBarIcon: ({ color }) => <TabIcon glyph="🗓" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Resumen',
-          tabBarIcon: ({ color }) => <TabIcon glyph="📊" color={color} />,
+          title: 'Vista general',
+          tabBarIcon: ({ color }) => <TabIcon glyph="🏠" color={color} />,
         }}
       />
       <Tabs.Screen
         name="budgets"
         options={{
-          title: 'Presupuestos',
+          title: 'Presupuesto',
           tabBarIcon: ({ color }) => <TabIcon glyph="🎯" color={color} />,
         }}
       />
@@ -48,9 +41,19 @@ export default function TabsLayout() {
         name="wallets"
         options={{
           title: 'Carteras',
-          tabBarIcon: ({ color }) => <TabIcon glyph="🏦" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon glyph="👛" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="tools"
+        options={{
+          title: 'Herramientas',
+          tabBarIcon: ({ color }) => <TabIcon glyph="🧰" color={color} />,
+        }}
+      />
+      {/* `history` sigue existiendo como ruta (se integra como subtab de
+          Vista general en Fase 3), pero ya no ocupa un lugar en la barra. */}
+      <Tabs.Screen name="history" options={{ href: null }} />
     </Tabs>
   );
 }
