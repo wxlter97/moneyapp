@@ -106,6 +106,8 @@ export interface Wallet {
   name: string;
   purpose: WalletPurpose;
   kind: WalletKind;
+  /** Color de acento hex "#RRGGBB"; "" = color por defecto del tipo. */
+  color: string;
   parent: UUID | null;
   currency: string;
   opening_balance: Money;
@@ -143,6 +145,7 @@ export interface WalletInput {
   name: string;
   purpose: WalletPurpose;
   kind?: WalletKind;
+  color?: string;
   parent?: UUID | null;
   currency?: string;
   opening_balance?: Money;

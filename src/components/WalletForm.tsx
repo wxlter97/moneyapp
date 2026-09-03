@@ -2,14 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import {
+  useArchiveWallet,
   useCreateWallet,
   useDeleteWallet,
+  useUnarchiveWallet,
   useUpdateWallet,
   useWallet,
   useWallets,
 } from '@/api/queries';
 import { errorMessage, fieldErrors } from '@/api/errors';
-import type { WalletInput, WalletPurpose } from '@/api/types';
+import type { WalletInput, WalletKind, WalletPurpose } from '@/api/types';
 import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +22,7 @@ import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { colors } from '@/theme';
 import { toNumber } from '@/lib/money';
+import { WALLET_COLORS } from '@/lib/wallets';
 
 interface WalletFormProps {
   walletId?: string;
@@ -32,6 +35,13 @@ const PURPOSE_OPTIONS: { value: WalletPurpose; label: string }[] = [
   { value: 'asset', label: 'Activo' },
 ];
 
+const KIND_OPTIONS: { value: WalletKind; label: string }[] = [
+  { value: 'bank', label: 'Banco' },
+  { value: 'credit', label: 'Crédito' },
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'custom', label: 'Otro' },
+];
+
 export function WalletForm({ walletId }: WalletFormProps) {
   const editing = !!walletId;
   const existing = useWallet(walletId);
@@ -39,9 +49,15 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const create = useCreateWallet();
   const update = useUpdateWallet();
   const remove = useDeleteWallet();
+  const archive = useArchiveWallet();
+  const unarchive = useUnarchiveWallet();
 
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState<WalletPurpose>('spending');
+  const [kind, setKind] = useState<WalletKind>('bank');
+  const [color, setColor] = useState('');
+  const [creditLimit, setCreditLimit] = useState('0.00');
+  const [isArchived, setIsArchived] = useState(false);
   const [amount, setAmount] = useState('0.00');
   const [debtOwedToUs, setDebtOwedToUs] = useState(false); // deuda: "me deben"
   const [parentId, setParentId] = useState<string | null>(null);
@@ -67,6 +83,10 @@ export function WalletForm({ walletId }: WalletFormProps) {
     const w = existing.data;
     setName(w.name);
     setPurpose(w.purpose);
+    setKind(w.kind);
+    setColor(w.color ?? '');
+    setCreditLimit(w.credit_limit ? toNumber(w.credit_limit).toFixed(2) : '0.00');
+    setIsArchived(w.is_archived);
     const bal = toNumber(w.opening_balance);
     setDebtOwedToUs(w.purpose === 'debt' && bal > 0);
     setAmount(Math.abs(bal).toFixed(2));
@@ -104,12 +124,31 @@ export function WalletForm({ walletId }: WalletFormProps) {
     return Number.isFinite(n) && n >= 1 && n <= 31 ? n : null;
   }
   const amountNum = toNumber(amount);
-  const busy = create.isPending || update.isPending || remove.isPending;
+  const busy =
+    create.isPending ||
+    update.isPending ||
+    remove.isPending ||
+    archive.isPending ||
+    unarchive.isPending;
   const canSubmit = name.trim().length > 0 && !busy;
 
   function onChangePurpose(next: WalletPurpose) {
     setPurpose(next);
     setParentId(null);
+    if (next === 'debt') setKind('credit');
+    else if (next === 'spending') setKind('bank');
+  }
+
+  async function onToggleArchive() {
+    if (!walletId) return;
+    setFormError(null);
+    try {
+      if (isArchived) await unarchive.mutateAsync(walletId);
+      else await archive.mutateAsync(walletId);
+      dismissModal();
+    } catch (err) {
+      setFormError(errorMessage(err, 'No se pudo cambiar el archivado.'));
+    }
   }
 
   async function onSubmit() {
@@ -127,9 +166,15 @@ export function WalletForm({ walletId }: WalletFormProps) {
     const payload: WalletInput = {
       name: name.trim(),
       purpose,
+      kind,
+      color: color || '',
       parent: parentId || null,
       opening_balance: signed.toFixed(2),
       counts_toward_net_worth: countsNet,
+      credit_limit:
+        kind === 'credit' && toNumber(creditLimit) > 0
+          ? toNumber(creditLimit).toFixed(2)
+          : null,
       is_default: isDefault,
       goal_amount: goalAmountValue,
       goal_date: isSavings && goalDate ? goalDate : null,
@@ -195,6 +240,44 @@ export function WalletForm({ walletId }: WalletFormProps) {
             <Text className="text-text-muted text-sm">Tipo</Text>
             <Segmented value={purpose} onChange={onChangePurpose} options={PURPOSE_OPTIONS} />
           </View>
+        ) : null}
+
+        <View className="gap-1.5">
+          <Text className="text-text-muted text-sm">Subtipo</Text>
+          <Segmented value={kind} onChange={setKind} options={KIND_OPTIONS} />
+        </View>
+
+        <View className="gap-1.5">
+          <Text className="text-text-muted text-sm">Color</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="gap-2 py-1"
+            keyboardShouldPersistTaps="handled"
+          >
+            {WALLET_COLORS.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setColor(color === c ? '' : c)}
+                accessibilityRole="button"
+                accessibilityLabel={`Color ${c}`}
+                className={`h-9 w-9 items-center justify-center rounded-full ${
+                  color === c ? 'border-2 border-text' : ''
+                }`}
+                style={{ backgroundColor: c }}
+              >
+                {color === c ? <Text className="text-xs text-white">✓</Text> : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        {kind === 'credit' ? (
+          <AmountInput
+            label="Límite de crédito (opcional)"
+            value={creditLimit}
+            onChangeText={setCreditLimit}
+          />
         ) : null}
 
         {isDebt ? (
@@ -329,14 +412,26 @@ export function WalletForm({ walletId }: WalletFormProps) {
         />
 
         {editing && !confirmingDelete ? (
-          <Pressable
-            onPress={() => setConfirmingDelete(true)}
-            disabled={busy}
-            className="items-center py-2 active:opacity-60"
-            accessibilityRole="button"
-          >
-            <Text className="text-expense text-sm font-semibold">Eliminar cartera</Text>
-          </Pressable>
+          <View className="items-center gap-3 py-2">
+            <Pressable
+              onPress={onToggleArchive}
+              disabled={busy}
+              className="active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Text className="text-primary text-sm font-semibold">
+                {isArchived ? 'Desarchivar cartera' : 'Archivar cartera'}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setConfirmingDelete(true)}
+              disabled={busy}
+              className="active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Text className="text-expense text-sm font-semibold">Eliminar cartera</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         {editing && confirmingDelete ? (

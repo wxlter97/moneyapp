@@ -1,6 +1,24 @@
 import type { Wallet, WalletPurpose } from '@/api/types';
 import { WALLET_PURPOSES } from '@/api/types';
 
+/** Paleta de acentos para carteras (estilo Buddy). */
+export const WALLET_COLORS = [
+  '#4F8CFF', '#3ECF8E', '#F0568F', '#F5A623', '#7C5CFC',
+  '#22C1C3', '#FF6B6B', '#A3E635', '#E879F9', '#94A3B8',
+];
+
+const PURPOSE_FALLBACK: Record<WalletPurpose, string> = {
+  spending: '#4F8CFF',
+  savings: '#3ECF8E',
+  debt: '#FF6B6B',
+  asset: '#7C5CFC',
+};
+
+/** Color de acento de una cartera: el propio, o el de su `purpose`. */
+export function walletColor(wallet: Wallet): string {
+  return wallet.color || PURPOSE_FALLBACK[wallet.purpose] || '#94A3B8';
+}
+
 export interface WalletNode {
   wallet: Wallet;
   depth: number;

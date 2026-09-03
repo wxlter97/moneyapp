@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 
 import { useNetWorth, useWallets } from '@/api/queries';
 import { NetWorthPager } from '@/components/NetWorthPager';
-import { ScreenHeader } from '@/components/ScreenHeader';
+import { SectionHeader } from '@/components/SectionHeader';
 import { WalletRow } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
@@ -20,18 +20,21 @@ export default function WalletsScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <ScrollView contentContainerClassName="px-4 pb-24 self-center w-full max-w-[560px] gap-4">
-        <View className="flex-row items-center justify-between">
-          <ScreenHeader />
-        </View>
-        <Pressable
-          onPress={() => router.push('/wallet/new')}
-          className="self-end rounded-lg border border-border px-3 py-1.5 active:opacity-70"
-          accessibilityRole="button"
-        >
-          <Text className="text-primary text-sm font-semibold">+ Nueva cartera</Text>
-        </Pressable>
+      <SectionHeader
+        section="wallets"
+        title="Carteras"
+        right={
+          <Pressable
+            onPress={() => router.push('/wallet/new')}
+            className="rounded-lg bg-white/20 px-3 py-1.5 active:opacity-70"
+            accessibilityRole="button"
+          >
+            <Text className="text-sm font-semibold text-white">+ Nueva</Text>
+          </Pressable>
+        }
+      />
 
+      <ScrollView contentContainerClassName="px-4 pb-28 pt-4 self-center w-full max-w-[560px] gap-4">
         {loading ? (
           <LoadingState />
         ) : netWorth.isError || wallets.isError || !netWorth.data ? (
