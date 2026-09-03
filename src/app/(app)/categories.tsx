@@ -2,7 +2,12 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { useCategories, useDeletedCategories, useRestoreCategory } from '@/api/queries';
+import {
+  useCategories,
+  useDeletedCategories,
+  useReorderCategories,
+  useRestoreCategory,
+} from '@/api/queries';
 import type { Category, CategoryType } from '@/api/types';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
@@ -19,8 +24,19 @@ interface GroupTree {
   children: Category[];
 }
 
+/** Devuelve una copia de `ids` con el elemento en `index` movido `delta` posiciones. */
+function moved(ids: string[], index: number, delta: number): string[] | null {
+  const target = index + delta;
+  if (target < 0 || target >= ids.length) return null;
+  const copy = [...ids];
+  [copy[index], copy[target]] = [copy[target], copy[index]];
+  return copy;
+}
+
 export default function CategoriesScreen() {
   const categoriesQ = useCategories();
+  const reorder = useReorderCategories();
+  const [reordering, setReordering] = useState(false);
 
   const trees = useMemo(() => {
     const map: Record<CategoryType, GroupTree[]> = { expense: [], income: [] };
@@ -39,15 +55,29 @@ export default function CategoriesScreen() {
     return map;
   }, [categoriesQ.data]);
 
+  const hasData = (categoriesQ.data?.length ?? 0) > 0;
+
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Categorías" />
+      {hasData ? (
+        <Pressable
+          onPress={() => setReordering((r) => !r)}
+          className="self-end py-1 active:opacity-60"
+          accessibilityRole="button"
+        >
+          <Text className="text-primary text-sm font-semibold">
+            {reordering ? 'Listo' : 'Reordenar'}
+          </Text>
+        </Pressable>
+      ) : null}
+
       <ScrollView contentContainerClassName="gap-4 py-2" keyboardShouldPersistTaps="handled">
         {categoriesQ.isLoading ? (
           <LoadingState />
         ) : categoriesQ.isError ? (
           <ErrorState error={categoriesQ.error} onRetry={categoriesQ.refetch} />
-        ) : (categoriesQ.data?.length ?? 0) === 0 ? (
+        ) : !hasData ? (
           <>
             <EmptyState
               title="Sin categorías"
@@ -57,58 +87,94 @@ export default function CategoriesScreen() {
             <NewGroupButton type="income" label="+ Nuevo grupo de ingreso" />
           </>
         ) : (
-          SECTIONS.map(({ type, title }) => (
-            <Card
-              key={type}
-              title={title}
-              action={
-                <Pressable
-                  onPress={() => router.push(`/category/new?type=${type}`)}
-                  accessibilityRole="button"
-                  className="active:opacity-60"
-                >
-                  <Text className="text-primary text-sm font-semibold">+ Grupo</Text>
-                </Pressable>
-              }
-            >
-              {trees[type].length === 0 ? (
-                <Text className="text-text-muted py-3 text-sm">Ningún grupo todavía.</Text>
-              ) : (
-                trees[type].map((t, i) => (
-                  <View key={t.group.id} className={i > 0 ? 'mt-2 border-t border-border/60 pt-2' : ''}>
-                    <CategoryLine category={t.group} bold />
-                    {t.children.map((c) => (
-                      <View key={c.id} className="pl-4">
-                        <CategoryLine category={c} />
-                      </View>
-                    ))}
+          SECTIONS.map(({ type, title }) => {
+            const groupIds = trees[type].map((t) => t.group.id);
+            return (
+              <Card
+                key={type}
+                title={title}
+                action={
+                  reordering ? null : (
                     <Pressable
-                      onPress={() => router.push(`/category/new?parent=${t.group.id}`)}
-                      className="py-2 pl-4 active:opacity-60"
+                      onPress={() => router.push(`/category/new?type=${type}`)}
                       accessibilityRole="button"
+                      className="active:opacity-60"
                     >
-                      <Text className="text-primary text-xs font-semibold">+ Subcategoría</Text>
+                      <Text className="text-primary text-sm font-semibold">+ Grupo</Text>
                     </Pressable>
-                  </View>
-                ))
-              )}
-            </Card>
-          ))
+                  )
+                }
+              >
+                {trees[type].length === 0 ? (
+                  <Text className="text-text-muted py-3 text-sm">Ningún grupo todavía.</Text>
+                ) : (
+                  trees[type].map((t, gi) => {
+                    const childIds = t.children.map((c) => c.id);
+                    return (
+                      <View
+                        key={t.group.id}
+                        className={gi > 0 ? 'mt-2 border-t border-border/60 pt-2' : ''}
+                      >
+                        <CategoryLine
+                          category={t.group}
+                          bold
+                          reordering={reordering}
+                          onMove={(delta) => {
+                            const next = moved(groupIds, gi, delta);
+                            if (next) reorder.mutate(next);
+                          }}
+                        />
+                        {t.children.map((c, ci) => (
+                          <View key={c.id} className="pl-4">
+                            <CategoryLine
+                              category={c}
+                              reordering={reordering}
+                              onMove={(delta) => {
+                                const next = moved(childIds, ci, delta);
+                                if (next) reorder.mutate(next);
+                              }}
+                            />
+                          </View>
+                        ))}
+                        {reordering ? null : (
+                          <Pressable
+                            onPress={() => router.push(`/category/new?parent=${t.group.id}`)}
+                            className="py-2 pl-4 active:opacity-60"
+                            accessibilityRole="button"
+                          >
+                            <Text className="text-primary text-xs font-semibold">
+                              + Subcategoría
+                            </Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    );
+                  })
+                )}
+              </Card>
+            );
+          })
         )}
 
-        <DeletedCategories />
+        {!reordering ? <DeletedCategories /> : null}
       </ScrollView>
     </Screen>
   );
 }
 
-function CategoryLine({ category, bold = false }: { category: Category; bold?: boolean }) {
-  return (
-    <Pressable
-      onPress={() => router.push(`/category/${category.id}`)}
-      className="flex-row items-center gap-3 py-2.5 active:opacity-60"
-      accessibilityRole="button"
-    >
+function CategoryLine({
+  category,
+  bold = false,
+  reordering = false,
+  onMove,
+}: {
+  category: Category;
+  bold?: boolean;
+  reordering?: boolean;
+  onMove?: (delta: number) => void;
+}) {
+  const inner = (
+    <View className="flex-row items-center gap-3 py-2.5">
       <View
         className="h-8 w-8 items-center justify-center rounded-full"
         style={{ backgroundColor: category.color || '#334155' }}
@@ -121,7 +187,39 @@ function CategoryLine({ category, bold = false }: { category: Category; bold?: b
       >
         {category.name}
       </Text>
-      <Text className="text-text-muted">›</Text>
+      {reordering ? (
+        <View className="flex-row gap-1">
+          <Pressable
+            onPress={() => onMove?.(-1)}
+            accessibilityLabel="Subir"
+            accessibilityRole="button"
+            className="h-8 w-8 items-center justify-center rounded-lg border border-border active:opacity-60"
+          >
+            <Text className="text-text">▲</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onMove?.(1)}
+            accessibilityLabel="Bajar"
+            accessibilityRole="button"
+            className="h-8 w-8 items-center justify-center rounded-lg border border-border active:opacity-60"
+          >
+            <Text className="text-text">▼</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Text className="text-text-muted">›</Text>
+      )}
+    </View>
+  );
+
+  if (reordering) return inner;
+  return (
+    <Pressable
+      onPress={() => router.push(`/category/${category.id}`)}
+      className="active:opacity-60"
+      accessibilityRole="button"
+    >
+      {inner}
     </Pressable>
   );
 }
