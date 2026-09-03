@@ -20,6 +20,8 @@ interface CategoryFormProps {
   categoryId?: string;
   /** Tipo inicial al crear (p. ej. desde el form de gasto). */
   initialType?: CategoryType;
+  /** Grupo (categoría padre) preseleccionado al crear una subcategoría. */
+  initialParent?: string;
 }
 
 const TYPE_OPTIONS: { value: CategoryType; label: string }[] = [
@@ -33,7 +35,11 @@ const SWATCHES = [
   '#F43F5E', '#64748B', '#94A3B8',
 ];
 
-export function CategoryForm({ categoryId, initialType = 'expense' }: CategoryFormProps) {
+export function CategoryForm({
+  categoryId,
+  initialType = 'expense',
+  initialParent,
+}: CategoryFormProps) {
   const editing = !!categoryId;
   const categoriesQ = useCategories();
   const create = useCreateCategory();
@@ -45,15 +51,29 @@ export function CategoryForm({ categoryId, initialType = 'expense' }: CategoryFo
     [categoriesQ.data, categoryId],
   );
 
+  const initialParentCat = useMemo(
+    () => categoriesQ.data?.find((c) => c.id === initialParent),
+    [categoriesQ.data, initialParent],
+  );
+
   const [name, setName] = useState('');
-  const [type, setType] = useState<CategoryType>(initialType);
+  const [type, setType] = useState<CategoryType>(
+    initialParentCat?.type ?? initialType,
+  );
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState<string | null>(null);
-  const [parentId, setParentId] = useState<string | null>(null);
+  const [parentId, setParentId] = useState<string | null>(initialParent ?? null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [prefilled, setPrefilled] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  // Al crear una subcategoría, hereda el tipo del grupo cuando cargan los datos.
+  useEffect(() => {
+    if (editing || !initialParentCat) return;
+    setType(initialParentCat.type);
+    setParentId(initialParentCat.id);
+  }, [editing, initialParentCat]);
 
   useEffect(() => {
     if (!editing || prefilled || !existing) return;
