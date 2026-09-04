@@ -150,6 +150,18 @@ export default function AppLayout() {
         options={{ presentation: 'modal', headerShown: false }}
       />
       <Stack.Screen
+        name="installments"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="installment/new"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="installment/[id]"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
         name="export"
         options={{ presentation: 'modal', headerShown: false }}
       />

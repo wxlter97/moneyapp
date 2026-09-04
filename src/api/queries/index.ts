@@ -12,6 +12,7 @@ import {
 import * as res from '@/api/resources';
 import type {
   CategoryInput,
+  InstallmentPurchaseInput,
   RecurringExpenseInput,
   TransactionInput,
   WalletInput,
@@ -285,6 +286,58 @@ export function useDeleteRecurringExpense() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({
     mutationFn: (id: string) => res.recurringExpenses.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
+// --- compras a plazo (cuotas) -----------------------------------
+export function useInstallments() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).installments(),
+    queryFn: res.installments.list,
+    enabled: !!ws,
+  });
+}
+
+export function useInstallment(id: string | undefined) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).installment(id ?? ''),
+    queryFn: () => res.installments.get(id!),
+    enabled: !!ws && !!id,
+  });
+}
+
+export function useCreateInstallment() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (input: InstallmentPurchaseInput) => res.installments.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateInstallment() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<InstallmentPurchaseInput> }) =>
+      res.installments.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteInstallment() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.installments.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function usePayInstallment() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.installments.pay(id),
     onSuccess: invalidate,
   });
 }

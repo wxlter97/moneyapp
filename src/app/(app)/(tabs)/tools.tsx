@@ -27,6 +27,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/recurring'),
   },
   {
+    glyph: '🧾',
+    label: 'Compras a plazo',
+    hint: 'Pagos en cuotas',
+    onPress: () => router.push('/installments'),
+  },
+  {
     glyph: '📤',
     label: 'Exportar datos',
     hint: 'Descarga en CSV',

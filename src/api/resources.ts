@@ -12,6 +12,8 @@ import type {
   CategoryBudget,
   CategoryInput,
   DashboardSummary,
+  InstallmentPurchase,
+  InstallmentPurchaseInput,
   MonthlySnapshot,
   NetWorthBreakdown,
   Paginated,
@@ -123,6 +125,22 @@ export const recurringExpenses = {
     api.patch<RecurringExpense>(`/recurring-expenses/${id}/`, input).then((r) => r.data),
   remove: (id: string) =>
     api.delete(`/recurring-expenses/${id}/`).then(() => undefined),
+};
+
+// --- compras a plazo (cuotas) ----------------------------------------
+export const installments = {
+  list: () => fetchAll<InstallmentPurchase>('/installment-purchases/'),
+  get: (id: string) =>
+    api.get<InstallmentPurchase>(`/installment-purchases/${id}/`).then((r) => r.data),
+  create: (input: InstallmentPurchaseInput) =>
+    api.post<InstallmentPurchase>('/installment-purchases/', input).then((r) => r.data),
+  update: (id: string, input: Partial<InstallmentPurchaseInput>) =>
+    api.patch<InstallmentPurchase>(`/installment-purchases/${id}/`, input).then((r) => r.data),
+  remove: (id: string) =>
+    api.delete(`/installment-purchases/${id}/`).then(() => undefined),
+  /** Registra la siguiente cuota (crea la transacción). */
+  pay: (id: string) =>
+    api.post<InstallmentPurchase>(`/installment-purchases/${id}/pay/`).then((r) => r.data),
 };
 
 // --- transacciones -----------------------------------------------------
