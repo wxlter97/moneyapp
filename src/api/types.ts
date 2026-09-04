@@ -313,6 +313,37 @@ export interface RecurringExpenseInput {
   is_active?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Compras a plazo (cuotas)
+// ---------------------------------------------------------------------------
+export interface InstallmentPurchase {
+  id: UUID;
+  wallet: UUID;
+  category: UUID;
+  description: string;
+  total_amount: Money;
+  installment_amount: Money;
+  installments_total: number;
+  installments_paid: number;
+  start_date: ISODate;
+  is_completed: boolean;
+  /** installment_amount × (total − pagadas). */
+  remaining_amount: Money;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+}
+
+export interface InstallmentPurchaseInput {
+  wallet: UUID;
+  category: UUID;
+  description: string;
+  total_amount: Money;
+  installment_amount: Money;
+  installments_total: number;
+  installments_paid?: number;
+  start_date: ISODate;
+}
+
 export interface MonthlySnapshot {
   id: UUID;
   month: number;

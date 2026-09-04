@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      # Los tipos de rutas de expo-router (.expo/types/router.d.ts) solo se
+      # generan al arrancar Metro; sin ellos `tsc` falla en los href tipados.
+      - name: Generar tipos de rutas de expo-router
+        run: |
+          (CI=1 npx expo start --offline >/tmp/expo.log 2>&1 &)
+          for i in $(seq 1 40); do
+            [ -f .expo/types/router.d.ts ] && break
+            sleep 2
+          done
+          pkill -f "expo start" || true
+          test -f .expo/types/router.d.ts
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Tests
+        run: npm test -- --ci
+
+      - name: Build web
+        run: npm run build:web
+        env:
+          EXPO_PUBLIC_API_URL: https://example.invalid/api/v1

@@ -1,7 +1,7 @@
 import { Text, type ColorValue } from 'react-native';
 import { Tabs } from 'expo-router';
 
-import { colors } from '@/theme';
+import { useColors } from '@/theme';
 
 function TabIcon({ glyph, color }: { glyph: string; color: ColorValue }) {
   return <Text style={{ fontSize: 18, color }}>{glyph}</Text>;
@@ -10,6 +10,7 @@ function TabIcon({ glyph, color }: { glyph: string; color: ColorValue }) {
 export const unstable_settings = { initialRouteName: 'dashboard' };
 
 export default function TabsLayout() {
+  const colors = useColors();
   return (
     <Tabs
       screenOptions={{

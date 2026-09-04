@@ -1,8 +1,28 @@
 /**
- * Tokens de tema en JS, espejo de `tailwind.config.js`. Úsalos cuando necesites
- * un color fuera de className (navegación de expo-router, StatusBar, gráficos).
+ * Tokens de tema en JS, espejo de `global.css` / `tailwind.config.js`. Úsalos
+ * cuando necesites un color fuera de className (navegación de expo-router,
+ * StatusBar, gráficos SVG, `trackColor` de Switch…).
+ *
+ * Para código dentro de React usa `useColors()` (reacciona al tema). El export
+ * `colors` es el tema OSCURO, como fallback sincrónico donde no hay hook.
  */
-export const colors = {
+import { useColorScheme } from 'nativewind';
+
+export interface ThemeColors {
+  bg: string;
+  surface: string;
+  surface2: string;
+  border: string;
+  text: string;
+  textMuted: string;
+  primary: string;
+  primaryFg: string;
+  income: string;
+  expense: string;
+  warning: string;
+}
+
+export const darkColors: ThemeColors = {
   bg: '#0B0D10',
   surface: '#15181D',
   surface2: '#1E232B',
@@ -14,7 +34,30 @@ export const colors = {
   income: '#3ECF8E',
   expense: '#FF6B6B',
   warning: '#F5A623',
-} as const;
+};
+
+export const lightColors: ThemeColors = {
+  bg: '#F7F7F5',
+  surface: '#FFFFFF',
+  surface2: '#EEF0F4',
+  border: '#E1E4EA',
+  text: '#14181F',
+  textMuted: '#5B6470',
+  primary: '#2F6CE9',
+  primaryFg: '#FFFFFF',
+  income: '#169E67',
+  expense: '#D6363C',
+  warning: '#B07416',
+};
+
+/** Fallback sincrónico (tema oscuro). Dentro de React preferí `useColors()`. */
+export const colors = darkColors;
+
+/** Paleta activa según el tema. Reacciona a los cambios de `colorScheme`. */
+export function useColors(): ThemeColors {
+  const { colorScheme } = useColorScheme();
+  return colorScheme === 'light' ? lightColors : darkColors;
+}
 
 /** Ancho máximo del contenido en pantallas grandes (web desktop). */
 export const MAX_CONTENT_WIDTH = 560;

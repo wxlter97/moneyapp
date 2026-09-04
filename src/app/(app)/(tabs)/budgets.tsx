@@ -11,13 +11,14 @@ import { Card } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
 import { Ring } from '@/components/ui/Ring';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
-import { colors } from '@/theme';
+import { useColors } from '@/theme';
 import { currentYearMonth } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 
 type Tab = 'restante' | 'informacion';
 
 export default function BudgetScreen() {
+  const colors = useColors();
   const [tab, setTab] = useState<Tab>('restante');
   const [month, setMonth] = useState(currentYearMonth);
   const budget = useBudgetReport(month);
@@ -85,8 +86,8 @@ export default function BudgetScreen() {
                 </Text>
               </Ring>
             </View>
-            {budget.data.groups.map((g) => (
-              <GroupCard key={g.group ?? g.group_name} group={g} currency={currency} />
+            {budget.data.groups.map((g, i) => (
+              <GroupCard key={g.group ?? g.group_name} group={g} currency={currency} index={i} />
             ))}
           </>
         ) : (
@@ -104,8 +105,14 @@ export default function BudgetScreen() {
                 </Labeled>
               </View>
             </Card>
-            {budget.data.groups.map((g) => (
-              <GroupCard key={g.group ?? g.group_name} group={g} currency={currency} showProvision />
+            {budget.data.groups.map((g, i) => (
+              <GroupCard
+                key={g.group ?? g.group_name}
+                group={g}
+                currency={currency}
+                showProvision
+                index={i}
+              />
             ))}
           </>
         )}
@@ -118,15 +125,19 @@ function GroupCard({
   group,
   currency,
   showProvision = false,
+  index = 0,
 }: {
   group: BudgetGroup;
   currency: string;
   showProvision?: boolean;
+  index?: number;
 }) {
   const remaining = toNumber(group.remaining);
   return (
     <Card
       title={group.group_name}
+      animated
+      index={index}
       action={
         <Money
           value={remaining}

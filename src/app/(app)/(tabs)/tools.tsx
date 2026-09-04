@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Card } from '@/components/ui/Card';
+import { Segmented } from '@/components/ui/Segmented';
+import { useThemeStore, type ThemePref } from '@/store/theme';
 
 interface Tool {
   glyph: string;
@@ -26,12 +28,36 @@ const TOOLS: Tool[] = [
     hint: 'Gastos e ingresos fijos',
     onPress: () => router.push('/recurring'),
   },
-  { glyph: '📤', label: 'Exportar datos', hint: 'Descarga en CSV', soon: true },
-  { glyph: '♻️', label: 'Restablecer', hint: 'Borrar todos los datos', soon: true },
+  {
+    glyph: '🧾',
+    label: 'Compras a plazo',
+    hint: 'Pagos en cuotas',
+    onPress: () => router.push('/installments'),
+  },
+  {
+    glyph: '📤',
+    label: 'Exportar datos',
+    hint: 'Descarga en CSV',
+    onPress: () => router.push('/export'),
+  },
+  {
+    glyph: '♻️',
+    label: 'Restablecer',
+    hint: 'Borrar datos del presupuesto',
+    onPress: () => router.push('/reset'),
+  },
+];
+
+const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
+  { value: 'light', label: 'Claro' },
+  { value: 'dark', label: 'Oscuro' },
+  { value: 'system', label: 'Sistema' },
 ];
 
 export default function ToolsScreen() {
   const version = Constants.expoConfig?.version ?? '—';
+  const themePref = useThemeStore((s) => s.pref);
+  const setThemePref = useThemeStore((s) => s.setPref);
 
   return (
     <View className="flex-1 bg-bg">
@@ -61,6 +87,10 @@ export default function ToolsScreen() {
               </View>
             ))}
           </View>
+        </Card>
+
+        <Card title="Apariencia">
+          <Segmented value={themePref} onChange={setThemePref} options={THEME_OPTIONS} />
         </Card>
 
         <Text className="text-text-muted self-center text-xs">Versión {version}</Text>

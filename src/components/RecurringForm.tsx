@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { Select } from '@/components/ui/Select';
 import { LoadingState } from '@/components/ui/states';
-import { colors } from '@/theme';
+import { useColors } from '@/theme';
 import { todayISO } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 
@@ -33,6 +33,7 @@ const FREQ_OPTIONS = RECURRENCE_FREQUENCIES.map((f) => ({
 }));
 
 export function RecurringForm({ recurringId }: { recurringId?: string }) {
+  const colors = useColors();
   const editing = !!recurringId;
   const existing = useRecurringExpense(recurringId);
   const categoriesQ = useCategories();

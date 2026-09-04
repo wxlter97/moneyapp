@@ -20,7 +20,7 @@ import { Segmented } from '@/components/ui/Segmented';
 import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
-import { colors } from '@/theme';
+import { useColors } from '@/theme';
 import { toNumber } from '@/lib/money';
 import { WALLET_COLORS } from '@/lib/wallets';
 
@@ -43,6 +43,7 @@ const KIND_OPTIONS: { value: WalletKind; label: string }[] = [
 ];
 
 export function WalletForm({ walletId }: WalletFormProps) {
+  const colors = useColors();
   const editing = !!walletId;
   const existing = useWallet(walletId);
   const walletsQ = useWallets();

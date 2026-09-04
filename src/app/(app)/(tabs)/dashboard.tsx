@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link, router } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
+import { FadeInView } from '@/components/ui/FadeInView';
+
 import {
   useBudgetReport,
   useDashboardSummary,
@@ -114,6 +116,8 @@ function ResumenTab({ currency }: { currency: string }) {
 
       <Card
         title="Carteras"
+        animated
+        index={1}
         action={
           <Link href="/wallets" asChild>
             <Text className="text-primary text-xs">Ver todo</Text>
@@ -134,6 +138,8 @@ function ResumenTab({ currency }: { currency: string }) {
 
       <Card
         title="Presupuesto"
+        animated
+        index={2}
         action={
           <Link href="/budgets" asChild>
             <Text className="text-primary text-xs">Ver todo</Text>
@@ -170,7 +176,7 @@ function ScheduledCard({
   if (items.length === 0) return null;
 
   return (
-    <Card title="Programado">
+    <Card title="Programado" animated index={0}>
       {items.map((it, i) => (
         <View
           key={`${it.kind}-${it.source_id}-${it.date}`}
@@ -233,8 +239,8 @@ function ListaTab({
       ) : items.length === 0 ? (
         <EmptyState title="Sin movimientos este mes" hint="Agrega uno con el botón +." />
       ) : (
-        days.map((day) => (
-          <View key={day.date}>
+        days.map((day, di) => (
+          <FadeInView key={day.date} index={di}>
             <Text className="text-text-muted pb-1 pt-3 text-xs font-semibold uppercase tracking-wide">
               {formatDayHeader(day.date)}
             </Text>
@@ -252,7 +258,7 @@ function ListaTab({
                 </View>
               ))}
             </View>
-          </View>
+          </FadeInView>
         ))
       )}
     </ScrollView>

@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tema claro (valores RGB separados por espacio para soportar alpha). */
+    --color-bg: 247 247 245;
+    --color-surface: 255 255 255;
+    --color-surface-2: 238 240 244;
+    --color-border: 225 228 234;
+    --color-text: 20 24 31;
+    --color-text-muted: 91 100 112;
+    --color-primary: 47 108 233;
+    --color-primary-fg: 255 255 255;
+    --color-income: 22 158 103;
+    --color-expense: 214 54 60;
+    --color-warning: 176 116 22;
+  }
+
+  :root.dark {
+    /* Tema oscuro (por defecto, dark-first). */
+    --color-bg: 11 13 16;
+    --color-surface: 21 24 29;
+    --color-surface-2: 30 35 43;
+    --color-border: 42 47 56;
+    --color-text: 242 244 247;
+    --color-text-muted: 154 164 178;
+    --color-primary: 79 140 255;
+    --color-primary-fg: 255 255 255;
+    --color-income: 62 207 142;
+    --color-expense: 255 107 107;
+    --color-warning: 245 166 35;
+  }
+}

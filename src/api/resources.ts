@@ -12,6 +12,8 @@ import type {
   CategoryBudget,
   CategoryInput,
   DashboardSummary,
+  InstallmentPurchase,
+  InstallmentPurchaseInput,
   MonthlySnapshot,
   NetWorthBreakdown,
   Paginated,
@@ -47,10 +49,21 @@ async function fetchAll<T>(path: string, params: object = {}): Promise<T[]> {
 }
 
 // --- workspaces (sin X-Workspace-ID) ---------------------------------------
+export type ResetScope = 'movimientos' | 'todo';
+
 export const workspaces = {
   list: () => fetchAll<Workspace>('/workspaces/'),
   create: (name: string) =>
     api.post<Workspace>('/workspaces/', { name }, { skipWorkspace: true }).then((r) => r.data),
+  /** Borra datos del workspace. Irreversible; solo owner. */
+  reset: (id: string, scope: ResetScope) =>
+    api
+      .post<{ scope: ResetScope; deleted: Record<string, number> }>(
+        `/workspaces/${id}/reset/`,
+        { scope, confirm: true },
+        { skipWorkspace: true },
+      )
+      .then((r) => r.data),
 };
 
 // --- carteras (wallets) -------------------------------------------------
@@ -112,6 +125,22 @@ export const recurringExpenses = {
     api.patch<RecurringExpense>(`/recurring-expenses/${id}/`, input).then((r) => r.data),
   remove: (id: string) =>
     api.delete(`/recurring-expenses/${id}/`).then(() => undefined),
+};
+
+// --- compras a plazo (cuotas) ----------------------------------------
+export const installments = {
+  list: () => fetchAll<InstallmentPurchase>('/installment-purchases/'),
+  get: (id: string) =>
+    api.get<InstallmentPurchase>(`/installment-purchases/${id}/`).then((r) => r.data),
+  create: (input: InstallmentPurchaseInput) =>
+    api.post<InstallmentPurchase>('/installment-purchases/', input).then((r) => r.data),
+  update: (id: string, input: Partial<InstallmentPurchaseInput>) =>
+    api.patch<InstallmentPurchase>(`/installment-purchases/${id}/`, input).then((r) => r.data),
+  remove: (id: string) =>
+    api.delete(`/installment-purchases/${id}/`).then(() => undefined),
+  /** Registra la siguiente cuota (crea la transacción). */
+  pay: (id: string) =>
+    api.post<InstallmentPurchase>(`/installment-purchases/${id}/pay/`).then((r) => r.data),
 };
 
 // --- transacciones -----------------------------------------------------
