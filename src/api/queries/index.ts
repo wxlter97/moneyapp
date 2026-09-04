@@ -10,7 +10,12 @@ import {
 } from '@tanstack/react-query';
 
 import * as res from '@/api/resources';
-import type { TransactionInput, WalletInput } from '@/api/types';
+import type {
+  CategoryInput,
+  RecurringExpenseInput,
+  TransactionInput,
+  WalletInput,
+} from '@/api/types';
 import { currentYearMonth, type YearMonth } from '@/lib/date';
 import { useWorkspaceStore } from '@/store/workspace';
 import { qk } from './keys';
@@ -50,11 +55,11 @@ export function useCreateWorkspace() {
 }
 
 // --- carteras (wallets) --------------------------------------------
-export function useWallets() {
+export function useWallets(params?: res.WalletListParams) {
   const ws = useActiveWs();
   return useQuery({
-    queryKey: qk.ws(ws).wallets(),
-    queryFn: () => res.wallets.list(),
+    queryKey: qk.ws(ws).wallets(params),
+    queryFn: () => res.wallets.list(params),
     enabled: !!ws,
   });
 }
@@ -93,12 +98,86 @@ export function useDeleteWallet() {
   });
 }
 
+export function useArchiveWallet() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.wallets.archive(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUnarchiveWallet() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.wallets.unarchive(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReorderWallets() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (ids: string[]) => res.wallets.reorder(ids),
+    onSuccess: invalidate,
+  });
+}
+
 export function useCategories() {
   const ws = useActiveWs();
   return useQuery({
     queryKey: qk.ws(ws).categories(),
     queryFn: res.categories.list,
     enabled: !!ws,
+  });
+}
+
+export function useCreateCategory() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (input: CategoryInput) => res.categories.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateCategory() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<CategoryInput> }) =>
+      res.categories.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteCategory() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.categories.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletedCategories() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).categoriesDeleted(),
+    queryFn: res.categories.deleted,
+    enabled: !!ws,
+  });
+}
+
+export function useRestoreCategory() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.categories.restore(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReorderCategories() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (ids: string[]) => res.categories.reorder(ids),
+    onSuccess: invalidate,
   });
 }
 
@@ -156,6 +235,50 @@ export function useCategoryBudgets(ym: YearMonth = currentYearMonth()) {
   });
 }
 
+// --- recurrentes -------------------------------------------------
+export function useRecurringExpenses() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).recurringExpenses(),
+    queryFn: res.recurringExpenses.list,
+    enabled: !!ws,
+  });
+}
+
+export function useRecurringExpense(id: string | undefined) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).recurringExpense(id ?? ''),
+    queryFn: () => res.recurringExpenses.get(id!),
+    enabled: !!ws && !!id,
+  });
+}
+
+export function useCreateRecurringExpense() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (input: RecurringExpenseInput) => res.recurringExpenses.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateRecurringExpense() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<RecurringExpenseInput> }) =>
+      res.recurringExpenses.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteRecurringExpense() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.recurringExpenses.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
 // --- snapshots ----------------------------------------------------
 export function useMonthlySnapshots() {
   const ws = useActiveWs();
@@ -199,6 +322,16 @@ export function useCashflow(months = 6) {
   return useQuery({
     queryKey: qk.ws(ws).reportCashflow(months),
     queryFn: () => res.reports.cashflow(months),
+    enabled: !!ws,
+  });
+}
+
+/** Recurrentes + cuotas próximas (default: hoy → fin de mes). */
+export function useScheduled(range?: { since?: string; until?: string }) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).reportScheduled(range),
+    queryFn: () => res.reports.scheduled(range),
     enabled: !!ws,
   });
 }

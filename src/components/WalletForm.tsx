@@ -2,14 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import {
+  useArchiveWallet,
   useCreateWallet,
   useDeleteWallet,
+  useUnarchiveWallet,
   useUpdateWallet,
   useWallet,
   useWallets,
 } from '@/api/queries';
 import { errorMessage, fieldErrors } from '@/api/errors';
-import type { WalletInput, WalletPurpose } from '@/api/types';
+import type { WalletInput, WalletKind, WalletPurpose } from '@/api/types';
 import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +22,7 @@ import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { colors } from '@/theme';
 import { toNumber } from '@/lib/money';
+import { WALLET_COLORS } from '@/lib/wallets';
 
 interface WalletFormProps {
   walletId?: string;
@@ -32,6 +35,13 @@ const PURPOSE_OPTIONS: { value: WalletPurpose; label: string }[] = [
   { value: 'asset', label: 'Activo' },
 ];
 
+const KIND_OPTIONS: { value: WalletKind; label: string }[] = [
+  { value: 'bank', label: 'Banco' },
+  { value: 'credit', label: 'Crédito' },
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'custom', label: 'Otro' },
+];
+
 export function WalletForm({ walletId }: WalletFormProps) {
   const editing = !!walletId;
   const existing = useWallet(walletId);
@@ -39,9 +49,15 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const create = useCreateWallet();
   const update = useUpdateWallet();
   const remove = useDeleteWallet();
+  const archive = useArchiveWallet();
+  const unarchive = useUnarchiveWallet();
 
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState<WalletPurpose>('spending');
+  const [kind, setKind] = useState<WalletKind>('bank');
+  const [color, setColor] = useState('');
+  const [creditLimit, setCreditLimit] = useState('0.00');
+  const [isArchived, setIsArchived] = useState(false);
   const [amount, setAmount] = useState('0.00');
   const [debtOwedToUs, setDebtOwedToUs] = useState(false); // deuda: "me deben"
   const [parentId, setParentId] = useState<string | null>(null);
@@ -50,7 +66,12 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [goalAmount, setGoalAmount] = useState('0.00');
   const [goalDate, setGoalDate] = useState('');
   const [monthly, setMonthly] = useState('0.00');
+  const [debtTotal, setDebtTotal] = useState('0.00');
+  const [interestRate, setInterestRate] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [cardLast4, setCardLast4] = useState('');
+  const [billingDay, setBillingDay] = useState('');
+  const [paymentDueDay, setPaymentDueDay] = useState('');
   const [counterparty, setCounterparty] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -62,6 +83,10 @@ export function WalletForm({ walletId }: WalletFormProps) {
     const w = existing.data;
     setName(w.name);
     setPurpose(w.purpose);
+    setKind(w.kind);
+    setColor(w.color ?? '');
+    setCreditLimit(w.credit_limit ? toNumber(w.credit_limit).toFixed(2) : '0.00');
+    setIsArchived(w.is_archived);
     const bal = toNumber(w.opening_balance);
     setDebtOwedToUs(w.purpose === 'debt' && bal > 0);
     setAmount(Math.abs(bal).toFixed(2));
@@ -71,7 +96,12 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setGoalAmount(w.goal_amount ? toNumber(w.goal_amount).toFixed(2) : '0.00');
     setGoalDate(w.goal_date ?? '');
     setMonthly(w.monthly_contribution ? toNumber(w.monthly_contribution).toFixed(2) : '0.00');
+    setDebtTotal(w.purpose === 'debt' && w.goal_amount ? toNumber(w.goal_amount).toFixed(2) : '0.00');
+    setInterestRate(w.interest_rate ? toNumber(w.interest_rate).toString() : '');
+    setDueDate(w.due_date ?? '');
     setCardLast4(w.card_last4 ?? '');
+    setBillingDay(w.billing_cycle_day ? String(w.billing_cycle_day) : '');
+    setPaymentDueDay(w.payment_due_day ? String(w.payment_due_day) : '');
     setCounterparty(w.counterparty ?? '');
     setPrefilled(true);
   }, [editing, prefilled, existing.data]);
@@ -86,13 +116,39 @@ export function WalletForm({ walletId }: WalletFormProps) {
 
   const isDebt = purpose === 'debt';
   const isSavings = purpose === 'savings';
+  const isSpending = purpose === 'spending';
+  const cardEligible = isSpending || isDebt;
+
+  function parseDay(value: string): number | null {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) && n >= 1 && n <= 31 ? n : null;
+  }
   const amountNum = toNumber(amount);
-  const busy = create.isPending || update.isPending || remove.isPending;
+  const busy =
+    create.isPending ||
+    update.isPending ||
+    remove.isPending ||
+    archive.isPending ||
+    unarchive.isPending;
   const canSubmit = name.trim().length > 0 && !busy;
 
   function onChangePurpose(next: WalletPurpose) {
     setPurpose(next);
     setParentId(null);
+    if (next === 'debt') setKind('credit');
+    else if (next === 'spending') setKind('bank');
+  }
+
+  async function onToggleArchive() {
+    if (!walletId) return;
+    setFormError(null);
+    try {
+      if (isArchived) await unarchive.mutateAsync(walletId);
+      else await archive.mutateAsync(walletId);
+      dismissModal();
+    } catch (err) {
+      setFormError(errorMessage(err, 'No se pudo cambiar el archivado.'));
+    }
   }
 
   async function onSubmit() {
@@ -100,18 +156,35 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setFields({});
 
     const signed = isDebt && !debtOwedToUs ? -amountNum : amountNum;
+    const goalAmountValue = isSavings
+      ? toNumber(goalAmount) > 0
+        ? toNumber(goalAmount).toFixed(2)
+        : null
+      : isDebt && toNumber(debtTotal) > 0
+        ? toNumber(debtTotal).toFixed(2)
+        : null;
     const payload: WalletInput = {
       name: name.trim(),
       purpose,
+      kind,
+      color: color || '',
       parent: parentId || null,
       opening_balance: signed.toFixed(2),
       counts_toward_net_worth: countsNet,
+      credit_limit:
+        kind === 'credit' && toNumber(creditLimit) > 0
+          ? toNumber(creditLimit).toFixed(2)
+          : null,
       is_default: isDefault,
-      goal_amount: isSavings && toNumber(goalAmount) > 0 ? toNumber(goalAmount).toFixed(2) : null,
+      goal_amount: goalAmountValue,
       goal_date: isSavings && goalDate ? goalDate : null,
       monthly_contribution:
         isSavings && toNumber(monthly) > 0 ? toNumber(monthly).toFixed(2) : null,
-      card_last4: isDebt && cardLast4.trim() ? cardLast4.trim() : null,
+      interest_rate: isDebt && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
+      due_date: isDebt && dueDate ? dueDate : null,
+      card_last4: cardEligible && cardLast4.trim() ? cardLast4.trim() : null,
+      billing_cycle_day: cardEligible ? parseDay(billingDay) : null,
+      payment_due_day: cardEligible ? parseDay(paymentDueDay) : null,
       counterparty: isDebt ? counterparty.trim() : '',
     };
 
@@ -169,6 +242,44 @@ export function WalletForm({ walletId }: WalletFormProps) {
           </View>
         ) : null}
 
+        <View className="gap-1.5">
+          <Text className="text-text-muted text-sm">Subtipo</Text>
+          <Segmented value={kind} onChange={setKind} options={KIND_OPTIONS} />
+        </View>
+
+        <View className="gap-1.5">
+          <Text className="text-text-muted text-sm">Color</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="gap-2 py-1"
+            keyboardShouldPersistTaps="handled"
+          >
+            {WALLET_COLORS.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setColor(color === c ? '' : c)}
+                accessibilityRole="button"
+                accessibilityLabel={`Color ${c}`}
+                className={`h-9 w-9 items-center justify-center rounded-full ${
+                  color === c ? 'border-2 border-text' : ''
+                }`}
+                style={{ backgroundColor: c }}
+              >
+                {color === c ? <Text className="text-xs text-white">✓</Text> : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        {kind === 'credit' ? (
+          <AmountInput
+            label="Límite de crédito (opcional)"
+            value={creditLimit}
+            onChangeText={setCreditLimit}
+          />
+        ) : null}
+
         {isDebt ? (
           <Segmented
             value={debtOwedToUs ? 'favor' : 'contra'}
@@ -208,6 +319,39 @@ export function WalletForm({ walletId }: WalletFormProps) {
 
         {isDebt ? (
           <>
+            <AmountInput
+              label="Monto total de la deuda (opcional)"
+              value={debtTotal}
+              onChangeText={setDebtTotal}
+            />
+            {toNumber(debtTotal) > amountNum && !debtOwedToUs ? (
+              <Text className="text-text-muted -mt-2 text-xs">
+                Aportado / pagado hasta ahora:{' '}
+                {(toNumber(debtTotal) - amountNum).toFixed(2)}
+              </Text>
+            ) : null}
+            <TextField
+              label="Tasa de interés % (opcional)"
+              value={interestRate}
+              onChangeText={(t) => setInterestRate(t.replace(/[^0-9.]/g, ''))}
+              keyboardType="decimal-pad"
+              placeholder="12.5"
+            />
+            <DateField
+              label="Fecha de vencimiento (opcional)"
+              value={dueDate || '2026-12-31'}
+              onChange={setDueDate}
+            />
+            <TextField
+              label="Persona / entidad (opcional)"
+              value={counterparty}
+              onChangeText={setCounterparty}
+            />
+          </>
+        ) : null}
+
+        {cardEligible ? (
+          <>
             <TextField
               label="Últimos 4 dígitos (tarjeta, opcional)"
               value={cardLast4}
@@ -215,11 +359,26 @@ export function WalletForm({ walletId }: WalletFormProps) {
               keyboardType="number-pad"
               placeholder="4242"
             />
-            <TextField
-              label="Persona / entidad (opcional)"
-              value={counterparty}
-              onChangeText={setCounterparty}
-            />
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <TextField
+                  label="Día de corte (opcional)"
+                  value={billingDay}
+                  onChangeText={(t) => setBillingDay(t.replace(/\D/g, '').slice(0, 2))}
+                  keyboardType="number-pad"
+                  placeholder="15"
+                />
+              </View>
+              <View className="flex-1">
+                <TextField
+                  label="Día de pago (opcional)"
+                  value={paymentDueDay}
+                  onChangeText={(t) => setPaymentDueDay(t.replace(/\D/g, '').slice(0, 2))}
+                  keyboardType="number-pad"
+                  placeholder="5"
+                />
+              </View>
+            </View>
           </>
         ) : null}
 
@@ -253,14 +412,26 @@ export function WalletForm({ walletId }: WalletFormProps) {
         />
 
         {editing && !confirmingDelete ? (
-          <Pressable
-            onPress={() => setConfirmingDelete(true)}
-            disabled={busy}
-            className="items-center py-2 active:opacity-60"
-            accessibilityRole="button"
-          >
-            <Text className="text-expense text-sm font-semibold">Eliminar cartera</Text>
-          </Pressable>
+          <View className="items-center gap-3 py-2">
+            <Pressable
+              onPress={onToggleArchive}
+              disabled={busy}
+              className="active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Text className="text-primary text-sm font-semibold">
+                {isArchived ? 'Desarchivar cartera' : 'Archivar cartera'}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setConfirmingDelete(true)}
+              disabled={busy}
+              className="active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Text className="text-expense text-sm font-semibold">Eliminar cartera</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         {editing && confirmingDelete ? (

@@ -1,4 +1,4 @@
-import type { TransactionListParams } from '@/api/resources';
+import type { TransactionListParams, WalletListParams } from '@/api/resources';
 import type { YearMonth } from '@/lib/date';
 
 /**
@@ -12,9 +12,11 @@ export const qk = {
   ws: (ws: string | null) => ({
     all: ['ws', ws] as const,
 
-    wallets: () => ['ws', ws, 'wallets'] as const,
+    wallets: (params?: WalletListParams) =>
+      ['ws', ws, 'wallets', params ?? {}] as const,
     wallet: (id: string) => ['ws', ws, 'wallet', id] as const,
     categories: () => ['ws', ws, 'categories'] as const,
+    categoriesDeleted: () => ['ws', ws, 'categories', 'deleted'] as const,
 
     transactions: (params?: TransactionListParams) =>
       ['ws', ws, 'transactions', params ?? {}] as const,
@@ -23,11 +25,16 @@ export const qk = {
     categoryBudgets: (ym?: YearMonth) =>
       ['ws', ws, 'category-budgets', ym ?? {}] as const,
 
+    recurringExpenses: () => ['ws', ws, 'recurring-expenses'] as const,
+    recurringExpense: (id: string) => ['ws', ws, 'recurring-expense', id] as const,
+
     monthlySnapshots: () => ['ws', ws, 'monthly-snapshots'] as const,
 
     reportNetWorth: () => ['ws', ws, 'reports', 'net-worth'] as const,
     reportSummary: () => ['ws', ws, 'reports', 'summary'] as const,
     reportBudget: (ym?: YearMonth) => ['ws', ws, 'reports', 'budget', ym ?? {}] as const,
     reportCashflow: (months: number) => ['ws', ws, 'reports', 'cashflow', months] as const,
+    reportScheduled: (range?: { since?: string; until?: string }) =>
+      ['ws', ws, 'reports', 'scheduled', range ?? {}] as const,
   }),
 };

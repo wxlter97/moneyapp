@@ -48,3 +48,13 @@ export function formatSigned(value: number, currency = 'USD'): string {
   if (value < 0) return `-${s}`;
   return s;
 }
+
+/** Estilo Buddy: negativos entre paréntesis, "($15.99)". */
+export function formatParens(
+  value: Money | number | null | undefined,
+  currency = 'USD',
+): string {
+  const n = typeof value === 'number' ? value : toNumber(value);
+  const s = formatMoney(Math.abs(n), currency);
+  return n < 0 ? `(${s})` : s;
+}

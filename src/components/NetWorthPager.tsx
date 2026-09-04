@@ -54,6 +54,11 @@ export function NetWorthPager({
         showsHorizontalScrollIndicator={false}
         snapToInterval={cardWidth}
         decelerationRate="fast"
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          const next = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+          setIndex((prev) => (prev === next ? prev : next));
+        }}
         onMomentumScrollEnd={(e) =>
           setIndex(Math.round(e.nativeEvent.contentOffset.x / cardWidth))
         }

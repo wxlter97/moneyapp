@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 /** Cierra el modal; si no hay pila previa (deep-link), vuelve al historial. */
 export function dismissModal() {
   if (router.canGoBack()) router.back();
-  else router.replace('/history');
+  else router.replace('/dashboard');
 }
 
 export function ModalHeader({ title }: { title: string }) {

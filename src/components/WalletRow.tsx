@@ -4,6 +4,7 @@ import type { Wallet } from '@/api/types';
 import { Money } from '@/components/ui/Money';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { toNumber } from '@/lib/money';
+import { walletColor } from '@/lib/wallets';
 
 interface WalletRowProps {
   wallet: Wallet;
@@ -20,6 +21,10 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
   return (
     <View className="py-3" style={{ paddingLeft: depth * 16 }}>
       <View className="flex-row items-center justify-between">
+        <View
+          className="mr-3 h-8 w-1.5 rounded-full"
+          style={{ backgroundColor: walletColor(wallet) }}
+        />
         <View className="flex-1 pr-3">
           <Text className="text-text text-base" numberOfLines={1}>
             {wallet.name}

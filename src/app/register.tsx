@@ -23,7 +23,7 @@ export default function RegisterScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
 
-  if (status === 'authenticated') return <Redirect href="/history" />;
+  if (status === 'authenticated') return <Redirect href="/dashboard" />;
 
   const set = (key: keyof typeof form) => (v: string) =>
     setForm((f) => ({ ...f, [key]: v }));

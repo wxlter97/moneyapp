@@ -133,6 +133,30 @@ export default function AppLayout() {
         name="wallet/[id]"
         options={{ presentation: 'modal', headerShown: false }}
       />
+      <Stack.Screen
+        name="categories"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="recurring"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="recurring/new"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="recurring/[id]"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="category/new"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="category/[id]"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
     </Stack>
   );
 }

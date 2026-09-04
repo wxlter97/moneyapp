@@ -18,7 +18,7 @@ export default function LoginScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
 
-  if (status === 'authenticated') return <Redirect href="/history" />;
+  if (status === 'authenticated') return <Redirect href="/dashboard" />;
 
   async function onSubmit() {
     setSubmitting(true);
