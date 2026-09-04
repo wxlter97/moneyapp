@@ -22,7 +22,7 @@ import { PickerRow } from '@/components/ui/PickerRow';
 import { Segmented } from '@/components/ui/Segmented';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
-import { colors } from '@/theme';
+import { useColors } from '@/theme';
 import { todayISO } from '@/lib/date';
 import { formatMoney, toNumber } from '@/lib/money';
 
@@ -33,6 +33,7 @@ interface TransactionFormProps {
 type OpenRow = 'category' | 'from' | 'to' | null;
 
 export function TransactionForm({ transactionId }: TransactionFormProps) {
+  const colors = useColors();
   const editing = !!transactionId;
   const existing = useTransaction(transactionId);
 

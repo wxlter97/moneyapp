@@ -11,13 +11,14 @@ import { Card } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
 import { Ring } from '@/components/ui/Ring';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
-import { colors } from '@/theme';
+import { useColors } from '@/theme';
 import { currentYearMonth } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 
 type Tab = 'restante' | 'informacion';
 
 export default function BudgetScreen() {
+  const colors = useColors();
   const [tab, setTab] = useState<Tab>('restante');
   const [month, setMonth] = useState(currentYearMonth);
   const budget = useBudgetReport(month);
