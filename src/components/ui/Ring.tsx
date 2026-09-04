@@ -32,14 +32,7 @@ export function Ring({
   return (
     <View style={{ width: size, height: size }} className="items-center justify-center">
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
-        <Circle
-          cx={mid}
-          cy={mid}
-          r={r}
-          stroke={trackColor}
-          strokeWidth={stroke}
-          fill="none"
-        />
+        <Circle cx={mid} cy={mid} r={r} stroke={trackColor} strokeWidth={stroke} fill="none" />
         <Circle
           cx={mid}
           cy={mid}

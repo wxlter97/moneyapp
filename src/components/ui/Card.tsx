@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Text, View } from 'react-native';
 
 interface CardProps {
   children: ReactNode;
@@ -7,10 +8,33 @@ interface CardProps {
   /** Contenido alineado a la derecha del título (ej. un enlace, un valor). */
   action?: ReactNode;
   className?: string;
+  /** Anima la entrada (deslizar + fundido). Úsalo en listas de cards. */
+  animated?: boolean;
+  /** Índice para escalonar la animación de entrada. */
+  index?: number;
 }
 
-export function Card({ children, title, action, className = '' }: CardProps) {
-  return (
+export function Card({
+  children,
+  title,
+  action,
+  className = '',
+  animated = false,
+  index = 0,
+}: CardProps) {
+  const v = useRef(new Animated.Value(animated ? 0 : 1)).current;
+
+  useEffect(() => {
+    if (!animated) return;
+    Animated.timing(v, {
+      toValue: 1,
+      duration: 240,
+      delay: Math.min(index, 6) * 45,
+      useNativeDriver: true,
+    }).start();
+  }, [animated, index, v]);
+
+  const body = (
     <View className={`rounded-2xl border border-border bg-surface p-4 ${className}`}>
       {(title || action) && (
         <View className="mb-3 flex-row items-center justify-between">
@@ -26,5 +50,20 @@ export function Card({ children, title, action, className = '' }: CardProps) {
       )}
       {children}
     </View>
+  );
+
+  if (!animated) return body;
+
+  return (
+    <Animated.View
+      style={{
+        opacity: v,
+        transform: [
+          { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+        ],
+      }}
+    >
+      {body}
+    </Animated.View>
   );
 }
