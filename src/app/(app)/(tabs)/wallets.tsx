@@ -52,7 +52,7 @@ export default function WalletsScreen() {
         }
       />
 
-      <ScrollView contentContainerClassName="px-4 pb-28 pt-4 self-center w-full max-w-[560px] gap-4">
+      <ScrollView contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4">
         {loading ? (
           <LoadingState />
         ) : netWorth.isError || wallets.isError || !netWorth.data ? (

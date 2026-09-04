@@ -35,7 +35,16 @@ export function Card({
   }, [animated, index, v]);
 
   const body = (
-    <View className={`rounded-2xl border border-border bg-surface p-4 ${className}`}>
+    <View
+      className={`rounded-2xl border border-border bg-surface p-4 ${className}`}
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 1,
+      }}
+    >
       {(title || action) && (
         <View className="mb-3 flex-row items-center justify-between">
           {title ? (

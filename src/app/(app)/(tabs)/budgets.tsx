@@ -67,7 +67,7 @@ export default function BudgetScreen() {
         />
       </SectionHeader>
 
-      <ScrollView contentContainerClassName="px-4 pb-28 pt-4 self-center w-full max-w-[560px] gap-4">
+      <ScrollView contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4">
         <MonthSwitcher value={month} onChange={setMonth} />
 
         {budget.isLoading ? (

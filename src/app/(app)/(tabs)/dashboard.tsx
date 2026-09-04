@@ -92,7 +92,7 @@ function ResumenTab({ currency }: { currency: string }) {
     return <ErrorState error={summary.error} onRetry={summary.refetch} />;
 
   return (
-    <ScrollView contentContainerClassName="px-4 pb-28 pt-4 self-center w-full max-w-[560px] gap-4">
+    <ScrollView contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4">
       {summary.data ? (
         <View className="gap-2">
           <Text className="text-text-muted text-xs font-semibold uppercase tracking-wide">
@@ -228,7 +228,7 @@ function ListaTab({
   const currency = items[0]?.currency ?? 'USD';
 
   return (
-    <ScrollView contentContainerClassName="px-4 pb-28 pt-4 self-center w-full max-w-[560px] gap-3">
+    <ScrollView contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-3">
       <MonthSwitcher value={month} onChange={onMonth} />
       <SummaryTriple income={totals.income} expenses={totals.expenses} currency={currency} />
 

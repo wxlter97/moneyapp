@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import type { Category, Transaction, Wallet } from '@/api/types';
+import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { walletLabel } from '@/api/queries/lookups';
 import { toNumber } from '@/lib/money';
@@ -38,7 +39,7 @@ export function TransactionRow({ txn, category, wallet, toWallet, onPress }: Tra
     ? `${walletLabel(wallet)} → ${walletLabel(toWallet)}`
     : `${category?.name ?? '—'} · ${walletLabel(wallet)}`;
 
-  const glyph = isTransfer ? '⇄' : category?.icon || (isIncome ? '↗' : '•');
+  const glyph = category?.icon;
   const circleColor = isTransfer ? '#334155' : category?.color || '#334155';
 
   return (
@@ -52,7 +53,15 @@ export function TransactionRow({ txn, category, wallet, toWallet, onPress }: Tra
         className="h-9 w-9 items-center justify-center rounded-full"
         style={{ backgroundColor: circleColor }}
       >
-        <Text className="text-sm">{glyph}</Text>
+        {glyph ? (
+          <Text className="text-sm">{glyph}</Text>
+        ) : (
+          <Icon
+            name={isTransfer ? 'swap' : isIncome ? 'arrow-up-right' : 'tag'}
+            size={16}
+            color="#FFFFFF"
+          />
+        )}
       </View>
 
       <View className="flex-1">

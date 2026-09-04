@@ -3,7 +3,10 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { useCreateWorkspace } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
+import { haptics } from '@/lib/haptics';
 import { useWorkspaceStore } from '@/store/workspace';
+import { FadeInView } from './ui/FadeInView';
+import { Icon } from './ui/Icon';
 
 /**
  * Selector "Casa ▾": cambia el workspace activo o crea uno nuevo.
@@ -22,6 +25,7 @@ export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'defa
   const [error, setError] = useState<string | null>(null);
 
   const active = workspaces.find((w) => w.id === activeId);
+  const iconColor = tone === 'light' ? '#FFFFFFB3' : '#9AA4B2';
 
   function close() {
     setOpen(false);
@@ -34,8 +38,10 @@ export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'defa
     setError(null);
     try {
       await create.mutateAsync(name.trim());
+      haptics.success();
       close();
     } catch (err) {
+      haptics.error();
       setError(errorMessage(err, 'No se pudo crear el presupuesto.'));
     }
   }
@@ -43,7 +49,11 @@ export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'defa
   return (
     <View className="flex-1 pr-3">
       <Pressable
-        onPress={() => (open ? close() : setOpen(true))}
+        onPress={() => {
+          haptics.tap();
+          if (open) close();
+          else setOpen(true);
+        }}
         className="flex-row items-center gap-1 self-start py-0.5 active:opacity-70"
         accessibilityRole="button"
       >
@@ -52,76 +62,78 @@ export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'defa
         >
           {active?.name ?? '—'}
         </Text>
-        <Text className={`text-lg ${tone === 'light' ? 'text-white/70' : 'text-text-muted'}`}>
-          {open ? '▴' : '▾'}
-        </Text>
+        <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color={iconColor} />
       </Pressable>
 
       {open ? (
-        <View className="mt-2 rounded-2xl border border-border bg-surface-2 p-2">
-          {workspaces.map((w) => (
-            <Pressable
-              key={w.id}
-              onPress={() => {
-                setActiveId(w.id);
-                close();
-              }}
-              className="flex-row items-center justify-between rounded-xl px-3 py-2.5 active:bg-surface"
-            >
-              <View>
-                <Text className="text-text text-base">{w.name}</Text>
-                <Text className="text-text-muted text-xs">
-                  {w.role || 'miembro'} · {w.member_count}{' '}
-                  {w.member_count === 1 ? 'miembro' : 'miembros'}
-                </Text>
-              </View>
-              {w.id === activeId ? <Text className="text-primary">✓</Text> : null}
-            </Pressable>
-          ))}
-
-          <View className="my-1 h-px bg-border" />
-
-          {creating ? (
-            <View className="gap-2 p-1">
-              <TextInput
-                autoFocus
-                value={name}
-                onChangeText={setName}
-                placeholder="Nombre del presupuesto"
-                placeholderTextColor="#6B7480"
-                className="h-10 rounded-lg border border-border bg-surface px-2 text-text"
-                onSubmitEditing={submitNew}
-              />
-              {error ? <Text className="text-expense text-xs">{error}</Text> : null}
-              <View className="flex-row gap-2">
-                <Pressable
-                  onPress={() => setCreating(false)}
-                  className="flex-1 items-center rounded-lg border border-border py-2 active:opacity-70"
-                >
-                  <Text className="text-text-muted text-sm">Cancelar</Text>
-                </Pressable>
-                <Pressable
-                  onPress={submitNew}
-                  disabled={!name.trim() || create.isPending}
-                  className={`flex-1 items-center rounded-lg bg-primary py-2 ${
-                    !name.trim() || create.isPending ? 'opacity-50' : 'active:opacity-80'
-                  }`}
-                >
-                  <Text className="text-primary-fg text-sm font-semibold">
-                    {create.isPending ? '…' : 'Crear'}
+        <FadeInView>
+          <View className="mt-2 rounded-2xl border border-border bg-surface-2 p-2">
+            {workspaces.map((w) => (
+              <Pressable
+                key={w.id}
+                onPress={() => {
+                  haptics.selection();
+                  setActiveId(w.id);
+                  close();
+                }}
+                className="flex-row items-center justify-between rounded-xl px-3 py-2.5 active:bg-surface"
+              >
+                <View>
+                  <Text className="text-text text-base">{w.name}</Text>
+                  <Text className="text-text-muted text-xs">
+                    {w.role || 'miembro'} · {w.member_count}{' '}
+                    {w.member_count === 1 ? 'miembro' : 'miembros'}
                   </Text>
-                </Pressable>
+                </View>
+                {w.id === activeId ? <Icon name="check" size={18} color="#4F8CFF" /> : null}
+              </Pressable>
+            ))}
+
+            <View className="my-1 h-px bg-border" />
+
+            {creating ? (
+              <View className="gap-2 p-1">
+                <TextInput
+                  autoFocus
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Nombre del presupuesto"
+                  placeholderTextColor="#6B7480"
+                  className="h-10 rounded-lg border border-border bg-surface px-2 text-text"
+                  onSubmitEditing={submitNew}
+                />
+                {error ? <Text className="text-expense text-xs">{error}</Text> : null}
+                <View className="flex-row gap-2">
+                  <Pressable
+                    onPress={() => setCreating(false)}
+                    className="flex-1 items-center rounded-lg border border-border py-2 active:opacity-70"
+                  >
+                    <Text className="text-text-muted text-sm">Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={submitNew}
+                    disabled={!name.trim() || create.isPending}
+                    className={`flex-1 items-center rounded-lg bg-primary py-2 ${
+                      !name.trim() || create.isPending ? 'opacity-50' : 'active:opacity-80'
+                    }`}
+                  >
+                    <Text className="text-primary-fg text-sm font-semibold">
+                      {create.isPending ? '…' : 'Crear'}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          ) : (
-            <Pressable
-              onPress={() => setCreating(true)}
-              className="rounded-xl px-3 py-2.5 active:bg-surface"
-            >
-              <Text className="text-primary text-base">+ Nuevo presupuesto</Text>
-            </Pressable>
-          )}
-        </View>
+            ) : (
+              <Pressable
+                onPress={() => setCreating(true)}
+                className="flex-row items-center gap-1.5 rounded-xl px-3 py-2.5 active:bg-surface"
+              >
+                <Icon name="plus" size={16} color="#4F8CFF" />
+                <Text className="text-primary text-base">Nuevo presupuesto</Text>
+              </Pressable>
+            )}
+          </View>
+        </FadeInView>
       ) : null}
     </View>
   );

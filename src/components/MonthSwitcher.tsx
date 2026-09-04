@@ -7,6 +7,9 @@ import {
   isSameOrAfter,
   type YearMonth,
 } from '@/lib/date';
+import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
+import { Icon } from './ui/Icon';
 
 interface MonthSwitcherProps {
   value: YearMonth;
@@ -16,18 +19,22 @@ interface MonthSwitcherProps {
 }
 
 export function MonthSwitcher({ value, onChange, clampToCurrent = false }: MonthSwitcherProps) {
+  const colors = useColors();
   const next = addMonths(value, 1);
   const atCurrent = clampToCurrent && isSameOrAfter(next, addMonths(currentYearMonth(), 1));
 
   return (
     <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-2 py-2">
       <Pressable
-        onPress={() => onChange(addMonths(value, -1))}
+        onPress={() => {
+          haptics.tap();
+          onChange(addMonths(value, -1));
+        }}
         className="h-8 w-10 items-center justify-center rounded-lg active:bg-surface-2"
         accessibilityRole="button"
         accessibilityLabel="Mes anterior"
       >
-        <Text className="text-text text-lg">‹</Text>
+        <Icon name="chevron-left" size={18} color={colors.text} />
       </Pressable>
 
       <Text className="text-text text-base font-semibold capitalize">
@@ -36,14 +43,17 @@ export function MonthSwitcher({ value, onChange, clampToCurrent = false }: Month
 
       <Pressable
         disabled={atCurrent}
-        onPress={() => onChange(next)}
+        onPress={() => {
+          haptics.tap();
+          onChange(next);
+        }}
         className={`h-8 w-10 items-center justify-center rounded-lg ${
           atCurrent ? 'opacity-30' : 'active:bg-surface-2'
         }`}
         accessibilityRole="button"
         accessibilityLabel="Mes siguiente"
       >
-        <Text className="text-text text-lg">›</Text>
+        <Icon name="chevron-right" size={18} color={colors.text} />
       </Pressable>
     </View>
   );

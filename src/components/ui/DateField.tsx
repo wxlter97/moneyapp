@@ -2,6 +2,10 @@ import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { ISODate } from '@/api/types';
+import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
+import { FadeInView } from './FadeInView';
+import { Icon } from './Icon';
 
 interface DateFieldProps {
   label: string;
@@ -37,6 +41,7 @@ function formatLong(iso: ISODate): string {
  * formulario (que va dentro de un ScrollView).
  */
 export function DateField({ label, value, onChange, error, maxToday = false }: DateFieldProps) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState(() => parseISO(value));
 
@@ -57,12 +62,14 @@ export function DateField({ label, value, onChange, error, maxToday = false }: D
   }, [view]);
 
   function toggle() {
+    haptics.tap();
     setView(parseISO(value));
     setOpen((o) => !o);
   }
 
   function pick(d: Date) {
     if (maxToday && d > today) return;
+    haptics.selection();
     onChange(toISO(d));
     setOpen(false);
   }
@@ -79,12 +86,13 @@ export function DateField({ label, value, onChange, error, maxToday = false }: D
         accessibilityRole="button"
       >
         <Text className="text-text">{formatLong(value)}</Text>
-        <Text className="text-text-muted">{open ? '▲' : '📅'}</Text>
+        <Icon name={open ? 'chevron-up' : 'calendar'} size={18} color={colors.textMuted} />
       </Pressable>
 
       {error ? <Text className="text-expense text-xs">{error}</Text> : null}
 
       {open ? (
+        <FadeInView>
         <View className="mt-1 rounded-xl border border-border bg-surface p-3">
           <View className="mb-2 flex-row items-center justify-between">
             <Pressable
@@ -92,7 +100,7 @@ export function DateField({ label, value, onChange, error, maxToday = false }: D
               className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
               accessibilityLabel="Mes anterior"
             >
-              <Text className="text-text text-lg">‹</Text>
+              <Icon name="chevron-left" size={18} color={colors.text} />
             </Pressable>
             <Text className="text-text font-semibold capitalize">
               {MONTHS[view.getMonth()]} {view.getFullYear()}
@@ -102,7 +110,7 @@ export function DateField({ label, value, onChange, error, maxToday = false }: D
               className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
               accessibilityLabel="Mes siguiente"
             >
-              <Text className="text-text text-lg">›</Text>
+              <Icon name="chevron-right" size={18} color={colors.text} />
             </Pressable>
           </View>
 
@@ -149,6 +157,7 @@ export function DateField({ label, value, onChange, error, maxToday = false }: D
             <Text className="text-primary text-sm font-semibold">Hoy</Text>
           </Pressable>
         </View>
+        </FadeInView>
       ) : null}
     </View>
   );

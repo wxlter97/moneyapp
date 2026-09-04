@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { sections, type SectionKey } from '@/theme';
+import { FadeInView } from './ui/FadeInView';
 import { ScreenHeader } from './ScreenHeader';
 
 interface SectionHeaderProps {
@@ -42,11 +43,13 @@ export function SectionHeader({
     >
       <View className="w-full max-w-[560px] self-center">
         <ScreenHeader tone="light" />
-        <View className="flex-row items-end justify-between">
-          <Text className="text-2xl font-bold text-white">{title ?? s.label}</Text>
-          {right}
-        </View>
-        {subtitle ? <View className="mt-1">{subtitle}</View> : null}
+        <FadeInView>
+          <View className="flex-row items-end justify-between">
+            <Text className="text-2xl font-bold text-white">{title ?? s.label}</Text>
+            {right}
+          </View>
+          {subtitle ? <View className="mt-1">{subtitle}</View> : null}
+        </FadeInView>
         {children ? <View className="mt-3">{children}</View> : null}
       </View>
     </LinearGradient>

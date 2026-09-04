@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 interface AmountInputProps {
@@ -38,6 +38,7 @@ export function AmountInput({
 }: AmountInputProps) {
   const cents = useMemo(() => toCents(value), [value]);
   const display = grouped.format(cents / 100);
+  const [focused, setFocused] = useState(false);
 
   function handleChange(text: string) {
     // Reinterpreta TODOS los dígitos del campo como centavos: robusto ante
@@ -52,7 +53,7 @@ export function AmountInput({
       <Text className="text-text-muted text-sm">{label}</Text>
       <View
         className={`h-14 flex-row items-center rounded-xl border bg-surface px-3 ${
-          error ? 'border-expense' : 'border-border'
+          error ? 'border-expense' : focused ? 'border-primary' : 'border-border'
         }`}
       >
         <Text className="text-text-muted mr-1 text-lg">{currency}</Text>
@@ -62,6 +63,8 @@ export function AmountInput({
           keyboardType="number-pad"
           autoFocus={autoFocus}
           selectTextOnFocus
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           className="flex-1 text-text text-2xl font-semibold"
           accessibilityLabel={label}
         />

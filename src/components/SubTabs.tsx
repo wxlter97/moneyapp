@@ -1,5 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
+
 interface SubTabsProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
@@ -26,7 +28,10 @@ export function SubTabs<T extends string>({
         return (
           <Pressable
             key={o.value}
-            onPress={() => onChange(o.value)}
+            onPress={() => {
+              if (o.value !== value) haptics.selection();
+              onChange(o.value);
+            }}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
           >
