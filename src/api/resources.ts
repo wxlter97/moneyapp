@@ -10,6 +10,7 @@ import type {
   CashflowPoint,
   Category,
   CategoryBudget,
+  CategoryBudgetInput,
   CategoryInput,
   DashboardSummary,
   InstallmentPurchase,
@@ -112,6 +113,11 @@ export const categories = {
 export const categoryBudgets = {
   list: (params?: { year?: number; month?: number }) =>
     fetchAll<CategoryBudget>('/category-budgets/', params),
+  create: (input: CategoryBudgetInput) =>
+    api.post<CategoryBudget>('/category-budgets/', input).then((r) => r.data),
+  update: (id: string, input: Partial<CategoryBudgetInput>) =>
+    api.patch<CategoryBudget>(`/category-budgets/${id}/`, input).then((r) => r.data),
+  remove: (id: string) => api.delete(`/category-budgets/${id}/`).then(() => undefined),
 };
 
 // --- recurrentes -------------------------------------------------------

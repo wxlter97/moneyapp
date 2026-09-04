@@ -17,6 +17,10 @@ interface WalletRowProps {
 export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowProps) {
   const balance = toNumber(hasChildren ? wallet.aggregated_balance : wallet.current_balance);
   const goal = toNumber(wallet.goal_amount);
+  const hasCredit =
+    wallet.kind === 'credit' &&
+    wallet.credit_limit != null &&
+    wallet.available_credit != null;
 
   return (
     <View className="py-3" style={{ paddingLeft: depth * 16 }}>
@@ -53,6 +57,24 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
           <Text className="text-text-muted text-[11px]">
             <Money value={wallet.current_balance} currency={wallet.currency} tone="muted" /> /{' '}
             <Money value={goal} currency={wallet.currency} tone="muted" /> de meta
+          </Text>
+        </View>
+      ) : null}
+
+      {hasCredit ? (
+        <View className="mt-2 gap-1">
+          <ProgressBar
+            progress={
+              1 - toNumber(wallet.available_credit) / toNumber(wallet.credit_limit)
+            }
+            over={
+              toNumber(wallet.available_credit) / toNumber(wallet.credit_limit) < 0.1
+            }
+          />
+          <Text className="text-text-muted text-[11px]">
+            <Money value={wallet.available_credit} currency={wallet.currency} tone="muted" />{' '}
+            disponibles de{' '}
+            <Money value={wallet.credit_limit} currency={wallet.currency} tone="muted" />
           </Text>
         </View>
       ) : null}

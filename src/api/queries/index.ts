@@ -11,6 +11,7 @@ import {
 
 import * as res from '@/api/resources';
 import type {
+  CategoryBudgetInput,
   CategoryInput,
   InstallmentPurchaseInput,
   RecurringExpenseInput,
@@ -243,6 +244,31 @@ export function useCategoryBudgets(ym: YearMonth = currentYearMonth()) {
     queryKey: qk.ws(ws).categoryBudgets(ym),
     queryFn: () => res.categoryBudgets.list(ym),
     enabled: !!ws,
+  });
+}
+
+export function useCreateCategoryBudget() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (input: CategoryBudgetInput) => res.categoryBudgets.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateCategoryBudget() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<CategoryBudgetInput> }) =>
+      res.categoryBudgets.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteCategoryBudget() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.categoryBudgets.remove(id),
+    onSuccess: invalidate,
   });
 }
 
