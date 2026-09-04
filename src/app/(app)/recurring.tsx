@@ -10,6 +10,7 @@ import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
+import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
@@ -28,6 +29,8 @@ export default function RecurringScreen() {
     [q.data],
   );
 
+  const refresh = usePullRefresh(q.isFetching && !q.isLoading, () => q.refetch());
+
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Recurrentes" />
@@ -45,7 +48,11 @@ export default function RecurringScreen() {
         </Text>
       </Pressable>
 
-      <ScrollView contentContainerClassName="gap-3 py-2" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerClassName="gap-3 py-2"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refresh}
+      >
         {q.isLoading ? (
           <LoadingState />
         ) : q.isError ? (

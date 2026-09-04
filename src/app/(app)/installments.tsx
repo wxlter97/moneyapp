@@ -10,6 +10,7 @@ import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
+import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
@@ -31,6 +32,8 @@ export default function InstallmentsScreen() {
       ),
     [q.data],
   );
+
+  const refresh = usePullRefresh(q.isFetching && !q.isLoading, () => q.refetch());
 
   async function onPay(p: InstallmentPurchase) {
     haptics.impact();
@@ -60,7 +63,11 @@ export default function InstallmentsScreen() {
         </Text>
       </Pressable>
 
-      <ScrollView contentContainerClassName="gap-3 py-2" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerClassName="gap-3 py-2"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refresh}
+      >
         {q.isLoading ? (
           <LoadingState />
         ) : q.isError ? (

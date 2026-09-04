@@ -17,6 +17,7 @@ export type IconName =
   | 'download'
   | 'reset'
   | 'swap'
+  | 'trash'
   | 'arrow-up-right'
   | 'sign-out'
   | 'grip';
@@ -111,6 +112,15 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
           <Path d="M16 4l4 3-4 3" {...p} />
           <Path d="M17 17H4" {...p} />
           <Path d="M8 14l-4 3 4 3" {...p} />
+        </>
+      )}
+      {name === 'trash' && (
+        <>
+          <Line x1={4} y1={7} x2={20} y2={7} {...p} />
+          <Path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" {...p} />
+          <Path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" {...p} />
+          <Line x1={10} y1={11} x2={10} y2={17} {...p} />
+          <Line x1={14} y1={11} x2={14} y2={17} {...p} />
         </>
       )}
       {name === 'arrow-up-right' && (

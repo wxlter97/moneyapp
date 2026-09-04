@@ -1,17 +1,16 @@
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { Icon } from './Icon';
+import { useDismissGesture } from './Screen';
 import { haptics } from '@/lib/haptics';
+import { dismissModal } from '@/lib/modal';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
-/** Cierra el modal; si no hay pila previa (deep-link), vuelve al historial. */
-export function dismissModal() {
-  if (router.canGoBack()) router.back();
-  else router.replace('/dashboard');
-}
+export { dismissModal };
 
 /**
  * Cabecera de hoja modal, estilo HIG: manija de arrastre + título + botón de
@@ -21,6 +20,7 @@ export function ModalHeader({ title }: { title: string }) {
   const colors = useColors();
   const press = useSharedValue(1);
   const enter = useSharedValue(0);
+  const dismissGesture = useDismissGesture();
 
   useEffect(() => {
     enter.value = withTiming(1, { duration: 260 });
@@ -32,14 +32,29 @@ export function ModalHeader({ title }: { title: string }) {
     transform: [{ translateY: (1 - enter.value) * 6 }],
   }));
 
+  const handle = (
+    // Área de toque generosa (el pill visual es angosto) para que arrastrar
+    // para cerrar sea fácil de agarrar sin exigir precisión de píxel.
+    <View
+      testID="modal-drag-handle"
+      accessibilityRole="adjustable"
+      accessibilityLabel="Arrastrar para cerrar"
+      className="items-center px-6 pb-2 pt-3"
+    >
+      <View className="h-1.5 w-10 rounded-full bg-border" />
+    </View>
+  );
+
   return (
     <View>
-      <View className="items-center pb-1 pt-2">
-        <View className="h-1.5 w-10 rounded-full bg-border" />
-      </View>
+      {dismissGesture ? <GestureDetector gesture={dismissGesture}>{handle}</GestureDetector> : handle}
       <Animated.View style={headerStyle}>
         <View className="flex-row items-center justify-between py-2">
-          <Text className="text-text flex-1 pr-3 text-lg font-semibold" numberOfLines={1}>
+          <Text
+            className="text-text flex-1 pr-3 text-lg"
+            style={{ fontFamily: fonts.bold }}
+            numberOfLines={1}
+          >
             {title}
           </Text>
           <Pressable

@@ -9,6 +9,7 @@ import { WalletRow } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
 import { DragList } from '@/components/ui/DragList';
 import { Icon } from '@/components/ui/Icon';
+import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { useColors } from '@/theme';
 import { flattenTree } from '@/lib/wallets';
@@ -23,6 +24,11 @@ export default function WalletsScreen() {
   const currency = wallets.data?.[0]?.currency ?? 'USD';
   const nodes = useMemo(() => flattenTree(wallets.data ?? []), [wallets.data]);
   const loading = netWorth.isLoading || wallets.isLoading;
+  const refreshing = (netWorth.isFetching || wallets.isFetching) && !loading;
+  const refresh = usePullRefresh(refreshing, () => {
+    netWorth.refetch();
+    wallets.refetch();
+  });
 
   return (
     <View className="flex-1 bg-bg">
@@ -55,7 +61,10 @@ export default function WalletsScreen() {
         }
       />
 
-      <ScrollView contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4">
+      <ScrollView
+        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
+        refreshControl={refresh}
+      >
         {loading ? (
           <LoadingState />
         ) : netWorth.isError || wallets.isError || !netWorth.data ? (

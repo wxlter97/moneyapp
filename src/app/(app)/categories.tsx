@@ -14,6 +14,7 @@ import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
 import { DragList } from '@/components/ui/DragList';
+import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { fonts } from '@/theme/typography';
@@ -51,6 +52,10 @@ export default function CategoriesScreen() {
   }, [categoriesQ.data]);
 
   const hasData = (categoriesQ.data?.length ?? 0) > 0;
+  const refresh = usePullRefresh(
+    categoriesQ.isFetching && !categoriesQ.isLoading,
+    () => categoriesQ.refetch(),
+  );
 
   return (
     <Screen edges={['top', 'bottom']}>
@@ -70,7 +75,11 @@ export default function CategoriesScreen() {
         </Pressable>
       ) : null}
 
-      <ScrollView contentContainerClassName="gap-4 py-2" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerClassName="gap-4 py-2"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refresh}
+      >
         {categoriesQ.isLoading ? (
           <LoadingState />
         ) : categoriesQ.isError ? (

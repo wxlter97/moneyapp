@@ -10,6 +10,7 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { SubTabs } from '@/components/SubTabs';
 import { Card } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
+import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Ring } from '@/components/ui/Ring';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { useColors } from '@/theme';
@@ -34,6 +35,8 @@ export default function BudgetScreen() {
 
   const openEditor = () =>
     router.push(`/budget-edit?y=${month.year}&m=${month.month}`);
+
+  const refresh = usePullRefresh(budget.isFetching && !budget.isLoading, () => budget.refetch());
 
   return (
     <View className="flex-1 bg-bg">
@@ -72,7 +75,10 @@ export default function BudgetScreen() {
         />
       </SectionHeader>
 
-      <ScrollView contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4">
+      <ScrollView
+        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
+        refreshControl={refresh}
+      >
         <MonthSwitcher value={month} onChange={setMonth} />
 
         {budget.isLoading ? (
