@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * iOS Safari hace zoom al enfocar un input con `font-size` < 16px. Forzamos
+ * 16px en todos los campos de texto para evitarlo (RN Web renderiza los
+ * TextInput como <input>/<textarea>). `text-size-adjust` evita reflows raros.
+ */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'] {
+  /* `!important` para ganarle a las clases atómicas de react-native-web. */
+  font-size: 16px !important;
+}
+
 @layer base {
   :root {
     /* Tema claro (valores RGB separados por espacio para soportar alpha). */
