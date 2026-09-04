@@ -23,6 +23,7 @@ import { darkColors, lightColors } from '@/theme';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
 import { SplashOverlay } from '@/components/SplashOverlay';
+import { SnackbarHost } from '@/components/ui/Snackbar';
 
 // Mantiene visible el splash nativo (imagen estática de app.json) hasta que
 // lo ocultamos a mano, apenas el overlay animado de abajo ya está pintado.
@@ -107,6 +108,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(app)" options={{ animation: 'fade' }} />
               </Stack>
             ) : null}
+            <SnackbarHost />
           </ThemeProvider>
         </SafeAreaProvider>
       </QueryClientProvider>

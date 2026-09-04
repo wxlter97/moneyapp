@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, router } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FadeInView } from '@/components/ui/FadeInView';
 import { useUIStore } from '@/store/ui';
@@ -18,6 +18,7 @@ import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import type { ScheduledItem } from '@/api/types';
 import { AddTransactionFab } from '@/components/AddTransactionFab';
 import { BudgetProgressRow } from '@/components/BudgetProgressRow';
+import { CategorySpendChart } from '@/components/CategorySpendChart';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SubTabs } from '@/components/SubTabs';
@@ -25,13 +26,19 @@ import { SummaryTriple } from '@/components/SummaryTriple';
 import { TransactionRow } from '@/components/TransactionRow';
 import { WalletRow } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
+import { SearchField } from '@/components/ui/SearchField';
+import { Segmented } from '@/components/ui/Segmented';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { currentYearMonth, formatDayHeader, formatShortDate, monthRange } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 import { groupByDay, summarizeByType } from '@/lib/transactions';
+import { useSnackbarStore } from '@/store/snackbar';
+import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 export default function OverviewScreen() {
   const tab = useUIStore((s) => s.overviewTab);
@@ -47,12 +54,22 @@ export default function OverviewScreen() {
       <SectionHeader
         title="Vista general"
         subtitle={
-          <Money
-            value={netWorth.data?.net}
-            currency={currency}
-            hero
-            className="text-[52px] leading-[56px]"
-          />
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              router.push('/net-worth-history');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Ver historial de patrimonio neto"
+            className="self-start active:opacity-70"
+          >
+            <Money
+              value={netWorth.data?.net}
+              currency={currency}
+              hero
+              className="text-[52px] leading-[56px]"
+            />
+          </Pressable>
         }
       >
         <SubTabs
@@ -80,10 +97,12 @@ export default function OverviewScreen() {
 // Resumen
 // ---------------------------------------------------------------------------
 function ResumenTab({ currency }: { currency: string }) {
+  const colors = useColors();
   const summary = useDashboardSummary();
   const wallets = useWallets();
   const budget = useBudgetReport();
   const scheduled = useScheduled();
+  const { map: categories } = useCategoryMap();
 
   const spendingWallets = (wallets.data ?? []).filter((w) => w.purpose === 'spending');
   const loading = summary.isLoading || wallets.isLoading;
@@ -116,9 +135,19 @@ function ResumenTab({ currency }: { currency: string }) {
             currency={currency}
           />
           {summary.data.pending_email_imports > 0 ? (
-            <Text className="text-warning text-xs">
-              {summary.data.pending_email_imports} importación(es) por correo pendientes.
-            </Text>
+            <Pressable
+              onPress={() => {
+                haptics.tap();
+                router.push('/imports');
+              }}
+              accessibilityRole="button"
+              className="flex-row items-center gap-1.5 self-start active:opacity-60"
+            >
+              <Icon name="inbox" size={14} color={colors.warning} />
+              <Text className="text-warning text-xs" style={{ fontFamily: fonts.semibold }}>
+                {summary.data.pending_email_imports} importación(es) por correo pendientes.
+              </Text>
+            </Pressable>
           ) : null}
         </View>
       ) : null}
@@ -170,6 +199,16 @@ function ResumenTab({ currency }: { currency: string }) {
           ))
         )}
       </Card>
+
+      {(summary.data?.top_expense_categories.length ?? 0) > 0 ? (
+        <Card title="Gasto por categoría" animated index={3}>
+          <CategorySpendChart
+            rows={summary.data!.top_expense_categories}
+            currency={currency}
+            categoryColor={(id) => categories.get(id)?.color}
+          />
+        </Card>
+      ) : null}
     </ScrollView>
   );
 }
@@ -221,6 +260,8 @@ function ScheduledCard({
 // ---------------------------------------------------------------------------
 // Lista (movimientos del mes, agrupados por día)
 // ---------------------------------------------------------------------------
+type TypeFilter = 'all' | 'income' | 'expense' | 'transfer';
+
 function ListaTab({
   month,
   onMonth,
@@ -233,37 +274,90 @@ function ListaTab({
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
   const deleteTxn = useDeleteTransaction();
+  const showSnackbar = useSnackbarStore((s) => s.show);
 
-  const items = txQuery.data ?? [];
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  // Ocultas de inmediato al deslizar-borrar; el borrado real llega con el
+  // timeout del snackbar si nadie toca "Deshacer" antes.
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+
+  const allItems = txQuery.data ?? [];
+  const items = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allItems.filter((t) => {
+      if (pendingDeleteIds.has(t.id)) return false;
+      if (typeFilter !== 'all' && t.type !== typeFilter) return false;
+      if (!q) return true;
+      const cat = t.category ? categories.get(t.category)?.name : undefined;
+      const haystack = `${t.description ?? ''} ${cat ?? ''} ${wallets.get(t.wallet)?.name ?? ''}`;
+      return haystack.toLowerCase().includes(q);
+    });
+  }, [allItems, pendingDeleteIds, typeFilter, search, categories, wallets]);
+
   const totals = useMemo(() => summarizeByType(items), [items]);
   const days = useMemo(() => groupByDay(items), [items]);
-  const currency = items[0]?.currency ?? 'USD';
+  const currency = items[0]?.currency ?? allItems[0]?.currency ?? 'USD';
 
   const refresh = usePullRefresh(txQuery.isFetching && !txQuery.isLoading, () => txQuery.refetch());
 
-  async function onSwipeDelete(id: string) {
-    try {
-      await deleteTxn.mutateAsync(id);
-      haptics.success();
-    } catch {
-      haptics.error();
-    }
+  function onSwipeDelete(id: string) {
+    setPendingDeleteIds((prev) => new Set(prev).add(id));
+    showSnackbar({
+      message: 'Movimiento eliminado.',
+      actionLabel: 'Deshacer',
+      onAction: () => {
+        haptics.selection();
+        setPendingDeleteIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      },
+      onTimeout: async () => {
+        try {
+          await deleteTxn.mutateAsync(id);
+        } catch {
+          haptics.error();
+          setPendingDeleteIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        }
+      },
+    });
   }
 
   return (
     <ScrollView
       contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-3"
       refreshControl={refresh}
+      keyboardShouldPersistTaps="handled"
     >
       <MonthSwitcher value={month} onChange={onMonth} />
       <SummaryTriple income={totals.income} expenses={totals.expenses} currency={currency} />
+
+      <SearchField value={search} onChange={setSearch} placeholder="Buscar movimientos" />
+      <Segmented
+        value={typeFilter}
+        onChange={setTypeFilter}
+        options={[
+          { value: 'all', label: 'Todas' },
+          { value: 'income', label: 'Ingresos' },
+          { value: 'expense', label: 'Gastos' },
+          { value: 'transfer', label: 'Transfer.' },
+        ]}
+      />
 
       {txQuery.isLoading ? (
         <LoadingState />
       ) : txQuery.isError ? (
         <ErrorState error={txQuery.error} onRetry={txQuery.refetch} />
-      ) : items.length === 0 ? (
+      ) : allItems.length === 0 ? (
         <EmptyState title="Sin movimientos este mes" hint="Agrega uno con el botón +." />
+      ) : items.length === 0 ? (
+        <EmptyState title="Sin resultados" hint="Probá con otro texto o filtro." />
       ) : (
         days.map((day, di) => (
           <FadeInView key={day.date} index={di}>

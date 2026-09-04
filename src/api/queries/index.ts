@@ -13,6 +13,8 @@ import * as res from '@/api/resources';
 import type {
   CategoryBudgetInput,
   CategoryInput,
+  ConfirmEmailImportInput,
+  EmailImportStatus,
   InstallmentPurchaseInput,
   RecurringExpenseInput,
   TransactionInput,
@@ -375,6 +377,42 @@ export function useMonthlySnapshots() {
     queryKey: qk.ws(ws).monthlySnapshots(),
     queryFn: res.monthlySnapshots.list,
     enabled: !!ws,
+  });
+}
+
+// --- bandeja de importación bancaria por correo -----------------------
+export function useEmailImportLogs(status?: EmailImportStatus) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).emailImportLogs(status),
+    queryFn: () => res.emailImportLogs.list(status),
+    enabled: !!ws,
+  });
+}
+
+export function useEmailImportLog(id: string | undefined) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).emailImportLog(id ?? ''),
+    queryFn: () => res.emailImportLogs.get(id!),
+    enabled: !!ws && !!id,
+  });
+}
+
+export function useConfirmEmailImport() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ConfirmEmailImportInput }) =>
+      res.emailImportLogs.confirm(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRejectEmailImport() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.emailImportLogs.reject(id),
+    onSuccess: invalidate,
   });
 }
 

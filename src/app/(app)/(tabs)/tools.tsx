@@ -30,6 +30,18 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/categories'),
   },
   {
+    icon: 'inbox',
+    label: 'Importaciones',
+    hint: 'Correos bancarios por revisar',
+    onPress: () => router.push('/imports'),
+  },
+  {
+    icon: 'trending',
+    label: 'Patrimonio',
+    hint: 'Evolución mes a mes',
+    onPress: () => router.push('/net-worth-history'),
+  },
+  {
     icon: 'repeat',
     label: 'Recurrentes',
     hint: 'Gastos e ingresos fijos',
