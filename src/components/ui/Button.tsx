@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, Text, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View, type PressableProps } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { haptics } from '@/lib/haptics';
@@ -45,23 +45,24 @@ export function Button({
       }}
       {...rest}
     >
-      <Animated.View
-        className={`${base} ${look} ${isDisabled ? 'opacity-50' : ''}`}
-        style={style}
-      >
-        {loading ? (
-          <ActivityIndicator color={variant === 'primary' ? colors.primaryFg : colors.text} />
-        ) : (
-          <Text
-            className={
-              variant === 'primary'
-                ? 'text-primary-fg font-semibold text-base'
-                : 'text-text font-semibold text-base'
-            }
-          >
-            {label}
-          </Text>
-        )}
+      {/* `className` no se resuelve en `Animated.View` de reanimated: el look
+          va en una View normal adentro, el `Animated.View` sólo anima el scale. */}
+      <Animated.View style={style}>
+        <View className={`${base} ${look} ${isDisabled ? 'opacity-50' : ''}`}>
+          {loading ? (
+            <ActivityIndicator color={variant === 'primary' ? colors.primaryFg : colors.text} />
+          ) : (
+            <Text
+              className={
+                variant === 'primary'
+                  ? 'text-primary-fg font-semibold text-base'
+                  : 'text-text font-semibold text-base'
+              }
+            >
+              {label}
+            </Text>
+          )}
+        </View>
       </Animated.View>
     </Pressable>
   );

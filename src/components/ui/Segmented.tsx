@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
 
 interface SegmentedProps<T extends string> {
   value: T;
@@ -11,6 +12,7 @@ interface SegmentedProps<T extends string> {
 }
 
 export function Segmented<T extends string>({ value, onChange, options }: SegmentedProps<T>) {
+  const colors = useColors();
   const index = Math.max(
     0,
     options.findIndex((o) => o.value === value),
@@ -22,17 +24,21 @@ export function Segmented<T extends string>({ value, onChange, options }: Segmen
     pos.value = withSpring(index, { damping: 18, stiffness: 220 });
   }, [index, pos]);
 
+  // `className` no se resuelve en `Animated.View` de reanimated: todo el
+  // estilo va en `style` (nativewind sólo intercepta los primitivos de RN).
   const pillStyle = useAnimatedStyle(() => ({
     left: `${(pos.value / count) * 100}%`,
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    width: `${100 / count}%`,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
   }));
 
   return (
     <View className="flex-row rounded-xl border border-border bg-surface p-1">
-      <Animated.View
-        pointerEvents="none"
-        style={[{ position: 'absolute', top: 4, bottom: 4, width: `${100 / count}%` }, pillStyle]}
-        className="rounded-lg bg-primary"
-      />
+      <Animated.View pointerEvents="none" style={pillStyle} />
       {options.map((opt) => {
         const active = opt.value === value;
         return (

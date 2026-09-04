@@ -37,31 +37,35 @@ export function ModalHeader({ title }: { title: string }) {
       <View className="items-center pb-1 pt-2">
         <View className="h-1.5 w-10 rounded-full bg-border" />
       </View>
-      <Animated.View style={headerStyle} className="flex-row items-center justify-between py-2">
-        <Text className="text-text flex-1 pr-3 text-lg font-semibold" numberOfLines={1}>
-          {title}
-        </Text>
-        <Pressable
-          onPress={() => {
-            haptics.tap();
-            dismissModal();
-          }}
-          onPressIn={() => {
-            press.value = withSpring(0.88, { damping: 14, stiffness: 320 });
-          }}
-          onPressOut={() => {
-            press.value = withSpring(1, { damping: 14, stiffness: 320 });
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar"
-        >
-          <Animated.View
-            style={closeStyle}
-            className="h-8 w-8 items-center justify-center rounded-full bg-surface-2"
+      <Animated.View style={headerStyle}>
+        <View className="flex-row items-center justify-between py-2">
+          <Text className="text-text flex-1 pr-3 text-lg font-semibold" numberOfLines={1}>
+            {title}
+          </Text>
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              dismissModal();
+            }}
+            onPressIn={() => {
+              press.value = withSpring(0.88, { damping: 14, stiffness: 320 });
+            }}
+            onPressOut={() => {
+              press.value = withSpring(1, { damping: 14, stiffness: 320 });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar"
           >
-            <Icon name="close" size={16} color={colors.textMuted} />
-          </Animated.View>
-        </Pressable>
+            {/* `className` no se resuelve en `Animated.View` de reanimated (nativewind
+                sólo intercepta los primitivos de react-native): el tamaño/color van acá
+                en una View normal, y el `Animated.View` de afuera sólo anima el scale. */}
+            <Animated.View style={closeStyle}>
+              <View className="h-8 w-8 items-center justify-center rounded-full bg-surface-2">
+                <Icon name="close" size={16} color={colors.textMuted} />
+              </View>
+            </Animated.View>
+          </Pressable>
+        </View>
       </Animated.View>
     </View>
   );
