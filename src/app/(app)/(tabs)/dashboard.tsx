@@ -3,6 +3,7 @@ import { Link, router } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
 import { FadeInView } from '@/components/ui/FadeInView';
+import { useUIStore } from '@/store/ui';
 
 import {
   useBudgetReport,
@@ -29,10 +30,9 @@ import { currentYearMonth, formatDayHeader, formatShortDate, monthRange } from '
 import { toNumber } from '@/lib/money';
 import { groupByDay, summarizeByType } from '@/lib/transactions';
 
-type Tab = 'resumen' | 'lista';
-
 export default function OverviewScreen() {
-  const [tab, setTab] = useState<Tab>('resumen');
+  const tab = useUIStore((s) => s.overviewTab);
+  const setTab = useUIStore((s) => s.setOverviewTab);
   const [month, setMonth] = useState(currentYearMonth);
 
   const netWorth = useNetWorth();
