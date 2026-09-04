@@ -8,6 +8,7 @@ import { useUIStore } from '@/store/ui';
 import {
   useBudgetReport,
   useDashboardSummary,
+  useDeleteTransaction,
   useNetWorth,
   useScheduled,
   useTransactions,
@@ -25,7 +26,9 @@ import { TransactionRow } from '@/components/TransactionRow';
 import { WalletRow } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
+import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { haptics } from '@/lib/haptics';
 import { currentYearMonth, formatDayHeader, formatShortDate, monthRange } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 import { groupByDay, summarizeByType } from '@/lib/transactions';
@@ -42,19 +45,17 @@ export default function OverviewScreen() {
   return (
     <View className="flex-1 bg-bg">
       <SectionHeader
-        section="overview"
         title="Vista general"
         subtitle={
           <Money
             value={netWorth.data?.net}
             currency={currency}
-            signed
-            className="text-3xl font-bold text-white"
+            hero
+            className="text-[52px] leading-[56px]"
           />
         }
       >
         <SubTabs
-          tone="light"
           value={tab}
           onChange={setTab}
           options={[
@@ -86,13 +87,23 @@ function ResumenTab({ currency }: { currency: string }) {
 
   const spendingWallets = (wallets.data ?? []).filter((w) => w.purpose === 'spending');
   const loading = summary.isLoading || wallets.isLoading;
+  const refreshing = summary.isFetching || wallets.isFetching || budget.isFetching || scheduled.isFetching;
+  const refresh = usePullRefresh(loading ? false : refreshing, () => {
+    summary.refetch();
+    wallets.refetch();
+    budget.refetch();
+    scheduled.refetch();
+  });
 
   if (loading) return <LoadingState />;
   if (summary.isError)
     return <ErrorState error={summary.error} onRetry={summary.refetch} />;
 
   return (
-    <ScrollView contentContainerClassName="px-4 pb-28 pt-4 self-center w-full max-w-[560px] gap-4">
+    <ScrollView
+      contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
+      refreshControl={refresh}
+    >
       {summary.data ? (
         <View className="gap-2">
           <Text className="text-text-muted text-xs font-semibold uppercase tracking-wide">
@@ -129,7 +140,7 @@ function ResumenTab({ currency }: { currency: string }) {
         ) : (
           spendingWallets.map((w, i) => (
             <View key={w.id}>
-              {i > 0 ? <View className="h-px bg-border/60" /> : null}
+              {i > 0 ? <View className="h-px bg-border/30" /> : null}
               <WalletRow wallet={w} />
             </View>
           ))
@@ -153,7 +164,7 @@ function ResumenTab({ currency }: { currency: string }) {
         ) : (
           budget.data!.rows.slice(0, 5).map((row, i) => (
             <View key={row.category}>
-              {i > 0 ? <View className="h-px bg-border/60" /> : null}
+              {i > 0 ? <View className="h-px bg-border/30" /> : null}
               <BudgetProgressRow row={row} currency={currency} />
             </View>
           ))
@@ -221,14 +232,29 @@ function ListaTab({
   const txQuery = useTransactions({ date_after: range.from, date_before: range.to });
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
+  const deleteTxn = useDeleteTransaction();
 
   const items = txQuery.data ?? [];
   const totals = useMemo(() => summarizeByType(items), [items]);
   const days = useMemo(() => groupByDay(items), [items]);
   const currency = items[0]?.currency ?? 'USD';
 
+  const refresh = usePullRefresh(txQuery.isFetching && !txQuery.isLoading, () => txQuery.refetch());
+
+  async function onSwipeDelete(id: string) {
+    try {
+      await deleteTxn.mutateAsync(id);
+      haptics.success();
+    } catch {
+      haptics.error();
+    }
+  }
+
   return (
-    <ScrollView contentContainerClassName="px-4 pb-28 pt-4 self-center w-full max-w-[560px] gap-3">
+    <ScrollView
+      contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-3"
+      refreshControl={refresh}
+    >
       <MonthSwitcher value={month} onChange={onMonth} />
       <SummaryTriple income={totals.income} expenses={totals.expenses} currency={currency} />
 
@@ -244,16 +270,17 @@ function ListaTab({
             <Text className="text-text-muted pb-1 pt-3 text-xs font-semibold uppercase tracking-wide">
               {formatDayHeader(day.date)}
             </Text>
-            <View className="rounded-2xl border border-border bg-surface px-4">
+            <View className="rounded-2xl border border-border/60 bg-surface/95 px-4">
               {day.data.map((item, i) => (
                 <View key={item.id}>
-                  {i > 0 ? <View className="h-px bg-border/60" /> : null}
+                  {i > 0 ? <View className="h-px bg-border/30" /> : null}
                   <TransactionRow
                     txn={item}
                     category={item.category ? categories.get(item.category) : undefined}
                     wallet={wallets.get(item.wallet)}
                     toWallet={item.to_wallet ? wallets.get(item.to_wallet) : undefined}
                     onPress={() => router.push(`/transaction/${item.id}`)}
+                    onSwipeDelete={() => onSwipeDelete(item.id)}
                   />
                 </View>
               ))}

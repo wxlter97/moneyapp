@@ -2,6 +2,7 @@ import { Text, type TextProps } from 'react-native';
 
 import type { Money as MoneyValue } from '@/api/types';
 import { formatMoney, formatParens, formatSigned, toNumber } from '@/lib/money';
+import { fonts } from '@/theme/typography';
 
 interface MoneyProps extends TextProps {
   value: MoneyValue | number | null | undefined;
@@ -12,6 +13,9 @@ interface MoneyProps extends TextProps {
   parens?: boolean;
   /** Fuerza un color semántico independientemente del signo. */
   tone?: 'income' | 'expense' | 'default' | 'muted';
+  /** Cifra protagonista (patrimonio neto, restante del mes…): peso extra y
+   * tracking negativo, como los números grandes de Cash App/Revolut. */
+  hero?: boolean;
   className?: string;
 }
 
@@ -21,7 +25,9 @@ export function Money({
   signed = false,
   parens = false,
   tone = 'default',
+  hero = false,
   className = '',
+  style,
   ...rest
 }: MoneyProps) {
   const n = typeof value === 'number' ? value : toNumber(value);
@@ -38,8 +44,23 @@ export function Money({
   else if (signed && n > 0) color = 'text-income';
   else if (signed && n < 0) color = 'text-expense';
 
+  // RN no sintetiza pesos sobre una fuente custom de forma confiable en
+  // iOS: `font-bold`/`font-semibold` de Tailwind (sólo cambian `fontWeight`)
+  // no alcanzan para las cifras — acá resolvemos al archivo .ttf correcto.
+  const fontFamily = hero
+    ? fonts.extrabold
+    : className.includes('font-bold')
+      ? fonts.extrabold
+      : className.includes('font-semibold')
+        ? fonts.semibold
+        : undefined;
+
   return (
-    <Text className={`${color} ${className}`} {...rest}>
+    <Text
+      className={`${color} ${className}`}
+      style={[fontFamily ? { fontFamily } : null, hero ? { letterSpacing: -1.2 } : null, style]}
+      {...rest}
+    >
       {text}
     </Text>
   );

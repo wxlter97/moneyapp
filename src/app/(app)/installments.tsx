@@ -8,11 +8,17 @@ import type { InstallmentPurchase } from '@/api/types';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
+import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 export default function InstallmentsScreen() {
+  const colors = useColors();
   const q = useInstallments();
   const pay = usePayInstallment();
   const { map: categories } = useCategoryMap();
@@ -27,10 +33,14 @@ export default function InstallmentsScreen() {
     [q.data],
   );
 
+  const refresh = usePullRefresh(q.isFetching && !q.isLoading, () => q.refetch());
+
   async function onPay(p: InstallmentPurchase) {
+    haptics.impact();
     setBusyId(p.id);
     try {
       await pay.mutateAsync(p.id);
+      haptics.success();
     } finally {
       setBusyId(null);
     }
@@ -40,14 +50,24 @@ export default function InstallmentsScreen() {
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Compras a plazo" />
       <Pressable
-        onPress={() => router.push('/installment/new')}
-        className="self-end rounded-lg border border-border px-3 py-1.5 active:opacity-70"
+        onPress={() => {
+          haptics.tap();
+          router.push('/installment/new');
+        }}
+        className="flex-row items-center gap-1 self-end rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
         accessibilityRole="button"
       >
-        <Text className="text-primary text-sm font-semibold">+ Nueva</Text>
+        <Icon name="plus" size={13} color={colors.primary} />
+        <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+          Nueva
+        </Text>
       </Pressable>
 
-      <ScrollView contentContainerClassName="gap-3 py-2" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerClassName="gap-3 py-2"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refresh}
+      >
         {q.isLoading ? (
           <LoadingState />
         ) : q.isError ? (
@@ -68,19 +88,33 @@ export default function InstallmentsScreen() {
             return (
               <Card key={p.id}>
                 <Pressable
-                  onPress={() => router.push(`/installment/${p.id}`)}
+                  onPress={() => {
+                    haptics.tap();
+                    router.push(`/installment/${p.id}`);
+                  }}
                   className="active:opacity-60"
                   accessibilityRole="button"
                 >
                   <View className="flex-row items-center gap-3">
-                    <View
-                      className="h-9 w-9 items-center justify-center rounded-full"
-                      style={{ backgroundColor: cat?.color || '#334155' }}
-                    >
-                      <Text className="text-sm">{cat?.icon || '🧾'}</Text>
+                    <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+                      {cat?.icon ? (
+                        <Text className="text-base">{cat.icon}</Text>
+                      ) : (
+                        <Icon name="receipt" size={16} color={colors.textMuted} />
+                      )}
+                      {cat?.color ? (
+                        <View
+                          className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface"
+                          style={{ backgroundColor: cat.color }}
+                        />
+                      ) : null}
                     </View>
                     <View className="flex-1">
-                      <Text className="text-text text-base" numberOfLines={1}>
+                      <Text
+                        className="text-text text-base"
+                        style={{ fontFamily: fonts.semibold }}
+                        numberOfLines={1}
+                      >
                         {p.description}
                       </Text>
                       <Text className="text-text-muted text-xs" numberOfLines={1}>
@@ -113,15 +147,18 @@ export default function InstallmentsScreen() {
                   <Pressable
                     onPress={() => onPay(p)}
                     disabled={busyId === p.id}
-                    className="mt-3 items-center rounded-lg border border-border py-2 active:opacity-60"
+                    className="mt-3 items-center rounded-full bg-surface-2 py-2 active:opacity-60"
                     accessibilityRole="button"
                   >
-                    <Text className="text-primary text-sm font-semibold">
+                    <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
                       {busyId === p.id ? '…' : 'Registrar cuota'}
                     </Text>
                   </Pressable>
                 ) : (
-                  <Text className="text-income mt-3 text-center text-xs font-semibold">
+                  <Text
+                    className="text-income mt-3 text-center text-xs"
+                    style={{ fontFamily: fonts.semibold }}
+                  >
                     Pagada por completo
                   </Text>
                 )}

@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { useColors } from '@/theme';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface RingProps {
   /** 0–1; se recorta al rango. */
@@ -14,7 +18,7 @@ interface RingProps {
   children?: ReactNode;
 }
 
-/** Anillo de progreso (SVG). El contenido central va como `children`. */
+/** Anillo de progreso (SVG) que se dibuja con una animación al cambiar. */
 export function Ring({
   progress,
   size = 220,
@@ -29,14 +33,20 @@ export function Ring({
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(1, Number.isFinite(progress) ? progress : 0));
-  const offset = circ * (1 - clamped);
   const mid = size / 2;
+
+  const offset = useSharedValue(circ);
+  useEffect(() => {
+    offset.value = withTiming(circ * (1 - clamped), { duration: 650, easing: Easing.out(Easing.cubic) });
+  }, [circ, clamped, offset]);
+
+  const animatedProps = useAnimatedProps(() => ({ strokeDashoffset: offset.value }));
 
   return (
     <View style={{ width: size, height: size }} className="items-center justify-center">
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Circle cx={mid} cy={mid} r={r} stroke={track} strokeWidth={stroke} fill="none" />
-        <Circle
+        <AnimatedCircle
           cx={mid}
           cy={mid}
           r={r}
@@ -44,7 +54,7 @@ export function Ring({
           strokeWidth={stroke}
           fill="none"
           strokeDasharray={circ}
-          strokeDashoffset={offset}
+          animatedProps={animatedProps}
           strokeLinecap="round"
           transform={`rotate(-90 ${mid} ${mid})`}
         />

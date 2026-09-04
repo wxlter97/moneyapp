@@ -1,5 +1,9 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
+import { Icon } from './Icon';
+
 interface NumPadProps {
   /** Monto como string decimal ("25.50"). */
   value: string;
@@ -33,7 +37,10 @@ function currentDigits(value: string): string {
  * (igual que `AmountInput`), sin abrir el teclado del sistema.
  */
 export function NumPad({ value, onChange }: NumPadProps) {
+  const colors = useColors();
+
   function press(key: (typeof KEYS)[number]) {
+    haptics.selection();
     let digits = currentDigits(value);
     if (key.kind === 'back') {
       digits = digits.slice(0, -1);
@@ -56,7 +63,11 @@ export function NumPad({ value, onChange }: NumPadProps) {
           accessibilityLabel={key.kind === 'back' ? 'Borrar' : key.label}
           className="w-1/3 items-center justify-center border-b border-border/40 py-4 active:bg-surface-2"
         >
-          <Text className="text-text text-2xl font-semibold">{key.label}</Text>
+          {key.kind === 'back' ? (
+            <Icon name="backspace" size={22} color={colors.text} />
+          ) : (
+            <Text className="text-text text-2xl font-semibold">{key.label}</Text>
+          )}
         </Pressable>
       ))}
     </View>

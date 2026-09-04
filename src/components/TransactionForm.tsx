@@ -18,12 +18,15 @@ import type { TransactionInput, TransactionType } from '@/api/types';
 import { CategoryPickerField } from '@/components/CategoryGrid';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
+import { Icon } from '@/components/ui/Icon';
 import { NumPad } from '@/components/ui/NumPad';
 import { PickerRow } from '@/components/ui/PickerRow';
 import { Segmented } from '@/components/ui/Segmented';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
+import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
 import { formatMoney, toNumber } from '@/lib/money';
 
@@ -206,7 +209,10 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
         />
 
         <View className="items-center py-2">
-          <Text className="text-3xl font-bold" style={{ color: amountColor }}>
+          <Text
+            className="text-[40px] leading-[44px]"
+            style={{ color: amountColor, fontFamily: fonts.extrabold, letterSpacing: -0.8 }}
+          >
             {formatMoney(amountNum || 0, currency)}
           </Text>
           {fields.amount ? (
@@ -265,12 +271,15 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
             <>
               <View className="items-center py-1">
                 <Pressable
-                  onPress={swapWallets}
+                  onPress={() => {
+                    haptics.tap();
+                    swapWallets();
+                  }}
                   accessibilityLabel="Intercambiar carteras"
                   accessibilityRole="button"
-                  className="h-8 w-8 items-center justify-center rounded-full border border-border bg-surface active:opacity-70"
+                  className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
                 >
-                  <Text className="text-text">⇅</Text>
+                  <Icon name="swap" size={15} color={colors.textMuted} />
                 </Pressable>
               </View>
               <PickerRow
@@ -292,11 +301,17 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
 
         {!isTransfer ? (
           <Pressable
-            onPress={() => router.push(`/category/new?type=${type}`)}
-            className="self-start py-1 active:opacity-60"
+            onPress={() => {
+              haptics.tap();
+              router.push(`/category/new?type=${type}`);
+            }}
+            className="flex-row items-center gap-1 self-start py-1 active:opacity-60"
             accessibilityRole="button"
           >
-            <Text className="text-primary text-xs font-semibold">+ Nueva categoría</Text>
+            <Icon name="plus" size={12} color={colors.primary} />
+            <Text className="text-primary text-xs" style={{ fontFamily: fonts.semibold }}>
+              Nueva categoría
+            </Text>
           </Pressable>
         ) : null}
 
@@ -311,9 +326,11 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
         />
 
         {showBudgetSwitch ? (
-          <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5">
+          <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
             <View className="flex-1 pr-2">
-              <Text className="text-text text-sm">Cuenta para el presupuesto</Text>
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                Cuenta para el presupuesto
+              </Text>
               <Text className="text-text-muted text-xs">
                 {inBudget
                   ? 'Descuenta del presupuesto de su categoría.'
@@ -338,17 +355,22 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
 
         {editing && !confirmingDelete ? (
           <Pressable
-            onPress={() => setConfirmingDelete(true)}
+            onPress={() => {
+              haptics.tap();
+              setConfirmingDelete(true);
+            }}
             disabled={busy}
             className="items-center py-2 active:opacity-60"
             accessibilityRole="button"
           >
-            <Text className="text-expense text-sm font-semibold">Eliminar transacción</Text>
+            <Text className="text-expense text-sm" style={{ fontFamily: fonts.semibold }}>
+              Eliminar transacción
+            </Text>
           </Pressable>
         ) : null}
 
         {editing && confirmingDelete ? (
-          <View className="gap-2 rounded-xl border border-expense/40 bg-expense/10 p-3">
+          <View className="gap-2 rounded-2xl bg-expense/10 p-3">
             <Text className="text-text text-sm">
               ¿Eliminar esta transacción? No se puede deshacer.
             </Text>

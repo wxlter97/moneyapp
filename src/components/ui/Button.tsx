@@ -1,6 +1,9 @@
-import { ActivityIndicator, Pressable, Text, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View, type PressableProps } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
+import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> {
   label: string;
@@ -13,36 +16,52 @@ export function Button({
   variant = 'primary',
   loading = false,
   disabled,
+  onPress,
   ...rest
 }: ButtonProps) {
   const colors = useColors();
   const isDisabled = disabled || loading;
+  const press = useSharedValue(1);
+
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
+
   const base = 'h-12 rounded-xl items-center justify-center px-4 flex-row';
-  const look =
-    variant === 'primary'
-      ? 'bg-primary active:opacity-80'
-      : 'bg-transparent border border-border active:opacity-70';
+  const look = variant === 'primary' ? 'bg-primary' : 'bg-transparent border border-border';
 
   return (
     <Pressable
       accessibilityRole="button"
       disabled={isDisabled}
-      className={`${base} ${look} ${isDisabled ? 'opacity-50' : ''}`}
+      onPressIn={() => {
+        if (isDisabled) return;
+        press.value = withSpring(0.96, { damping: 16, stiffness: 320 });
+      }}
+      onPressOut={() => {
+        press.value = withSpring(1, { damping: 16, stiffness: 320 });
+      }}
+      onPress={(e) => {
+        if (isDisabled) return;
+        haptics.tap();
+        onPress?.(e);
+      }}
       {...rest}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.primaryFg : colors.text} />
-      ) : (
-        <Text
-          className={
-            variant === 'primary'
-              ? 'text-primary-fg font-semibold text-base'
-              : 'text-text font-semibold text-base'
-          }
-        >
-          {label}
-        </Text>
-      )}
+      {/* `className` no se resuelve en `Animated.View` de reanimated: el look
+          va en una View normal adentro, el `Animated.View` sólo anima el scale. */}
+      <Animated.View style={style}>
+        <View className={`${base} ${look} ${isDisabled ? 'opacity-50' : ''}`}>
+          {loading ? (
+            <ActivityIndicator color={variant === 'primary' ? colors.primaryFg : colors.text} />
+          ) : (
+            <Text
+              className={variant === 'primary' ? 'text-primary-fg text-base' : 'text-text text-base'}
+              style={{ fontFamily: fonts.bold }}
+            >
+              {label}
+            </Text>
+          )}
+        </View>
+      </Animated.View>
     </Pressable>
   );
 }

@@ -2,6 +2,10 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { Category, CategoryType } from '@/api/types';
+import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
+import { FadeInView } from './ui/FadeInView';
+import { Icon } from './ui/Icon';
 
 interface GroupTree {
   group: Category;
@@ -32,7 +36,10 @@ function Tile({
 }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        haptics.selection();
+        onPress();
+      }}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       className="w-1/4 items-center gap-1 px-1 py-2 active:opacity-60"
@@ -43,7 +50,11 @@ function Tile({
         }`}
         style={{ backgroundColor: category.color || '#334155' }}
       >
-        <Text className="text-xl">{category.icon || '•'}</Text>
+        {category.icon ? (
+          <Text className="text-xl">{category.icon}</Text>
+        ) : (
+          <Icon name="tag" size={20} color="#FFFFFF" />
+        )}
       </View>
       <Text
         className={`text-center text-[11px] leading-tight ${
@@ -164,11 +175,15 @@ export function CategoryPickerField({
   error?: string;
 }) {
   const selected = categories.find((c) => c.id === value) ?? null;
+  const colors = useColors();
 
   return (
     <View>
       <Pressable
-        onPress={onToggle}
+        onPress={() => {
+          haptics.tap();
+          onToggle();
+        }}
         accessibilityRole="button"
         className={`h-12 flex-row items-center justify-between border-b px-1 ${
           error ? 'border-expense' : 'border-border/60'
@@ -181,29 +196,35 @@ export function CategoryPickerField({
               className="h-6 w-6 items-center justify-center rounded-full"
               style={{ backgroundColor: selected.color || '#334155' }}
             >
-              <Text className="text-xs">{selected.icon || '•'}</Text>
+              {selected.icon ? (
+                <Text className="text-xs">{selected.icon}</Text>
+              ) : (
+                <Icon name="tag" size={12} color="#FFFFFF" />
+              )}
             </View>
           ) : null}
           <Text className={selected ? 'text-text' : 'text-text-muted'} numberOfLines={1}>
             {loading ? 'Cargando…' : (selected?.name ?? 'Elegir')}
           </Text>
-          <Text className="text-text-muted">{open ? '▲' : '▾'}</Text>
+          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
         </View>
       </Pressable>
 
       {error ? <Text className="text-expense mt-1 text-xs">{error}</Text> : null}
 
       {open ? (
-        <View className="mt-2 rounded-xl border border-border bg-surface p-3">
-          <ScrollView className="max-h-80" keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-            <CategoryGrid
-              categories={categories}
-              type={type}
-              selectedId={value}
-              onSelect={onChange}
-            />
-          </ScrollView>
-        </View>
+        <FadeInView>
+          <View className="mt-2 rounded-xl border border-border bg-surface p-3">
+            <ScrollView className="max-h-80" keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+              <CategoryGrid
+                categories={categories}
+                type={type}
+                selectedId={value}
+                onSelect={onChange}
+              />
+            </ScrollView>
+          </View>
+        </FadeInView>
       ) : null}
     </View>
   );

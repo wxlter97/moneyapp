@@ -3,12 +3,16 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 import { Link, Redirect, router } from 'expo-router';
 
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import { useAuthStore } from '@/store/auth';
+import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 export default function RegisterScreen() {
+  const colors = useColors();
   const status = useAuthStore((s) => s.status);
   const signUp = useAuthStore((s) => s.signUp);
 
@@ -58,10 +62,17 @@ export default function RegisterScreen() {
       >
         <ScrollView contentContainerClassName="grow justify-center gap-6 py-6" keyboardShouldPersistTaps="handled">
           <View className="flex-row items-center gap-3">
-            <Pressable onPress={() => router.back()} accessibilityRole="button">
-              <Text className="text-text-muted text-lg">‹</Text>
+            <Pressable
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Volver"
+              className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-60"
+            >
+              <Icon name="chevron-left" size={18} color={colors.text} />
             </Pressable>
-            <Text className="text-text text-2xl font-bold">Crear cuenta</Text>
+            <Text className="text-text text-2xl" style={{ fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
+              Crear cuenta
+            </Text>
           </View>
 
           <View className="gap-4">

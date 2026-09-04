@@ -13,10 +13,13 @@ import {
 import { errorMessage } from '@/api/errors';
 import type { Category } from '@/api/types';
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { dismissModal, ModalHeader } from '@/components/ui/ModalHeader';
 import { Money } from '@/components/ui/Money';
 import { Screen } from '@/components/ui/Screen';
 import { LoadingState } from '@/components/ui/states';
+import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 import { currentYearMonth, formatYearMonth, type YearMonth } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 
@@ -181,16 +184,24 @@ function GroupRow({
   spent: number;
   onChange: (text: string) => void;
 }) {
+  const colors = useColors();
   return (
-    <View className="flex-row items-center gap-3 border-b border-border/50 py-2.5">
-      <View
-        className="h-8 w-8 items-center justify-center rounded-full"
-        style={{ backgroundColor: group.color || '#334155' }}
-      >
-        <Text className="text-sm">{group.icon || '📁'}</Text>
+    <View className="flex-row items-center gap-3 border-b border-border/25 py-2.5">
+      <View className="h-9 w-9 items-center justify-center rounded-full bg-surface-2">
+        {group.icon ? (
+          <Text className="text-sm">{group.icon}</Text>
+        ) : (
+          <Icon name="tag" size={14} color={colors.textMuted} />
+        )}
+        {group.color ? (
+          <View
+            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface"
+            style={{ backgroundColor: group.color }}
+          />
+        ) : null}
       </View>
       <View className="flex-1">
-        <Text className="text-text text-base" numberOfLines={1}>
+        <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>
           {group.name}
         </Text>
         {spent > 0 ? (
@@ -199,7 +210,7 @@ function GroupRow({
           </Text>
         ) : null}
       </View>
-      <View className="flex-row items-center gap-1 rounded-xl border border-border bg-surface px-2.5">
+      <View className="flex-row items-center gap-1 rounded-xl bg-surface-2 px-2.5">
         <Text className="text-text-muted text-sm">$</Text>
         <TextInput
           value={value}

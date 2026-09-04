@@ -10,6 +10,7 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { SubTabs } from '@/components/SubTabs';
 import { Card } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
+import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Ring } from '@/components/ui/Ring';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { useColors } from '@/theme';
@@ -35,29 +36,36 @@ export default function BudgetScreen() {
   const openEditor = () =>
     router.push(`/budget-edit?y=${month.year}&m=${month.month}`);
 
+  const refresh = usePullRefresh(budget.isFetching && !budget.isLoading, () => budget.refetch());
+
   return (
     <View className="flex-1 bg-bg">
       <SectionHeader
-        section="budget"
         title="Presupuesto"
         right={
           <Pressable
             onPress={openEditor}
-            className="rounded-lg bg-white/20 px-3 py-1.5 active:opacity-70"
+            className="rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
             accessibilityRole="button"
           >
-            <Text className="text-sm font-semibold text-white">Ajustar</Text>
+            <Text className="text-text text-sm font-semibold">Ajustar</Text>
           </Pressable>
         }
         subtitle={
-          <Text className="text-sm text-white/80">
-            {over ? 'Te pasaste por ' : 'Te queda '}
-            <Money value={Math.abs(remaining)} currency={currency} className="font-semibold text-white" />
-          </Text>
+          <View>
+            <Money
+              value={Math.abs(remaining)}
+              currency={currency}
+              hero
+              className="text-[52px] leading-[56px]"
+            />
+            <Text className="text-text-muted text-sm">
+              {over ? 'te pasaste' : 'te queda'} de <Money value={budgeted} currency={currency} tone="muted" />
+            </Text>
+          </View>
         }
       >
         <SubTabs
-          tone="light"
           value={tab}
           onChange={setTab}
           options={[
@@ -67,7 +75,10 @@ export default function BudgetScreen() {
         />
       </SectionHeader>
 
-      <ScrollView contentContainerClassName="px-4 pb-28 pt-4 self-center w-full max-w-[560px] gap-4">
+      <ScrollView
+        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
+        refreshControl={refresh}
+      >
         <MonthSwitcher value={month} onChange={setMonth} />
 
         {budget.isLoading ? (
@@ -162,7 +173,7 @@ function GroupCard({
     >
       {group.rows.map((row, i) => (
         <View key={row.category}>
-          {i > 0 ? <View className="h-px bg-border/60" /> : null}
+          {i > 0 ? <View className="h-px bg-border/30" /> : null}
           <BudgetProgressRow row={row} currency={currency} showProvision={showProvision} />
         </View>
       ))}

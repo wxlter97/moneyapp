@@ -2,12 +2,14 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/errors';
+import { useColors } from '@/theme';
 import { Button } from './Button';
 
 export function LoadingState() {
+  const colors = useColors();
   return (
     <View className="flex-1 items-center justify-center py-16">
-      <ActivityIndicator color="#4F8CFF" />
+      <ActivityIndicator color={colors.primary} />
     </View>
   );
 }

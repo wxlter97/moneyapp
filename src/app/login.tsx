@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { Link, Redirect } from 'expo-router';
 
+import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/Button';
+import { FadeInView } from '@/components/ui/FadeInView';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import { useAuthStore } from '@/store/auth';
+import { fonts } from '@/theme/typography';
 
 export default function LoginScreen() {
   const status = useAuthStore((s) => s.status);
@@ -41,10 +44,16 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1 justify-center"
       >
+        <FadeInView>
         <View className="gap-6">
-          <View className="gap-1">
-            <Text className="text-text text-2xl font-bold">Budget</Text>
-            <Text className="text-text-muted">Inicia sesión para continuar.</Text>
+          <View className="items-center gap-3 pb-2">
+            <BrandMark size={64} />
+            <View className="items-center gap-1">
+              <Text className="text-text text-2xl" style={{ fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
+                Budget
+              </Text>
+              <Text className="text-text-muted">Inicia sesión para continuar.</Text>
+            </View>
           </View>
 
           <View className="gap-4">
@@ -89,6 +98,7 @@ export default function LoginScreen() {
             </Pressable>
           </Link>
         </View>
+        </FadeInView>
       </KeyboardAvoidingView>
     </Screen>
   );

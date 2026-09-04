@@ -8,10 +8,14 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { WalletRow } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
 import { DragList } from '@/components/ui/DragList';
+import { Icon } from '@/components/ui/Icon';
+import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { useColors } from '@/theme';
 import { flattenTree } from '@/lib/wallets';
 
 export default function WalletsScreen() {
+  const colors = useColors();
   const netWorth = useNetWorth();
   const wallets = useWallets();
   const reorder = useReorderWallets();
@@ -20,21 +24,25 @@ export default function WalletsScreen() {
   const currency = wallets.data?.[0]?.currency ?? 'USD';
   const nodes = useMemo(() => flattenTree(wallets.data ?? []), [wallets.data]);
   const loading = netWorth.isLoading || wallets.isLoading;
+  const refreshing = (netWorth.isFetching || wallets.isFetching) && !loading;
+  const refresh = usePullRefresh(refreshing, () => {
+    netWorth.refetch();
+    wallets.refetch();
+  });
 
   return (
     <View className="flex-1 bg-bg">
       <SectionHeader
-        section="wallets"
         title="Carteras"
         right={
           <View className="flex-row gap-2">
             {nodes.length > 1 ? (
               <Pressable
                 onPress={() => setReordering((r) => !r)}
-                className="rounded-lg bg-white/20 px-3 py-1.5 active:opacity-70"
+                className="rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
                 accessibilityRole="button"
               >
-                <Text className="text-sm font-semibold text-white">
+                <Text className="text-text text-sm font-semibold">
                   {reordering ? 'Listo' : 'Ordenar'}
                 </Text>
               </Pressable>
@@ -42,17 +50,21 @@ export default function WalletsScreen() {
             {!reordering ? (
               <Pressable
                 onPress={() => router.push('/wallet/new')}
-                className="rounded-lg bg-white/20 px-3 py-1.5 active:opacity-70"
+                className="h-8 w-8 items-center justify-center rounded-full bg-primary active:opacity-80"
                 accessibilityRole="button"
+                accessibilityLabel="Nueva cartera"
               >
-                <Text className="text-sm font-semibold text-white">+ Nueva</Text>
+                <Icon name="plus" size={16} color={colors.primaryFg} />
               </Pressable>
             ) : null}
           </View>
         }
       />
 
-      <ScrollView contentContainerClassName="px-4 pb-28 pt-4 self-center w-full max-w-[560px] gap-4">
+      <ScrollView
+        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
+        refreshControl={refresh}
+      >
         {loading ? (
           <LoadingState />
         ) : netWorth.isError || wallets.isError || !netWorth.data ? (
@@ -87,7 +99,7 @@ export default function WalletsScreen() {
               <Card title="Todas las carteras">
                 {nodes.map((node, i) => (
                   <View key={node.wallet.id}>
-                    {i > 0 ? <View className="h-px bg-border/60" /> : null}
+                    {i > 0 ? <View className="h-px bg-border/30" /> : null}
                     <Pressable
                       onPress={() => router.push(`/wallet/${node.wallet.id}`)}
                       className="active:opacity-60"

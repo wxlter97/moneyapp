@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import { Animated, Text, View } from 'react-native';
 
+import { fonts } from '@/theme/typography';
+
 interface CardProps {
   children: ReactNode;
   title?: string;
@@ -35,11 +37,20 @@ export function Card({
   }, [animated, index, v]);
 
   const body = (
-    <View className={`rounded-2xl border border-border bg-surface p-4 ${className}`}>
+    <View
+      className={`rounded-3xl bg-surface/95 p-4 ${className}`}
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.06,
+        shadowRadius: 24,
+        elevation: 1,
+      }}
+    >
       {(title || action) && (
         <View className="mb-3 flex-row items-center justify-between">
           {title ? (
-            <Text className="text-text-muted text-xs font-semibold uppercase tracking-wide">
+            <Text className="text-text text-[17px]" style={{ fontFamily: fonts.bold }}>
               {title}
             </Text>
           ) : (

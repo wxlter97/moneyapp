@@ -22,32 +22,33 @@ select,
 
 @layer base {
   :root {
-    /* Tema claro (valores RGB separados por espacio para soportar alpha). */
-    --color-bg: 247 247 245;
+    /* Tema claro: neutro y suave (un solo acento), estilo "glass".
+       Valores RGB separados por espacio para soportar alpha (bg-surface/80). */
+    --color-bg: 246 246 248;
     --color-surface: 255 255 255;
-    --color-surface-2: 238 240 244;
-    --color-border: 225 228 234;
-    --color-text: 20 24 31;
-    --color-text-muted: 91 100 112;
-    --color-primary: 47 108 233;
+    --color-surface-2: 241 241 244;
+    --color-border: 231 231 236;
+    --color-text: 22 23 26;
+    --color-text-muted: 142 142 150;
+    --color-primary: 61 116 250;
     --color-primary-fg: 255 255 255;
-    --color-income: 22 158 103;
-    --color-expense: 214 54 60;
-    --color-warning: 176 116 22;
+    --color-income: 33 158 106;
+    --color-expense: 224 73 62;
+    --color-warning: 199 138 46;
   }
 
   :root.dark {
-    /* Tema oscuro (por defecto, dark-first). */
-    --color-bg: 11 13 16;
-    --color-surface: 21 24 29;
-    --color-surface-2: 30 35 43;
-    --color-border: 42 47 56;
-    --color-text: 242 244 247;
-    --color-text-muted: 154 164 178;
-    --color-primary: 79 140 255;
+    /* Tema oscuro (por defecto, dark-first). Mismo lenguaje neutro. */
+    --color-bg: 10 11 13;
+    --color-surface: 23 24 28;
+    --color-surface-2: 31 33 38;
+    --color-border: 41 43 49;
+    --color-text: 244 244 246;
+    --color-text-muted: 148 150 158;
+    --color-primary: 91 147 255;
     --color-primary-fg: 255 255 255;
-    --color-income: 62 207 142;
-    --color-expense: 255 107 107;
-    --color-warning: 245 166 35;
+    --color-income: 52 199 135;
+    --color-expense: 255 107 96;
+    --color-warning: 240 169 62;
   }
 }
