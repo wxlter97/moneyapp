@@ -9,6 +9,7 @@ import { TextField } from '@/components/ui/TextField';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import { useAuthStore } from '@/store/auth';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 export default function RegisterScreen() {
   const colors = useColors();
@@ -69,7 +70,9 @@ export default function RegisterScreen() {
             >
               <Icon name="chevron-left" size={18} color={colors.text} />
             </Pressable>
-            <Text className="text-text text-2xl font-bold">Crear cuenta</Text>
+            <Text className="text-text text-2xl" style={{ fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
+              Crear cuenta
+            </Text>
           </View>
 
           <View className="gap-4">

@@ -90,7 +90,7 @@ export default function WalletsScreen() {
               <Card title="Todas las carteras">
                 {nodes.map((node, i) => (
                   <View key={node.wallet.id}>
-                    {i > 0 ? <View className="h-px bg-border/60" /> : null}
+                    {i > 0 ? <View className="h-px bg-border/30" /> : null}
                     <Pressable
                       onPress={() => router.push(`/wallet/${node.wallet.id}`)}
                       className="active:opacity-60"

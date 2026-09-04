@@ -53,9 +53,10 @@ export default function BudgetScreen() {
             <Money
               value={Math.abs(remaining)}
               currency={currency}
-              className="text-text text-[40px] font-bold leading-tight"
+              hero
+              className="text-[52px] leading-[56px]"
             />
-            <Text className="text-text-muted -mt-1 text-sm">
+            <Text className="text-text-muted text-sm">
               {over ? 'te pasaste' : 'te queda'} de <Money value={budgeted} currency={currency} tone="muted" />
             </Text>
           </View>
@@ -166,7 +167,7 @@ function GroupCard({
     >
       {group.rows.map((row, i) => (
         <View key={row.category}>
-          {i > 0 ? <View className="h-px bg-border/60" /> : null}
+          {i > 0 ? <View className="h-px bg-border/30" /> : null}
           <BudgetProgressRow row={row} currency={currency} showProvision={showProvision} />
         </View>
       ))}

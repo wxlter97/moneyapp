@@ -73,7 +73,8 @@ export function NetWorthPager({
                 value={item.value}
                 currency={currency}
                 signed={item.signed}
-                className="text-primary-fg text-4xl font-bold"
+                hero
+                className="text-primary-fg text-[42px] leading-[46px]"
               />
               <Text className="text-primary-fg/80 mt-1 text-sm">{item.title}</Text>
             </View>

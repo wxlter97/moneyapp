@@ -4,6 +4,9 @@ module.exports = {
   presets: [require('nativewind/preset')],
   darkMode: 'class',
   theme: {
+    fontFamily: {
+      sans: ['Manrope_500Medium'],
+    },
     extend: {
       colors: {
         // Tokens semánticos. Los valores viven en global.css como CSS vars

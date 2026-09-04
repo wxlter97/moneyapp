@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { BrandMark } from './BrandMark';
+import { fonts } from '@/theme/typography';
 
 interface SplashOverlayProps {
   /** La app ya tiene todo listo para mostrarse (bootstrap de auth resuelto). */
@@ -97,7 +98,7 @@ export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
           <BrandMark size={112} />
         </Animated.View>
         <Animated.View style={wordStyle}>
-          <Text style={{ color: '#F2F4F7', fontSize: 22, fontWeight: '700', letterSpacing: 1 }}>
+          <Text style={{ color: '#F2F4F7', fontSize: 24, fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
             budget
           </Text>
         </Animated.View>

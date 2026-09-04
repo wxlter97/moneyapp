@@ -5,6 +5,7 @@ import { Icon } from './ui/Icon';
 import { haptics } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 interface ScreenHeaderProps {
   /** Título grande de página (para pantallas sin cifra hero, ej. Herramientas). */
@@ -32,7 +33,14 @@ export function ScreenHeader({ title }: ScreenHeaderProps) {
           <Icon name="sign-out" size={16} color={colors.textMuted} />
         </Pressable>
       </View>
-      {title ? <Text className="text-text text-3xl font-bold">{title}</Text> : null}
+      {title ? (
+        <Text
+          className="text-text text-[34px] leading-[38px]"
+          style={{ fontFamily: fonts.extrabold, letterSpacing: -0.5 }}
+        >
+          {title}
+        </Text>
+      ) : null}
     </View>
   );
 }

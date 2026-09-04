@@ -3,6 +3,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> {
   label: string;
@@ -53,11 +54,8 @@ export function Button({
             <ActivityIndicator color={variant === 'primary' ? colors.primaryFg : colors.text} />
           ) : (
             <Text
-              className={
-                variant === 'primary'
-                  ? 'text-primary-fg font-semibold text-base'
-                  : 'text-text font-semibold text-base'
-              }
+              className={variant === 'primary' ? 'text-primary-fg text-base' : 'text-text text-base'}
+              style={{ fontFamily: fonts.bold }}
             >
               {label}
             </Text>

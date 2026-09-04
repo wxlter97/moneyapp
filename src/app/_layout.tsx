@@ -8,8 +8,17 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { colorScheme, useColorScheme } from 'nativewind';
+import {
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+  useFonts,
+} from '@expo-google-fonts/manrope';
 
 import { queryClient } from '@/lib/queryClient';
+import { applyGlobalFont } from '@/lib/globalFont';
 import { darkColors, lightColors } from '@/theme';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
@@ -43,6 +52,14 @@ export default function RootLayout() {
   const { colorScheme: active } = useColorScheme();
   const scheme = active === 'light' ? 'light' : 'dark';
 
+  const [fontsLoaded] = useFonts({
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
+  });
+
   const [showSplash, setShowSplash] = useState(true);
   const dismissSplash = useCallback(() => setShowSplash(false), []);
 
@@ -56,6 +73,13 @@ export default function RootLayout() {
   }, [pref]);
 
   useEffect(() => {
+    // Recién cuando la fuente ya está registrada montamos el árbol real
+    // (más abajo): así ningún `<Text>` llega a pintarse una vez con la
+    // fuente de sistema y se queda así (defaultProps no re-renderiza solo).
+    if (fontsLoaded) applyGlobalFont();
+  }, [fontsLoaded]);
+
+  useEffect(() => {
     // El overlay animado (mismo color de fondo que el splash nativo) ya está
     // pintado en este punto, así que ocultar el splash nativo es invisible.
     SplashScreen.hide();
@@ -67,25 +91,30 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ThemeProvider value={navThemeFor(scheme)}>
             <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                animation: 'slide_from_right',
-                contentStyle: {
-                  backgroundColor: scheme === 'light' ? lightColors.bg : darkColors.bg,
-                },
-              }}
-            >
-              <Stack.Screen name="index" options={{ animation: 'fade' }} />
-              <Stack.Screen name="login" options={{ animation: 'fade' }} />
-              <Stack.Screen name="register" />
-              <Stack.Screen name="(app)" options={{ animation: 'fade' }} />
-            </Stack>
+            {fontsLoaded ? (
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  contentStyle: {
+                    backgroundColor: scheme === 'light' ? lightColors.bg : darkColors.bg,
+                  },
+                }}
+              >
+                <Stack.Screen name="index" options={{ animation: 'fade' }} />
+                <Stack.Screen name="login" options={{ animation: 'fade' }} />
+                <Stack.Screen name="register" />
+                <Stack.Screen name="(app)" options={{ animation: 'fade' }} />
+              </Stack>
+            ) : null}
           </ThemeProvider>
         </SafeAreaProvider>
       </QueryClientProvider>
       {showSplash ? (
-        <SplashOverlay ready={authStatus !== 'loading'} onFinished={dismissSplash} />
+        <SplashOverlay
+          ready={fontsLoaded && authStatus !== 'loading'}
+          onFinished={dismissSplash}
+        />
       ) : null}
     </GestureHandlerRootView>
   );

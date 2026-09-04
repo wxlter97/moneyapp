@@ -5,6 +5,7 @@ import { Money } from '@/components/ui/Money';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { toNumber } from '@/lib/money';
 import { walletColor } from '@/lib/wallets';
+import { fonts } from '@/theme/typography';
 
 interface WalletRowProps {
   wallet: Wallet;
@@ -30,7 +31,7 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
           style={{ backgroundColor: walletColor(wallet) }}
         />
         <View className="flex-1 pr-3">
-          <Text className="text-text text-base" numberOfLines={1}>
+          <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>
             {wallet.name}
             {wallet.card_last4 ? (
               <Text className="text-text-muted"> ···· {wallet.card_last4}</Text>

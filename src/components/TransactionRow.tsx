@@ -7,6 +7,7 @@ import { Money } from '@/components/ui/Money';
 import { walletLabel } from '@/api/queries/lookups';
 import { toNumber } from '@/lib/money';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 interface TransactionRowProps {
   txn: Transaction;
@@ -85,7 +86,7 @@ export function TransactionRow({ txn, category, wallet, toWallet, onPress }: Tra
         </View>
 
         <View className="flex-1">
-          <Text className="text-text text-base" numberOfLines={1}>
+          <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>
             {title}
           </Text>
           <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>

@@ -9,6 +9,7 @@ import { Icon, type IconName } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 import { useThemeStore, type ThemePref } from '@/store/theme';
 
 interface Tool {
@@ -94,7 +95,10 @@ export default function ToolsScreen() {
                       size={20}
                       color={tool.destructive ? colors.expense : colors.text}
                     />
-                    <Text className="text-text mt-2.5 text-sm font-semibold">
+                    <Text
+                      className="text-text mt-2.5 text-sm"
+                      style={{ fontFamily: fonts.semibold }}
+                    >
                       {tool.label}
                     </Text>
                     <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>

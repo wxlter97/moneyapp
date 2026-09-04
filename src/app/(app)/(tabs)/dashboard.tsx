@@ -47,8 +47,8 @@ export default function OverviewScreen() {
           <Money
             value={netWorth.data?.net}
             currency={currency}
-            signed
-            className="text-text text-[40px] font-bold leading-tight"
+            hero
+            className="text-[52px] leading-[56px]"
           />
         }
       >
@@ -127,7 +127,7 @@ function ResumenTab({ currency }: { currency: string }) {
         ) : (
           spendingWallets.map((w, i) => (
             <View key={w.id}>
-              {i > 0 ? <View className="h-px bg-border/60" /> : null}
+              {i > 0 ? <View className="h-px bg-border/30" /> : null}
               <WalletRow wallet={w} />
             </View>
           ))
@@ -151,7 +151,7 @@ function ResumenTab({ currency }: { currency: string }) {
         ) : (
           budget.data!.rows.slice(0, 5).map((row, i) => (
             <View key={row.category}>
-              {i > 0 ? <View className="h-px bg-border/60" /> : null}
+              {i > 0 ? <View className="h-px bg-border/30" /> : null}
               <BudgetProgressRow row={row} currency={currency} />
             </View>
           ))
@@ -245,7 +245,7 @@ function ListaTab({
             <View className="rounded-2xl border border-border/60 bg-surface/95 px-4">
               {day.data.map((item, i) => (
                 <View key={item.id}>
-                  {i > 0 ? <View className="h-px bg-border/60" /> : null}
+                  {i > 0 ? <View className="h-px bg-border/30" /> : null}
                   <TransactionRow
                     txn={item}
                     category={item.category ? categories.get(item.category) : undefined}

@@ -4,6 +4,7 @@ import type { BudgetRow } from '@/api/types';
 import { Money } from '@/components/ui/Money';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { toNumber } from '@/lib/money';
+import { fonts } from '@/theme/typography';
 
 interface BudgetProgressRowProps {
   row: BudgetRow;
@@ -26,7 +27,7 @@ export function BudgetProgressRow({
   return (
     <View className="gap-1.5 py-3">
       <View className="flex-row items-center justify-between">
-        <Text className="text-text text-sm" numberOfLines={1}>
+        <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>
           {row.category_name ?? 'Sin categoría'}
         </Text>
         <Text className="text-text-muted text-xs">

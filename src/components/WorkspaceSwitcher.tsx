@@ -5,6 +5,7 @@ import { useCreateWorkspace } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 import { useWorkspaceStore } from '@/store/workspace';
 import { FadeInView } from './ui/FadeInView';
 import { Icon } from './ui/Icon';
@@ -58,7 +59,9 @@ export function WorkspaceSwitcher() {
         className="flex-row items-center gap-1 self-start py-0.5 active:opacity-70"
         accessibilityRole="button"
       >
-        <Text className="text-text text-lg font-semibold">{active?.name ?? '—'}</Text>
+        <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
+          {active?.name ?? '—'}
+        </Text>
         <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
       </Pressable>
 
