@@ -150,6 +150,14 @@ export default function AppLayout() {
         options={{ presentation: 'modal', headerShown: false }}
       />
       <Stack.Screen
+        name="export"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="reset"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
         name="category/new"
         options={{ presentation: 'modal', headerShown: false }}
       />

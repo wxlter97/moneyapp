@@ -54,6 +54,16 @@ export function useCreateWorkspace() {
   });
 }
 
+export function useResetWorkspace() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, scope }: { id: string; scope: res.ResetScope }) =>
+      res.workspaces.reset(id, scope),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ws', ws], type: 'all' }),
+  });
+}
+
 // --- carteras (wallets) --------------------------------------------
 export function useWallets(params?: res.WalletListParams) {
   const ws = useActiveWs();

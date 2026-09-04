@@ -26,8 +26,18 @@ const TOOLS: Tool[] = [
     hint: 'Gastos e ingresos fijos',
     onPress: () => router.push('/recurring'),
   },
-  { glyph: '📤', label: 'Exportar datos', hint: 'Descarga en CSV', soon: true },
-  { glyph: '♻️', label: 'Restablecer', hint: 'Borrar todos los datos', soon: true },
+  {
+    glyph: '📤',
+    label: 'Exportar datos',
+    hint: 'Descarga en CSV',
+    onPress: () => router.push('/export'),
+  },
+  {
+    glyph: '♻️',
+    label: 'Restablecer',
+    hint: 'Borrar datos del presupuesto',
+    onPress: () => router.push('/reset'),
+  },
 ];
 
 export default function ToolsScreen() {

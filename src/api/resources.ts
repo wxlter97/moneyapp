@@ -47,10 +47,21 @@ async function fetchAll<T>(path: string, params: object = {}): Promise<T[]> {
 }
 
 // --- workspaces (sin X-Workspace-ID) ---------------------------------------
+export type ResetScope = 'movimientos' | 'todo';
+
 export const workspaces = {
   list: () => fetchAll<Workspace>('/workspaces/'),
   create: (name: string) =>
     api.post<Workspace>('/workspaces/', { name }, { skipWorkspace: true }).then((r) => r.data),
+  /** Borra datos del workspace. Irreversible; solo owner. */
+  reset: (id: string, scope: ResetScope) =>
+    api
+      .post<{ scope: ResetScope; deleted: Record<string, number> }>(
+        `/workspaces/${id}/reset/`,
+        { scope, confirm: true },
+        { skipWorkspace: true },
+      )
+      .then((r) => r.data),
 };
 
 // --- carteras (wallets) -------------------------------------------------
