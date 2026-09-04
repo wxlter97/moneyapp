@@ -118,6 +118,8 @@ export interface Wallet {
   counts_toward_net_worth: boolean;
   /** Límite de la tarjeta de crédito (solo `kind: 'credit'`). */
   credit_limit: Money | null;
+  /** Crédito disponible = límite + saldo; null si no es tarjeta con límite. */
+  available_credit: Money | null;
   goal_amount: Money | null;
   goal_date: ISODate | null;
   monthly_contribution: Money | null;
@@ -327,6 +329,8 @@ export interface RecurringExpenseInput {
 export interface InstallmentPurchase {
   id: UUID;
   wallet: UUID;
+  /** Tarjeta de crédito: cartera desde la que se pagan las cuotas. */
+  payment_wallet: UUID | null;
   category: UUID;
   description: string;
   total_amount: Money;
@@ -335,6 +339,8 @@ export interface InstallmentPurchase {
   installments_paid: number;
   start_date: ISODate;
   is_completed: boolean;
+  /** true si `payment_wallet` está definido (compra con tarjeta). */
+  is_credit_card: boolean;
   /** installment_amount × (total − pagadas). */
   remaining_amount: Money;
   created_at: ISODateTime;
@@ -343,6 +349,7 @@ export interface InstallmentPurchase {
 
 export interface InstallmentPurchaseInput {
   wallet: UUID;
+  payment_wallet?: UUID | null;
   category: UUID;
   description: string;
   total_amount: Money;

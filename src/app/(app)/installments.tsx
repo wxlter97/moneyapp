@@ -83,9 +83,12 @@ export default function InstallmentsScreen() {
                       <Text className="text-text text-base" numberOfLines={1}>
                         {p.description}
                       </Text>
-                      <Text className="text-text-muted text-xs">
+                      <Text className="text-text-muted text-xs" numberOfLines={1}>
                         {p.installments_paid}/{p.installments_total} cuotas ·{' '}
                         {wallet?.name ?? '—'}
+                        {p.is_credit_card
+                          ? ` · paga desde ${wallets.get(p.payment_wallet ?? '')?.name ?? '—'}`
+                          : ''}
                       </Text>
                     </View>
                     <View className="items-end">

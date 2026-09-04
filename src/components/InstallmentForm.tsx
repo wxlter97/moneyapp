@@ -44,6 +44,7 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
   const [startDate, setStartDate] = useState(todayISO());
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [walletId, setWalletId] = useState<string | null>(null);
+  const [paymentWalletId, setPaymentWalletId] = useState<string | null>(null);
   const [touchedInstallment, setTouchedInstallment] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -61,6 +62,7 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
     setStartDate(p.start_date);
     setCategoryId(p.category);
     setWalletId(p.wallet);
+    setPaymentWalletId(p.payment_wallet);
     setTouchedInstallment(true);
     setPrefilled(true);
   }, [editing, prefilled, existing.data]);
@@ -85,6 +87,15 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
     [walletsQ.data],
   );
 
+  const isCreditCard = useMemo(
+    () => (walletsQ.data ?? []).find((w) => w.id === walletId)?.kind === 'credit',
+    [walletsQ.data, walletId],
+  );
+  const paymentWalletOptions = useMemo(
+    () => walletOptions.filter((o) => o.value !== walletId),
+    [walletOptions, walletId],
+  );
+
   const busy = create.isPending || update.isPending || remove.isPending;
   const canSubmit =
     description.trim().length > 0 &&
@@ -92,6 +103,7 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
     toInt(count) > 0 &&
     !!categoryId &&
     !!walletId &&
+    (!isCreditCard || !!paymentWalletId) &&
     !busy;
 
   async function onSubmit() {
@@ -100,12 +112,13 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
     setFields({});
     const payload: InstallmentPurchaseInput = {
       wallet: walletId,
+      payment_wallet: isCreditCard ? paymentWalletId : null,
       category: categoryId,
       description: description.trim(),
       total_amount: (toNumber(total) || toNumber(installment) * toInt(count)).toFixed(2),
       installment_amount: toNumber(installment).toFixed(2),
       installments_total: toInt(count),
-      installments_paid: Math.min(toInt(paid), toInt(count)),
+      installments_paid: isCreditCard ? 0 : Math.min(toInt(paid), toInt(count)),
       start_date: startDate,
     };
     try {
@@ -157,15 +170,19 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
               error={fields.installments_total}
             />
           </View>
-          <View className="flex-1">
-            <TextField
-              label="Ya pagadas"
-              value={paid}
-              onChangeText={(t) => setPaid(t.replace(/\D/g, '').slice(0, 3))}
-              keyboardType="number-pad"
-              error={fields.installments_paid}
-            />
-          </View>
+          {!isCreditCard ? (
+            <View className="flex-1">
+              <TextField
+                label="Ya pagadas"
+                value={paid}
+                onChangeText={(t) => setPaid(t.replace(/\D/g, '').slice(0, 3))}
+                keyboardType="number-pad"
+                error={fields.installments_paid}
+              />
+            </View>
+          ) : (
+            <View className="flex-1" />
+          )}
         </View>
 
         <AmountInput
@@ -195,13 +212,31 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
         />
 
         <Select
-          label="Cartera"
+          label={isCreditCard ? 'Tarjeta' : 'Cartera'}
           value={walletId}
           onChange={setWalletId}
           options={walletOptions}
           placeholder={walletsQ.isLoading ? 'Cargando…' : 'Elegir cartera'}
           error={fields.wallet}
         />
+
+        {isCreditCard ? (
+          <View className="gap-2">
+            <Select
+              label="Pagar las cuotas desde"
+              value={paymentWalletId}
+              onChange={setPaymentWalletId}
+              options={paymentWalletOptions}
+              placeholder="Elegir cartera"
+              error={fields.payment_wallet}
+            />
+            <Text className="text-text-muted text-xs">
+              Compra con tarjeta: el total se carga a la tarjeta hoy (baja tu
+              crédito disponible) y cada cuota es una transferencia desde esta
+              cartera para pagarla.
+            </Text>
+          </View>
+        ) : null}
 
         {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
 
