@@ -15,6 +15,7 @@ import {
 import { walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import type { TransactionInput, TransactionType } from '@/api/types';
+import { CategoryPickerField } from '@/components/CategoryGrid';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { NumPad } from '@/components/ui/NumPad';
@@ -216,29 +217,35 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
         {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
 
         <View className="gap-1">
-          <PickerRow
-            label={isTransfer ? 'Categoría (opcional)' : 'Categoría'}
-            options={
-              isTransfer
-                ? [{ value: '', label: 'Sin categoría' }, ...categoryOptions]
-                : categoryOptions
-            }
-            value={categoryId}
-            onChange={(v) => {
-              setCategoryId(v || null);
-              setOpenRow(null);
-            }}
-            open={openRow === 'category'}
-            onToggle={() => toggleRow('category')}
-            placeholder={
-              categoriesQ.isLoading
-                ? 'Cargando…'
-                : !isTransfer && categoryOptions.length === 0
-                  ? `Sin categorías de ${type === 'income' ? 'ingreso' : 'gasto'}`
-                  : 'Elegir'
-            }
-            error={fields.category}
-          />
+          {isTransfer ? (
+            <PickerRow
+              label="Categoría (opcional)"
+              options={[{ value: '', label: 'Sin categoría' }, ...categoryOptions]}
+              value={categoryId}
+              onChange={(v) => {
+                setCategoryId(v || null);
+                setOpenRow(null);
+              }}
+              open={openRow === 'category'}
+              onToggle={() => toggleRow('category')}
+              placeholder={categoriesQ.isLoading ? 'Cargando…' : 'Elegir'}
+              error={fields.category}
+            />
+          ) : (
+            <CategoryPickerField
+              categories={categoriesQ.data ?? []}
+              type={type}
+              value={categoryId}
+              open={openRow === 'category'}
+              onToggle={() => toggleRow('category')}
+              onChange={(v) => {
+                setCategoryId(v || null);
+                setOpenRow(null);
+              }}
+              loading={categoriesQ.isLoading}
+              error={fields.category}
+            />
+          )}
 
           <PickerRow
             label={isTransfer ? 'Desde' : 'Cartera'}
