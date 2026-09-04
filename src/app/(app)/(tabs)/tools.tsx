@@ -8,52 +8,50 @@ import { FadeInView } from '@/components/ui/FadeInView';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
 import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
 import { useThemeStore, type ThemePref } from '@/store/theme';
 
 interface Tool {
   icon: IconName;
-  tint: string;
   label: string;
   hint: string;
   onPress?: () => void;
+  /** Acción destructiva: es el único ícono que se pinta con color (rojo). */
+  destructive?: boolean;
   soon?: boolean;
 }
 
 const TOOLS: Tool[] = [
   {
     icon: 'tag',
-    tint: '#7C5CFC',
     label: 'Categorías',
     hint: 'Grupos y subcategorías',
     onPress: () => router.push('/categories'),
   },
   {
     icon: 'repeat',
-    tint: '#2FBF71',
     label: 'Recurrentes',
     hint: 'Gastos e ingresos fijos',
     onPress: () => router.push('/recurring'),
   },
   {
     icon: 'receipt',
-    tint: '#F0568F',
     label: 'Compras a plazo',
     hint: 'Pagos en cuotas',
     onPress: () => router.push('/installments'),
   },
   {
     icon: 'download',
-    tint: '#4F8CFF',
     label: 'Exportar datos',
     hint: 'Descarga en CSV',
     onPress: () => router.push('/export'),
   },
   {
     icon: 'reset',
-    tint: '#D6363C',
     label: 'Restablecer',
     hint: 'Borrar datos del presupuesto',
     onPress: () => router.push('/reset'),
+    destructive: true,
   },
 ];
 
@@ -64,6 +62,7 @@ const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
 ];
 
 export default function ToolsScreen() {
+  const colors = useColors();
   const version = Constants.expoConfig?.version ?? '—';
   const themePref = useThemeStore((s) => s.pref);
   const setThemePref = useThemeStore((s) => s.setPref);
@@ -86,17 +85,16 @@ export default function ToolsScreen() {
                     }}
                     disabled={!tool.onPress}
                     accessibilityRole="button"
-                    className={`rounded-xl border border-border bg-surface-2 p-3 ${
+                    className={`rounded-xl bg-surface-2 p-3 ${
                       tool.onPress ? 'active:opacity-60' : 'opacity-50'
                     }`}
                   >
-                    <View
-                      className="h-9 w-9 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: tool.tint + '26' }}
-                    >
-                      <Icon name={tool.icon} size={18} color={tool.tint} />
-                    </View>
-                    <Text className="text-text mt-2 text-sm font-semibold">
+                    <Icon
+                      name={tool.icon}
+                      size={20}
+                      color={tool.destructive ? colors.expense : colors.text}
+                    />
+                    <Text className="text-text mt-2.5 text-sm font-semibold">
                       {tool.label}
                     </Text>
                     <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>

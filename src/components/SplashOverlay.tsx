@@ -74,7 +74,7 @@ export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
   return (
     <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: SPLASH_BG }, overlayStyle]} pointerEvents="none">
       <LinearGradient
-        colors={['#171233', SPLASH_BG, SPLASH_BG]}
+        colors={['#101528', SPLASH_BG, SPLASH_BG]}
         start={{ x: 0.15, y: 0 }}
         end={{ x: 0.9, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -88,9 +88,9 @@ export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
       >
         {/* Tres círculos concéntricos con opacidad decreciente: aproximan un
             resplandor radial suave sin depender de un blur real. */}
-        <View style={{ width: 340, height: 340, borderRadius: 170, backgroundColor: '#7C5CFC', opacity: 0.14 }} />
-        <View style={{ position: 'absolute', top: 60, left: 60, width: 220, height: 220, borderRadius: 110, backgroundColor: '#9B7BFF', opacity: 0.2 }} />
-        <View style={{ position: 'absolute', top: 110, left: 110, width: 120, height: 120, borderRadius: 60, backgroundColor: '#B79CFF', opacity: 0.28 }} />
+        <View style={{ width: 340, height: 340, borderRadius: 170, backgroundColor: '#3D6BE0', opacity: 0.14 }} />
+        <View style={{ position: 'absolute', top: 60, left: 60, width: 220, height: 220, borderRadius: 110, backgroundColor: '#5B93FF', opacity: 0.18 }} />
+        <View style={{ position: 'absolute', top: 110, left: 110, width: 120, height: 120, borderRadius: 60, backgroundColor: '#8FB4FF', opacity: 0.26 }} />
       </Animated.View>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18 }}>
         <Animated.View style={markStyle}>

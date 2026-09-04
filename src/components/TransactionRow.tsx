@@ -1,10 +1,12 @@
 import { Pressable, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import type { Category, Transaction, Wallet } from '@/api/types';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { walletLabel } from '@/api/queries/lookups';
 import { toNumber } from '@/lib/money';
+import { useColors } from '@/theme';
 
 interface TransactionRowProps {
   txn: Transaction;
@@ -21,8 +23,15 @@ const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
   installment: 'cuota',
 };
 
-/** Fila de movimiento estilo Buddy: icono circular + título/subtítulo + importe. */
+/**
+ * Fila de movimiento: avatar neutro (el color de la categoría queda como un
+ * punto discreto, no llenando el círculo) + título/subtítulo + importe.
+ */
 export function TransactionRow({ txn, category, wallet, toWallet, onPress }: TransactionRowProps) {
+  const colors = useColors();
+  const press = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
+
   const isTransfer = txn.type === 'transfer';
   const isIncome = txn.type === 'income';
   const badge = SOURCE_LABEL[txn.source];
@@ -40,57 +49,69 @@ export function TransactionRow({ txn, category, wallet, toWallet, onPress }: Tra
     : `${category?.name ?? '—'} · ${walletLabel(wallet)}`;
 
   const glyph = category?.icon;
-  const circleColor = isTransfer ? '#334155' : category?.color || '#334155';
+  const dotColor = isTransfer ? undefined : category?.color;
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      className="flex-row items-center gap-3 py-3 active:opacity-60"
-      accessibilityRole={onPress ? 'button' : undefined}
-    >
-      <View
-        className="h-9 w-9 items-center justify-center rounded-full"
-        style={{ backgroundColor: circleColor }}
+    <Animated.View style={pressStyle}>
+      <Pressable
+        onPress={onPress}
+        disabled={!onPress}
+        onPressIn={() => {
+          if (!onPress) return;
+          press.value = withSpring(0.98, { damping: 16, stiffness: 320 });
+        }}
+        onPressOut={() => {
+          press.value = withSpring(1, { damping: 16, stiffness: 320 });
+        }}
+        className="flex-row items-center gap-3 py-3"
+        accessibilityRole={onPress ? 'button' : undefined}
       >
-        {glyph ? (
-          <Text className="text-sm">{glyph}</Text>
-        ) : (
-          <Icon
-            name={isTransfer ? 'swap' : isIncome ? 'arrow-up-right' : 'tag'}
-            size={16}
-            color="#FFFFFF"
+        <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+          {glyph ? (
+            <Text className="text-base">{glyph}</Text>
+          ) : (
+            <Icon
+              name={isTransfer ? 'swap' : isIncome ? 'arrow-up-right' : 'tag'}
+              size={16}
+              color={colors.textMuted}
+            />
+          )}
+          {dotColor ? (
+            <View
+              className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface"
+              style={{ backgroundColor: dotColor }}
+            />
+          ) : null}
+        </View>
+
+        <View className="flex-1">
+          <Text className="text-text text-base" numberOfLines={1}>
+            {title}
+          </Text>
+          <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </View>
+
+        <View className="items-end gap-1">
+          <Money
+            value={signed}
+            currency={txn.currency}
+            parens
+            tone={isTransfer ? 'muted' : isIncome ? 'income' : 'expense'}
+            className="text-base font-semibold"
           />
-        )}
-      </View>
-
-      <View className="flex-1">
-        <Text className="text-text text-base" numberOfLines={1}>
-          {title}
-        </Text>
-        <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
-          {subtitle}
-        </Text>
-      </View>
-
-      <View className="items-end gap-1">
-        <Money
-          value={signed}
-          currency={txn.currency}
-          parens
-          tone={isTransfer ? 'muted' : isIncome ? 'income' : 'expense'}
-          className="text-base font-semibold"
-        />
-        {txn.type === 'expense' && !txn.counts_toward_budget ? (
-          <View className="rounded-full bg-surface-2 px-2 py-0.5">
-            <Text className="text-warning text-[10px] uppercase tracking-wide">s/pres.</Text>
-          </View>
-        ) : badge ? (
-          <View className="rounded-full bg-surface-2 px-2 py-0.5">
-            <Text className="text-text-muted text-[10px] uppercase tracking-wide">{badge}</Text>
-          </View>
-        ) : null}
-      </View>
-    </Pressable>
+          {txn.type === 'expense' && !txn.counts_toward_budget ? (
+            <View className="rounded-full bg-surface-2 px-2 py-0.5">
+              <Text className="text-warning text-[10px] uppercase tracking-wide">s/pres.</Text>
+            </View>
+          ) : badge ? (
+            <View className="rounded-full bg-surface-2 px-2 py-0.5">
+              <Text className="text-text-muted text-[10px] uppercase tracking-wide">{badge}</Text>
+            </View>
+          ) : null}
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }

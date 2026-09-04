@@ -1,57 +1,49 @@
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 
-import { sections, type SectionKey } from '@/theme';
 import { FadeInView } from './ui/FadeInView';
 import { ScreenHeader } from './ScreenHeader';
 
 interface SectionHeaderProps {
-  section: SectionKey;
-  /** Título grande. Por defecto el nombre de la sección. */
+  /** Etiqueta pequeña sobre el contenido principal ("Vista general", "Carteras"…). */
   title?: string;
-  /** Contenido bajo el título (una cifra, un mes…). */
+  /** Contenido principal: normalmente una cifra grande (`<Money className="text-hero" />`). */
   subtitle?: ReactNode;
-  /** Acción alineada a la derecha del título. */
+  /** Acción alineada a la derecha de la etiqueta (botón "Ajustar", "+ Nueva"…). */
   right?: ReactNode;
-  /** Subtabs u otro contenido al pie del degradado. */
+  /** Subtabs u otro contenido al pie. */
   children?: ReactNode;
 }
 
 /**
- * Cabecera de sección estilo Buddy: banda con degradado (púrpura / verde /
- * rosa según la sección) que cubre el área segura superior. El contenido de
- * la pantalla va debajo, en un `ScrollView` normal sobre el fondo del tema.
+ * Cabecera de pantalla: neutra, sin banda de color — el foco es el
+ * contenido (una cifra grande), no el chrome. Reemplaza el degradado por
+ * sección de la versión anterior (demasiado saturado / "sitio web de 2018").
  */
-export function SectionHeader({
-  section,
-  title,
-  subtitle,
-  right,
-  children,
-}: SectionHeaderProps) {
+export function SectionHeader({ title, subtitle, right, children }: SectionHeaderProps) {
   const insets = useSafeAreaInsets();
-  const s = sections[section];
 
   return (
-    <LinearGradient
-      colors={[s.gradient[0], s.gradient[1]]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{ paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: 14 }}
+    <View
+      className="w-full max-w-[560px] self-center px-4"
+      style={{ paddingTop: insets.top + 8 }}
     >
-      <View className="w-full max-w-[560px] self-center">
-        <ScreenHeader tone="light" />
-        <FadeInView>
-          <View className="flex-row items-end justify-between">
-            <Text className="text-2xl font-bold text-white">{title ?? s.label}</Text>
-            {right}
-          </View>
-          {subtitle ? <View className="mt-1">{subtitle}</View> : null}
-        </FadeInView>
-        {children ? <View className="mt-3">{children}</View> : null}
-      </View>
-    </LinearGradient>
+      <ScreenHeader />
+      <FadeInView>
+        <View className="flex-row items-center justify-between pt-1">
+          {title ? (
+            <Text className="text-text-muted text-[13px] font-semibold uppercase tracking-wide">
+              {title}
+            </Text>
+          ) : (
+            <View />
+          )}
+          {right}
+        </View>
+        {subtitle ? <View className="mt-1">{subtitle}</View> : null}
+      </FadeInView>
+      {children ? <View className="mt-4 pb-1">{children}</View> : null}
+    </View>
   );
 }

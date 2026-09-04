@@ -20,12 +20,14 @@ module.exports = {
         income: 'rgb(var(--color-income) / <alpha-value>)',
         expense: 'rgb(var(--color-expense) / <alpha-value>)',
         warning: 'rgb(var(--color-warning) / <alpha-value>)',
-
-        // Acentos por sección (estilo Buddy): iguales en claro y oscuro porque
-        // van sobre degradados. `from`/`to` son las paradas del degradado.
-        overview: { DEFAULT: '#7C5CFC', from: '#5B3FD6', to: '#9B7BFF' },
-        budget: { DEFAULT: '#2FBF71', from: '#1F9D5B', to: '#3ED88A' },
-        walletsAccent: { DEFAULT: '#F0568F', from: '#D63D77', to: '#FF7FB0' },
+      },
+      // Esquinas más suaves en toda la app (un solo cambio en vez de tocar
+      // cada `rounded-xl`/`rounded-2xl`): menos "brusco", más orgánico.
+      borderRadius: {
+        lg: '14px',
+        xl: '18px',
+        '2xl': '26px',
+        '3xl': '32px',
       },
     },
   },

@@ -36,12 +36,12 @@ export function Card({
 
   const body = (
     <View
-      className={`rounded-2xl border border-border bg-surface p-4 ${className}`}
+      className={`rounded-2xl border border-border/60 bg-surface/95 p-4 ${className}`}
       style={{
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.06,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.05,
+        shadowRadius: 20,
         elevation: 1,
       }}
     >

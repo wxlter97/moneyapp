@@ -8,10 +8,13 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { WalletRow } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
 import { DragList } from '@/components/ui/DragList';
+import { Icon } from '@/components/ui/Icon';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { useColors } from '@/theme';
 import { flattenTree } from '@/lib/wallets';
 
 export default function WalletsScreen() {
+  const colors = useColors();
   const netWorth = useNetWorth();
   const wallets = useWallets();
   const reorder = useReorderWallets();
@@ -24,17 +27,16 @@ export default function WalletsScreen() {
   return (
     <View className="flex-1 bg-bg">
       <SectionHeader
-        section="wallets"
         title="Carteras"
         right={
           <View className="flex-row gap-2">
             {nodes.length > 1 ? (
               <Pressable
                 onPress={() => setReordering((r) => !r)}
-                className="rounded-lg bg-white/20 px-3 py-1.5 active:opacity-70"
+                className="rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
                 accessibilityRole="button"
               >
-                <Text className="text-sm font-semibold text-white">
+                <Text className="text-text text-sm font-semibold">
                   {reordering ? 'Listo' : 'Ordenar'}
                 </Text>
               </Pressable>
@@ -42,10 +44,11 @@ export default function WalletsScreen() {
             {!reordering ? (
               <Pressable
                 onPress={() => router.push('/wallet/new')}
-                className="rounded-lg bg-white/20 px-3 py-1.5 active:opacity-70"
+                className="h-8 w-8 items-center justify-center rounded-full bg-primary active:opacity-80"
                 accessibilityRole="button"
+                accessibilityLabel="Nueva cartera"
               >
-                <Text className="text-sm font-semibold text-white">+ Nueva</Text>
+                <Icon name="plus" size={16} color={colors.primaryFg} />
               </Pressable>
             ) : null}
           </View>

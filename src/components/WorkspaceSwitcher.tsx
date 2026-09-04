@@ -4,16 +4,18 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { useCreateWorkspace } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
 import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
 import { useWorkspaceStore } from '@/store/workspace';
 import { FadeInView } from './ui/FadeInView';
 import { Icon } from './ui/Icon';
 
 /**
- * Selector "Casa ▾": cambia el workspace activo o crea uno nuevo.
+ * Selector "Casa ⌄": cambia el workspace activo o crea uno nuevo.
  * El panel se expande en el flujo normal (empuja el contenido), sin Modal
  * ni posicionamiento absoluto — evita problemas de z-index en web.
  */
-export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'default' }) {
+export function WorkspaceSwitcher() {
+  const colors = useColors();
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeId = useWorkspaceStore((s) => s.activeId);
   const setActiveId = useWorkspaceStore((s) => s.setActiveId);
@@ -25,7 +27,6 @@ export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'defa
   const [error, setError] = useState<string | null>(null);
 
   const active = workspaces.find((w) => w.id === activeId);
-  const iconColor = tone === 'light' ? '#FFFFFFB3' : '#9AA4B2';
 
   function close() {
     setOpen(false);
@@ -57,17 +58,13 @@ export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'defa
         className="flex-row items-center gap-1 self-start py-0.5 active:opacity-70"
         accessibilityRole="button"
       >
-        <Text
-          className={`text-lg font-semibold ${tone === 'light' ? 'text-white' : 'text-text'}`}
-        >
-          {active?.name ?? '—'}
-        </Text>
-        <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color={iconColor} />
+        <Text className="text-text text-lg font-semibold">{active?.name ?? '—'}</Text>
+        <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
       </Pressable>
 
       {open ? (
         <FadeInView>
-          <View className="mt-2 rounded-2xl border border-border bg-surface-2 p-2">
+          <View className="mt-2 rounded-2xl border border-border/70 bg-surface-2 p-2">
             {workspaces.map((w) => (
               <Pressable
                 key={w.id}
@@ -85,7 +82,7 @@ export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'defa
                     {w.member_count === 1 ? 'miembro' : 'miembros'}
                   </Text>
                 </View>
-                {w.id === activeId ? <Icon name="check" size={18} color="#4F8CFF" /> : null}
+                {w.id === activeId ? <Icon name="check" size={18} color={colors.primary} /> : null}
               </Pressable>
             ))}
 
@@ -128,7 +125,7 @@ export function WorkspaceSwitcher({ tone = 'default' }: { tone?: 'light' | 'defa
                 onPress={() => setCreating(true)}
                 className="flex-row items-center gap-1.5 rounded-xl px-3 py-2.5 active:bg-surface"
               >
-                <Icon name="plus" size={16} color="#4F8CFF" />
+                <Icon name="plus" size={16} color={colors.primary} />
                 <Text className="text-primary text-base">Nuevo presupuesto</Text>
               </Pressable>
             )}

@@ -42,19 +42,17 @@ export default function OverviewScreen() {
   return (
     <View className="flex-1 bg-bg">
       <SectionHeader
-        section="overview"
         title="Vista general"
         subtitle={
           <Money
             value={netWorth.data?.net}
             currency={currency}
             signed
-            className="text-3xl font-bold text-white"
+            className="text-text text-[40px] font-bold leading-tight"
           />
         }
       >
         <SubTabs
-          tone="light"
           value={tab}
           onChange={setTab}
           options={[
@@ -244,7 +242,7 @@ function ListaTab({
             <Text className="text-text-muted pb-1 pt-3 text-xs font-semibold uppercase tracking-wide">
               {formatDayHeader(day.date)}
             </Text>
-            <View className="rounded-2xl border border-border bg-surface px-4">
+            <View className="rounded-2xl border border-border/60 bg-surface/95 px-4">
               {day.data.map((item, i) => (
                 <View key={item.id}>
                   {i > 0 ? <View className="h-px bg-border/60" /> : null}

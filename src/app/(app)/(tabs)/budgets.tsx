@@ -38,26 +38,30 @@ export default function BudgetScreen() {
   return (
     <View className="flex-1 bg-bg">
       <SectionHeader
-        section="budget"
         title="Presupuesto"
         right={
           <Pressable
             onPress={openEditor}
-            className="rounded-lg bg-white/20 px-3 py-1.5 active:opacity-70"
+            className="rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
             accessibilityRole="button"
           >
-            <Text className="text-sm font-semibold text-white">Ajustar</Text>
+            <Text className="text-text text-sm font-semibold">Ajustar</Text>
           </Pressable>
         }
         subtitle={
-          <Text className="text-sm text-white/80">
-            {over ? 'Te pasaste por ' : 'Te queda '}
-            <Money value={Math.abs(remaining)} currency={currency} className="font-semibold text-white" />
-          </Text>
+          <View>
+            <Money
+              value={Math.abs(remaining)}
+              currency={currency}
+              className="text-text text-[40px] font-bold leading-tight"
+            />
+            <Text className="text-text-muted -mt-1 text-sm">
+              {over ? 'te pasaste' : 'te queda'} de <Money value={budgeted} currency={currency} tone="muted" />
+            </Text>
+          </View>
         }
       >
         <SubTabs
-          tone="light"
           value={tab}
           onChange={setTab}
           options={[

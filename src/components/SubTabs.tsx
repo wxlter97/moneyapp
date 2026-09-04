@@ -6,21 +6,10 @@ interface SubTabsProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   options: { value: T; label: string }[];
-  /** `light` sobre degradado, `dark` sobre el fondo del tema. */
-  tone?: 'light' | 'dark';
 }
 
-/** Subtabs de texto con subrayado, estilo Buddy (VISTA GENERAL · GASTO · LISTA). */
-export function SubTabs<T extends string>({
-  value,
-  onChange,
-  options,
-  tone = 'dark',
-}: SubTabsProps<T>) {
-  const activeColor = tone === 'light' ? 'text-white' : 'text-text';
-  const mutedColor = tone === 'light' ? 'text-white/60' : 'text-text-muted';
-  const bar = tone === 'light' ? 'bg-white' : 'bg-primary';
-
+/** Subtabs de texto con subrayado (VISTA GENERAL · LISTA). */
+export function SubTabs<T extends string>({ value, onChange, options }: SubTabsProps<T>) {
   return (
     <View className="flex-row gap-5">
       {options.map((o) => {
@@ -37,14 +26,12 @@ export function SubTabs<T extends string>({
           >
             <Text
               className={`text-xs font-semibold uppercase tracking-wide ${
-                active ? activeColor : mutedColor
+                active ? 'text-text' : 'text-text-muted'
               }`}
             >
               {o.label}
             </Text>
-            <View
-              className={`mt-1 h-0.5 rounded-full ${active ? bar : 'bg-transparent'}`}
-            />
+            <View className={`mt-1 h-0.5 rounded-full ${active ? 'bg-primary' : 'bg-transparent'}`} />
           </Pressable>
         );
       })}
