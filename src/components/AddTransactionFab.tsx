@@ -12,14 +12,24 @@ export function AddTransactionFab() {
 
   return (
     <Animated.View
-      style={{ transform: [{ scale: v }] }}
-      className="absolute bottom-5 right-5"
+      style={{
+        position: 'absolute',
+        right: 24,
+        bottom: 28,
+        transform: [{ scale: v }],
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.28,
+        shadowRadius: 12,
+        elevation: 8,
+      }}
+      pointerEvents="box-none"
     >
       <Pressable
         onPress={() => router.push('/transaction/new')}
         accessibilityRole="button"
         accessibilityLabel="Agregar transacción"
-        className="h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg active:opacity-80"
+        className="h-14 w-14 items-center justify-center rounded-full bg-primary active:opacity-80"
       >
         <Text className="text-primary-fg text-2xl leading-none">+</Text>
       </Pressable>

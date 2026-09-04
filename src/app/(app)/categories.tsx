@@ -9,6 +9,7 @@ import {
   useRestoreCategory,
 } from '@/api/queries';
 import type { Category, CategoryType } from '@/api/types';
+import { CategoryGrid } from '@/components/CategoryGrid';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
@@ -139,26 +140,12 @@ export default function CategoriesScreen() {
                 {trees[type].length === 0 ? (
                   <Text className="text-text-muted py-3 text-sm">Ningún grupo todavía.</Text>
                 ) : (
-                  trees[type].map((t, gi) => (
-                    <View
-                      key={t.group.id}
-                      className={gi > 0 ? 'mt-2 border-t border-border/60 pt-2' : ''}
-                    >
-                      <CategoryLine category={t.group} bold />
-                      {t.children.map((c) => (
-                        <View key={c.id} className="pl-4">
-                          <CategoryLine category={c} />
-                        </View>
-                      ))}
-                      <Pressable
-                        onPress={() => router.push(`/category/new?parent=${t.group.id}`)}
-                        className="py-2 pl-4 active:opacity-60"
-                        accessibilityRole="button"
-                      >
-                        <Text className="text-primary text-xs font-semibold">+ Subcategoría</Text>
-                      </Pressable>
-                    </View>
-                  ))
+                  <CategoryGrid
+                    categories={categoriesQ.data ?? []}
+                    type={type}
+                    onEditCategory={(c) => router.push(`/category/${c.id}`)}
+                    onAddSub={(groupId) => router.push(`/category/new?parent=${groupId}`)}
+                  />
                 )}
               </Card>
             ))}
@@ -167,30 +154,6 @@ export default function CategoriesScreen() {
         )}
       </ScrollView>
     </Screen>
-  );
-}
-
-function CategoryLine({ category, bold = false }: { category: Category; bold?: boolean }) {
-  return (
-    <Pressable
-      onPress={() => router.push(`/category/${category.id}`)}
-      className="flex-row items-center gap-3 py-2.5 active:opacity-60"
-      accessibilityRole="button"
-    >
-      <View
-        className="h-8 w-8 items-center justify-center rounded-full"
-        style={{ backgroundColor: category.color || '#334155' }}
-      >
-        <Text className="text-sm">{category.icon || (bold ? '📁' : '•')}</Text>
-      </View>
-      <Text
-        className={`flex-1 text-base ${bold ? 'text-text font-semibold' : 'text-text'}`}
-        numberOfLines={1}
-      >
-        {category.name}
-      </Text>
-      <Text className="text-text-muted">›</Text>
-    </Pressable>
   );
 }
 

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { FlatList, Text, View, useWindowDimensions } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 
 import type { NetWorthBreakdown } from '@/api/types';
 import { PURPOSE_LABEL, WALLET_PURPOSES } from '@/api/types';
@@ -14,7 +14,10 @@ interface Page {
   signed: boolean;
 }
 
-/** Tarjeta deslizable: Valor neto total + un total por cada tipo de cartera con datos. */
+/**
+ * Tarjeta de valor neto. El recuadro morado NO se mueve: sólo el contenido
+ * (cifra + etiqueta) se desliza dentro de un ScrollView horizontal paginado.
+ */
 export function NetWorthPager({
   data,
   currency,
@@ -23,8 +26,9 @@ export function NetWorthPager({
   currency: string;
 }) {
   const { width } = useWindowDimensions();
-  const cardWidth = Math.min(width, MAX_CONTENT_WIDTH) - 32; // menos el px-4 de la pantalla
+  const innerWidth = Math.min(width, MAX_CONTENT_WIDTH) - 32; // menos el px-4 de la pantalla
   const [index, setIndex] = useState(0);
+  const scroller = useRef<ScrollView>(null);
 
   const pages = useMemo<Page[]>(() => {
     const list: Page[] = [
@@ -46,45 +50,43 @@ export function NetWorthPager({
 
   return (
     <View>
-      <FlatList
-        data={pages}
-        keyExtractor={(p) => p.key}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={cardWidth}
-        decelerationRate="fast"
-        scrollEventThrottle={16}
-        onScroll={(e) => {
-          const next = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
-          setIndex((prev) => (prev === next ? prev : next));
-        }}
-        onMomentumScrollEnd={(e) =>
-          setIndex(Math.round(e.nativeEvent.contentOffset.x / cardWidth))
-        }
-        renderItem={({ item }) => (
-          <View
-            style={{ width: cardWidth }}
-            className="items-center justify-center rounded-2xl bg-primary py-10"
-          >
-            <Money
-              value={item.value}
-              currency={currency}
-              signed={item.signed}
-              className="text-primary-fg text-4xl font-bold"
-            />
-            <Text className="text-primary-fg/80 mt-1 text-sm">{item.title}</Text>
-          </View>
-        )}
-      />
+      <View className="overflow-hidden rounded-2xl bg-primary">
+        <ScrollView
+          ref={scroller}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          decelerationRate="fast"
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            const next = Math.round(e.nativeEvent.contentOffset.x / innerWidth);
+            setIndex((prev) => (prev === next ? prev : next));
+          }}
+        >
+          {pages.map((item) => (
+            <View
+              key={item.key}
+              style={{ width: innerWidth }}
+              className="items-center justify-center py-10"
+            >
+              <Money
+                value={item.value}
+                currency={currency}
+                signed={item.signed}
+                className="text-primary-fg text-4xl font-bold"
+              />
+              <Text className="text-primary-fg/80 mt-1 text-sm">{item.title}</Text>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+
       {pages.length > 1 ? (
         <View className="mt-2 flex-row justify-center gap-1.5">
           {pages.map((p, i) => (
             <View
               key={p.key}
-              className={`h-1.5 w-1.5 rounded-full ${
-                i === index ? 'bg-primary' : 'bg-border'
-              }`}
+              className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-primary' : 'bg-border'}`}
             />
           ))}
         </View>
