@@ -12,7 +12,10 @@ import type {
   CategoryBudget,
   CategoryBudgetInput,
   CategoryInput,
+  ConfirmEmailImportInput,
   DashboardSummary,
+  EmailImportLog,
+  EmailImportStatus,
   InstallmentPurchase,
   InstallmentPurchaseInput,
   MonthlySnapshot,
@@ -159,6 +162,8 @@ export interface TransactionListParams {
   category?: string;
   source?: string;
   counts_toward_budget?: boolean;
+  /** Coincidencia parcial en descripción, categoría o cartera. */
+  search?: string;
   limit?: number;
   offset?: number;
 }
@@ -186,6 +191,19 @@ export const transactions = {
 // --- snapshots mensuales (solo lectura) -------------------------------
 export const monthlySnapshots = {
   list: () => fetchAll<MonthlySnapshot>('/monthly-snapshots/'),
+};
+
+// --- bandeja de importación bancaria por correo -----------------------
+export const emailImportLogs = {
+  /** Sin `status`: todo el historial. `?status=pending` para la bandeja. */
+  list: (status?: EmailImportStatus) =>
+    fetchAll<EmailImportLog>('/email-import-logs/', status ? { status } : {}),
+  get: (id: string) => api.get<EmailImportLog>(`/email-import-logs/${id}/`).then((r) => r.data),
+  /** Aprueba la candidata y crea la Transaction. */
+  confirm: (id: string, input: ConfirmEmailImportInput) =>
+    api.post<EmailImportLog>(`/email-import-logs/${id}/confirm/`, input).then((r) => r.data),
+  reject: (id: string) =>
+    api.post<EmailImportLog>(`/email-import-logs/${id}/reject/`).then((r) => r.data),
 };
 
 // --- reportes (agregaciones) -----------------------------------------

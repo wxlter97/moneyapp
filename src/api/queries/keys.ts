@@ -33,6 +33,10 @@ export const qk = {
 
     monthlySnapshots: () => ['ws', ws, 'monthly-snapshots'] as const,
 
+    emailImportLogs: (status?: string) =>
+      ['ws', ws, 'email-import-logs', status ?? 'all'] as const,
+    emailImportLog: (id: string) => ['ws', ws, 'email-import-log', id] as const,
+
     reportNetWorth: () => ['ws', ws, 'reports', 'net-worth'] as const,
     reportSummary: () => ['ws', ws, 'reports', 'summary'] as const,
     reportBudget: (ym?: YearMonth) => ['ws', ws, 'reports', 'budget', ym ?? {}] as const,

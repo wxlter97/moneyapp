@@ -181,6 +181,18 @@ export default function AppLayout() {
         name="category/[id]"
         options={{ presentation: 'modal', headerShown: false }}
       />
+      <Stack.Screen
+        name="imports"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="import/[id]"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="net-worth-history"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
     </Stack>
   );
 }

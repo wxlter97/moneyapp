@@ -370,6 +370,35 @@ export interface MonthlySnapshot {
 }
 
 // ---------------------------------------------------------------------------
+// Importación bancaria por correo (bandeja de revisión)
+// ---------------------------------------------------------------------------
+export type EmailImportStatus = 'pending' | 'confirmed' | 'rejected' | 'failed';
+
+export interface EmailImportLog {
+  id: UUID;
+  status: EmailImportStatus;
+  bank_schema: UUID | null;
+  bank_name: string | null;
+  wallet: UUID | null;
+  raw_email_subject: string;
+  extracted_amount: Money | null;
+  extracted_merchant: string;
+  extracted_date: ISODate | null;
+  resulting_transaction: UUID | null;
+  error_message: string;
+  created_at: ISODateTime;
+}
+
+/** Datos para materializar la Transaction al confirmar una candidata. */
+export interface ConfirmEmailImportInput {
+  category: UUID;
+  wallet?: UUID;
+  amount?: string;
+  date?: ISODate;
+  description?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Reportes (agregaciones, solo lectura, workspace del header)
 // ---------------------------------------------------------------------------
 export interface NetWorthBreakdown {

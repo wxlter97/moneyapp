@@ -20,7 +20,10 @@ export type IconName =
   | 'trash'
   | 'arrow-up-right'
   | 'sign-out'
-  | 'grip';
+  | 'grip'
+  | 'inbox'
+  | 'trending'
+  | 'search';
 
 interface IconProps {
   name: IconName;
@@ -144,6 +147,24 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
           <Circle cx={15} cy={12} r={1.3} fill={color} stroke="none" />
           <Circle cx={9} cy={18} r={1.3} fill={color} stroke="none" />
           <Circle cx={15} cy={18} r={1.3} fill={color} stroke="none" />
+        </>
+      )}
+      {name === 'inbox' && (
+        <>
+          <Path d="M4 12h4l2 3h4l2-3h4" {...p} />
+          <Path d="M5.5 5h13L21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6L5.5 5z" {...p} />
+        </>
+      )}
+      {name === 'trending' && (
+        <>
+          <Path d="M3 17l6-6 4 4 8-8" {...p} />
+          <Path d="M15 7h6v6" {...p} />
+        </>
+      )}
+      {name === 'search' && (
+        <>
+          <Circle cx={11} cy={11} r={7} {...p} />
+          <Line x1={21} y1={21} x2={16.2} y2={16.2} {...p} />
         </>
       )}
     </Svg>
