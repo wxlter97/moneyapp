@@ -8,11 +8,16 @@ import { RECURRENCE_LABEL } from '@/api/types';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 import { formatShortDate } from '@/lib/date';
 
 export default function RecurringScreen() {
+  const colors = useColors();
   const q = useRecurringExpenses();
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
@@ -27,11 +32,17 @@ export default function RecurringScreen() {
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Recurrentes" />
       <Pressable
-        onPress={() => router.push('/recurring/new')}
-        className="self-end rounded-lg border border-border px-3 py-1.5 active:opacity-70"
+        onPress={() => {
+          haptics.tap();
+          router.push('/recurring/new');
+        }}
+        className="flex-row items-center gap-1 self-end rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
         accessibilityRole="button"
       >
-        <Text className="text-primary text-sm font-semibold">+ Nuevo</Text>
+        <Icon name="plus" size={13} color={colors.primary} />
+        <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+          Nuevo
+        </Text>
       </Pressable>
 
       <ScrollView contentContainerClassName="gap-3 py-2" keyboardShouldPersistTaps="handled">
@@ -52,20 +63,34 @@ export default function RecurringScreen() {
               return (
                 <Pressable
                   key={r.id}
-                  onPress={() => router.push(`/recurring/${r.id}`)}
+                  onPress={() => {
+                    haptics.tap();
+                    router.push(`/recurring/${r.id}`);
+                  }}
                   className={`flex-row items-center gap-3 py-3 active:opacity-60 ${
-                    i > 0 ? 'border-t border-border/60' : ''
+                    i > 0 ? 'border-t border-border/30' : ''
                   }`}
                   accessibilityRole="button"
                 >
-                  <View
-                    className="h-9 w-9 items-center justify-center rounded-full"
-                    style={{ backgroundColor: cat?.color || '#334155' }}
-                  >
-                    <Text className="text-sm">{cat?.icon || '🔁'}</Text>
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+                    {cat?.icon ? (
+                      <Text className="text-base">{cat.icon}</Text>
+                    ) : (
+                      <Icon name="repeat" size={16} color={colors.textMuted} />
+                    )}
+                    {cat?.color ? (
+                      <View
+                        className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface"
+                        style={{ backgroundColor: cat.color }}
+                      />
+                    ) : null}
                   </View>
                   <View className="flex-1">
-                    <Text className="text-text text-base" numberOfLines={1}>
+                    <Text
+                      className="text-text text-base"
+                      style={{ fontFamily: fonts.semibold }}
+                      numberOfLines={1}
+                    >
                       {cat?.name ?? 'Categoría'}
                       {r.is_active ? '' : ' · pausado'}
                     </Text>

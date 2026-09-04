@@ -19,6 +19,8 @@ import { DateField } from '@/components/ui/DateField';
 import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
+import { haptics } from '@/lib/haptics';
+import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 
@@ -249,17 +251,22 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
 
         {editing && !confirmingDelete ? (
           <Pressable
-            onPress={() => setConfirmingDelete(true)}
+            onPress={() => {
+              haptics.tap();
+              setConfirmingDelete(true);
+            }}
             disabled={busy}
             className="items-center py-2 active:opacity-60"
             accessibilityRole="button"
           >
-            <Text className="text-expense text-sm font-semibold">Eliminar</Text>
+            <Text className="text-expense text-sm" style={{ fontFamily: fonts.semibold }}>
+              Eliminar
+            </Text>
           </Pressable>
         ) : null}
 
         {editing && confirmingDelete ? (
-          <View className="gap-2 rounded-xl border border-expense/40 bg-expense/10 p-3">
+          <View className="gap-2 rounded-2xl bg-expense/10 p-3">
             <Text className="text-text text-sm">¿Eliminar esta compra a plazo?</Text>
             <View className="flex-row gap-2">
               <View className="flex-1">

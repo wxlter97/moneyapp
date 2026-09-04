@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { dismissModal, ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
+import { haptics } from '@/lib/haptics';
+import { fonts } from '@/theme/typography';
 import { useWorkspaceStore } from '@/store/workspace';
 
 const OPTIONS: { value: ResetScope; title: string; hint: string }[] = [
@@ -51,24 +53,32 @@ export default function ResetScreen() {
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Restablecer datos" />
       <ScrollView contentContainerClassName="gap-4 py-3" keyboardShouldPersistTaps="handled">
-        <View className="rounded-xl border border-expense/40 bg-expense/10 p-3">
+        <View className="rounded-2xl bg-expense/10 p-3">
           <Text className="text-text text-sm">
-            Esto borra datos de <Text className="font-semibold">{target}</Text> de forma
-            permanente. No se puede deshacer.
+            Esto borra datos de{' '}
+            <Text className="text-text text-sm" style={{ fontFamily: fonts.bold }}>
+              {target}
+            </Text>{' '}
+            de forma permanente. No se puede deshacer.
           </Text>
         </View>
 
         {OPTIONS.map((o) => (
           <Pressable
             key={o.value}
-            onPress={() => setScope(o.value)}
+            onPress={() => {
+              haptics.selection();
+              setScope(o.value);
+            }}
             accessibilityRole="radio"
             accessibilityState={{ selected: scope === o.value }}
-            className={`rounded-xl border p-3 ${
-              scope === o.value ? 'border-primary bg-surface-2' : 'border-border bg-surface'
+            className={`rounded-2xl border p-3 ${
+              scope === o.value ? 'border-primary bg-surface-2' : 'border-transparent bg-surface-2/50'
             }`}
           >
-            <Text className="text-text text-sm font-semibold">{o.title}</Text>
+            <Text className="text-text text-sm" style={{ fontFamily: fonts.bold }}>
+              {o.title}
+            </Text>
             <Text className="text-text-muted mt-1 text-xs">{o.hint}</Text>
           </Pressable>
         ))}

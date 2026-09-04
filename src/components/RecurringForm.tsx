@@ -23,7 +23,9 @@ import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { Select } from '@/components/ui/Select';
 import { LoadingState } from '@/components/ui/states';
+import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 
@@ -159,11 +161,16 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
           error={fields.next_due_date}
         />
 
-        <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5">
-          <Text className="text-text text-sm">Activo</Text>
+        <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
+          <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+            Activo
+          </Text>
           <Switch
             value={isActive}
-            onValueChange={setIsActive}
+            onValueChange={(v) => {
+              haptics.tap();
+              setIsActive(v);
+            }}
             trackColor={{ true: colors.primary, false: colors.surface2 }}
             thumbColor="#FFFFFF"
           />
@@ -180,17 +187,22 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
 
         {editing && !confirmingDelete ? (
           <Pressable
-            onPress={() => setConfirmingDelete(true)}
+            onPress={() => {
+              haptics.tap();
+              setConfirmingDelete(true);
+            }}
             disabled={busy}
             className="items-center py-2 active:opacity-60"
             accessibilityRole="button"
           >
-            <Text className="text-expense text-sm font-semibold">Eliminar recurrente</Text>
+            <Text className="text-expense text-sm" style={{ fontFamily: fonts.semibold }}>
+              Eliminar recurrente
+            </Text>
           </Pressable>
         ) : null}
 
         {editing && confirmingDelete ? (
-          <View className="gap-2 rounded-xl border border-expense/40 bg-expense/10 p-3">
+          <View className="gap-2 rounded-2xl bg-expense/10 p-3">
             <Text className="text-text text-sm">¿Eliminar este recurrente?</Text>
             <View className="flex-row gap-2">
               <View className="flex-1">

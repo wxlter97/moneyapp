@@ -16,11 +16,14 @@ import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
+import { Icon } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
 import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
+import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 import { toNumber } from '@/lib/money';
 import { WALLET_COLORS } from '@/lib/wallets';
 
@@ -259,7 +262,10 @@ export function WalletForm({ walletId }: WalletFormProps) {
             {WALLET_COLORS.map((c) => (
               <Pressable
                 key={c}
-                onPress={() => setColor(color === c ? '' : c)}
+                onPress={() => {
+                  haptics.selection();
+                  setColor(color === c ? '' : c);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={`Color ${c}`}
                 className={`h-9 w-9 items-center justify-center rounded-full ${
@@ -267,7 +273,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 }`}
                 style={{ backgroundColor: c }}
               >
-                {color === c ? <Text className="text-xs text-white">✓</Text> : null}
+                {color === c ? <Icon name="check" size={14} color="#FFFFFF" /> : null}
               </Pressable>
             ))}
           </ScrollView>
@@ -383,21 +389,31 @@ export function WalletForm({ walletId }: WalletFormProps) {
           </>
         ) : null}
 
-        <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5">
-          <Text className="text-text text-sm">Cuenta para el patrimonio neto</Text>
+        <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
+          <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+            Cuenta para el patrimonio neto
+          </Text>
           <Switch
             value={countsNet}
-            onValueChange={setCountsNet}
+            onValueChange={(v) => {
+              haptics.tap();
+              setCountsNet(v);
+            }}
             trackColor={{ true: colors.primary, false: colors.surface2 }}
             thumbColor="#FFFFFF"
           />
         </View>
 
-        <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5">
-          <Text className="text-text text-sm">Preseleccionar al crear transacciones</Text>
+        <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
+          <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+            Preseleccionar al crear transacciones
+          </Text>
           <Switch
             value={isDefault}
-            onValueChange={setIsDefault}
+            onValueChange={(v) => {
+              haptics.tap();
+              setIsDefault(v);
+            }}
             trackColor={{ true: colors.primary, false: colors.surface2 }}
             thumbColor="#FFFFFF"
           />
@@ -415,28 +431,36 @@ export function WalletForm({ walletId }: WalletFormProps) {
         {editing && !confirmingDelete ? (
           <View className="items-center gap-3 py-2">
             <Pressable
-              onPress={onToggleArchive}
+              onPress={() => {
+                haptics.tap();
+                onToggleArchive();
+              }}
               disabled={busy}
               className="active:opacity-60"
               accessibilityRole="button"
             >
-              <Text className="text-primary text-sm font-semibold">
+              <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
                 {isArchived ? 'Desarchivar cartera' : 'Archivar cartera'}
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => setConfirmingDelete(true)}
+              onPress={() => {
+                haptics.tap();
+                setConfirmingDelete(true);
+              }}
               disabled={busy}
               className="active:opacity-60"
               accessibilityRole="button"
             >
-              <Text className="text-expense text-sm font-semibold">Eliminar cartera</Text>
+              <Text className="text-expense text-sm" style={{ fontFamily: fonts.semibold }}>
+                Eliminar cartera
+              </Text>
             </Pressable>
           </View>
         ) : null}
 
         {editing && confirmingDelete ? (
-          <View className="gap-2 rounded-xl border border-expense/40 bg-expense/10 p-3">
+          <View className="gap-2 rounded-2xl bg-expense/10 p-3">
             <Text className="text-text text-sm">¿Eliminar esta cartera?</Text>
             <View className="flex-row gap-2">
               <View className="flex-1">

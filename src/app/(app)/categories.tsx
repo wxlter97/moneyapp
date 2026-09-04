@@ -15,6 +15,8 @@ import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
 import { DragList } from '@/components/ui/DragList';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { haptics } from '@/lib/haptics';
+import { fonts } from '@/theme/typography';
 
 const SECTIONS: { type: CategoryType; title: string }[] = [
   { type: 'expense', title: 'Gastos' },
@@ -55,11 +57,14 @@ export default function CategoriesScreen() {
       <ModalHeader title="Categorías" />
       {hasData ? (
         <Pressable
-          onPress={() => setReordering((r) => !r)}
+          onPress={() => {
+            haptics.tap();
+            setReordering((r) => !r);
+          }}
           className="self-end py-1 active:opacity-60"
           accessibilityRole="button"
         >
-          <Text className="text-primary text-sm font-semibold">
+          <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
             {reordering ? 'Listo' : 'Reordenar'}
           </Text>
         </Pressable>
@@ -129,11 +134,16 @@ export default function CategoriesScreen() {
                 title={title}
                 action={
                   <Pressable
-                    onPress={() => router.push(`/category/new?type=${type}`)}
+                    onPress={() => {
+                      haptics.tap();
+                      router.push(`/category/new?type=${type}`);
+                    }}
                     accessibilityRole="button"
                     className="active:opacity-60"
                   >
-                    <Text className="text-primary text-sm font-semibold">+ Grupo</Text>
+                    <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                      + Grupo
+                    </Text>
                   </Pressable>
                 }
               >
@@ -180,19 +190,22 @@ function DeletedCategories() {
         <View
           key={c.id}
           className={`flex-row items-center gap-3 py-2.5 ${
-            i > 0 ? 'border-t border-border/60' : ''
+            i > 0 ? 'border-t border-border/30' : ''
           }`}
         >
           <Text className="text-text-muted flex-1 text-sm" numberOfLines={1}>
             {c.name}
           </Text>
           <Pressable
-            onPress={() => onRestore(c.id)}
+            onPress={() => {
+              haptics.tap();
+              onRestore(c.id);
+            }}
             disabled={busyId === c.id}
-            className="rounded-lg border border-border px-2.5 py-1 active:opacity-60"
+            className="rounded-full bg-surface-2 px-2.5 py-1 active:opacity-60"
             accessibilityRole="button"
           >
-            <Text className="text-primary text-xs font-semibold">
+            <Text className="text-primary text-xs" style={{ fontFamily: fonts.semibold }}>
               {busyId === c.id ? '…' : 'Restaurar'}
             </Text>
           </Pressable>
@@ -205,11 +218,16 @@ function DeletedCategories() {
 function NewGroupButton({ type, label }: { type: CategoryType; label: string }) {
   return (
     <Pressable
-      onPress={() => router.push(`/category/new?type=${type}`)}
-      className="self-center rounded-lg border border-border px-3 py-1.5 active:opacity-70"
+      onPress={() => {
+        haptics.tap();
+        router.push(`/category/new?type=${type}`);
+      }}
+      className="self-center rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
       accessibilityRole="button"
     >
-      <Text className="text-primary text-sm font-semibold">{label}</Text>
+      <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
