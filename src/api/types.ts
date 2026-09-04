@@ -251,6 +251,14 @@ export interface CategoryBudget {
   updated_at: ISODateTime;
 }
 
+/** Payload de alta/edición de presupuesto de categoría. */
+export interface CategoryBudgetInput {
+  category: UUID;
+  amount: Money;
+  month: number;
+  year: number;
+}
+
 // ---------------------------------------------------------------------------
 // Gastos / ingresos recurrentes
 // ---------------------------------------------------------------------------

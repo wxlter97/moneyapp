@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { useBudgetReport } from '@/api/queries';
 import type { BudgetGroup } from '@/api/types';
@@ -31,11 +32,23 @@ export default function BudgetScreen() {
   const over = remaining < 0;
   const progress = budgeted > 0 ? spent / budgeted : 0;
 
+  const openEditor = () =>
+    router.push(`/budget-edit?y=${month.year}&m=${month.month}`);
+
   return (
     <View className="flex-1 bg-bg">
       <SectionHeader
         section="budget"
         title="Presupuesto"
+        right={
+          <Pressable
+            onPress={openEditor}
+            className="rounded-lg bg-white/20 px-3 py-1.5 active:opacity-70"
+            accessibilityRole="button"
+          >
+            <Text className="text-sm font-semibold text-white">Ajustar</Text>
+          </Pressable>
+        }
         subtitle={
           <Text className="text-sm text-white/80">
             {over ? 'Te pasaste por ' : 'Te queda '}
@@ -64,7 +77,7 @@ export default function BudgetScreen() {
         ) : budget.data.rows.length === 0 ? (
           <EmptyState
             title="Sin presupuesto este mes"
-            hint="Define montos por categoría desde Herramientas → Categorías."
+            hint="Toca «Ajustar» arriba para fijar un monto mensual por grupo."
           />
         ) : tab === 'restante' ? (
           <>

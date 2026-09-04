@@ -138,6 +138,10 @@ export default function AppLayout() {
         options={{ presentation: 'modal', headerShown: false }}
       />
       <Stack.Screen
+        name="budget-edit"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
         name="recurring"
         options={{ presentation: 'modal', headerShown: false }}
       />
