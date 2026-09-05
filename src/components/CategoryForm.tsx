@@ -16,6 +16,7 @@ import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { muteColor } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 
 interface CategoryFormProps {
@@ -191,7 +192,7 @@ export function CategoryForm({
                   haptics.selection();
                   setColor(c);
                 }}
-                style={{ backgroundColor: c }}
+                style={{ backgroundColor: muteColor(c) ?? c }}
                 className={`h-8 w-8 rounded-full border-2 ${
                   color === c ? 'border-text' : 'border-transparent'
                 }`}

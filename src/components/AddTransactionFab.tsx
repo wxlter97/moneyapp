@@ -76,7 +76,7 @@ export function AddTransactionFab() {
             justifyContent: 'center',
           }}
         >
-          <Icon name="plus" size={26} color="#FFFFFF" strokeWidth={2.4} />
+          <Icon name="plus" size={26} color={colors.primaryFg} strokeWidth={2.4} />
         </LinearGradient>
       </Pressable>
     </Animated.View>

@@ -8,6 +8,7 @@ import { RECURRENCE_LABEL } from '@/api/types';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
+import { CategoryAvatar } from '@/components/ui/CategoryAvatar';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
@@ -79,19 +80,12 @@ export default function RecurringScreen() {
                   }`}
                   accessibilityRole="button"
                 >
-                  <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
-                    {cat?.icon ? (
-                      <Text className="text-base">{cat.icon}</Text>
-                    ) : (
-                      <Icon name="repeat" size={16} color={colors.textMuted} />
-                    )}
-                    {cat?.color ? (
-                      <View
-                        className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface"
-                        style={{ backgroundColor: cat.color }}
-                      />
-                    ) : null}
-                  </View>
+                  <CategoryAvatar
+                    icon={cat?.icon}
+                    color={cat?.color}
+                    fallbackIcon="repeat"
+                    size={40}
+                  />
                   <View className="flex-1">
                     <Text
                       className="text-text text-base"

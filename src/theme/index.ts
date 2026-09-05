@@ -6,10 +6,10 @@
  * Para código dentro de React usa `useColors()` (reacciona al tema). El export
  * `colors` es el tema OSCURO, como fallback sincrónico donde no hay hook.
  *
- * Paleta neutra con un solo acento (azul por defecto, elegible en
- * Herramientas → Apariencia, ver `theme/accents.ts`): sin colores de
- * sección — el énfasis visual lo dan la tipografía y las cards "glass",
- * no el color.
+ * Paleta neutra, cálida (piedra/papel, no gris frío) con un solo acento
+ * tierra (musgo por defecto, elegible en Herramientas → Apariencia, ver
+ * `theme/accents.ts`): sin colores de sección — el énfasis visual lo dan
+ * la tipografía y las cards "glass", no el color.
  */
 import { useColorScheme } from 'nativewind';
 
@@ -31,31 +31,31 @@ export interface ThemeColors {
 }
 
 export const darkColors: ThemeColors = {
-  bg: '#0A0B0D',
-  surface: '#17181C',
-  surface2: '#1F2126',
-  border: '#292B31',
-  text: '#F4F4F6',
-  textMuted: '#94969E',
-  primary: '#5B93FF',
+  bg: '#0C0B09',
+  surface: '#1A1816',
+  surface2: '#211F1C',
+  border: '#332F2A',
+  text: '#F5F3EF',
+  textMuted: '#9C978E',
+  primary: '#6B8A5A',
   primaryFg: '#FFFFFF',
-  income: '#34C787',
-  expense: '#FF6B60',
-  warning: '#F0A93E',
+  income: '#7C9A6B',
+  expense: '#C97B63',
+  warning: '#C9A15A',
 };
 
 export const lightColors: ThemeColors = {
-  bg: '#F6F6F8',
+  bg: '#F7F5F2',
   surface: '#FFFFFF',
-  surface2: '#F1F1F4',
-  border: '#E7E7EC',
-  text: '#16171A',
-  textMuted: '#8E8E96',
-  primary: '#3D74FA',
+  surface2: '#F2EFEA',
+  border: '#E8E3DC',
+  text: '#1A1815',
+  textMuted: '#8F897E',
+  primary: '#516B45',
   primaryFg: '#FFFFFF',
-  income: '#219E6A',
-  expense: '#E0493E',
-  warning: '#C78A2E',
+  income: '#4F7047',
+  expense: '#B5573E',
+  warning: '#96742E',
 };
 
 /** Fallback sincrónico (tema oscuro). Dentro de React preferí `useColors()`. */

@@ -53,7 +53,7 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
       </View>
 
       {goal > 0 ? (
-        <View className="mt-2 gap-1">
+        <View className="mt-2 gap-1 pl-[18px]">
           <ProgressBar progress={toNumber(wallet.current_balance) / goal} tone="income" />
           <Text className="text-text-muted text-[11px]">
             <Money value={wallet.current_balance} currency={wallet.currency} tone="muted" /> /{' '}
@@ -63,7 +63,7 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
       ) : null}
 
       {hasCredit ? (
-        <View className="mt-2 gap-1">
+        <View className="mt-2 gap-1 pl-[18px]">
           <ProgressBar
             progress={
               1 - toNumber(wallet.available_credit) / toNumber(wallet.credit_limit)

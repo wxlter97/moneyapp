@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Icon, type IconName } from './Icon';
 import { useColors } from '@/theme';
+import { muteColor } from '@/theme/accents';
 
 interface CategoryAvatarProps {
   /** Emoji de la categoría, si tiene. */
@@ -37,6 +38,10 @@ export function CategoryAvatar({
   const emojiSize = Math.round(size * 0.42);
   const iconSize = Math.round(size * 0.38);
   const dotSize = Math.min(16, Math.max(10, Math.round(size * 0.3)));
+  // El color es libre (lo elige la persona usuaria al crear la categoría):
+  // se atenúa siempre al pintarlo, para que sea un detalle discreto y no un
+  // bloque de color vivo — ver `muteColor`.
+  const muted = muteColor(color);
 
   return (
     <View style={{ width: size, height: size }} className="items-center justify-center">
@@ -49,14 +54,14 @@ export function CategoryAvatar({
         {icon ? (
           <Text style={{ fontSize: emojiSize, lineHeight: emojiSize * 1.15 }}>{icon}</Text>
         ) : (
-          <Icon name={fallbackIcon} size={iconSize} color={color || colors.textMuted} />
+          <Icon name={fallbackIcon} size={iconSize} color={muted || colors.textMuted} />
         )}
       </View>
-      {color ? (
+      {muted ? (
         <View
           pointerEvents="none"
           className="absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-surface"
-          style={{ width: dotSize, height: dotSize, backgroundColor: color }}
+          style={{ width: dotSize, height: dotSize, backgroundColor: muted }}
         />
       ) : null}
     </View>
