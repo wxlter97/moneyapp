@@ -24,7 +24,10 @@ interface SectionHeaderProps {
  * detrás del status bar / Dynamic Island (el panel arranca en y=0; el
  * contenido se acomoda con `insets.top`, no al revés) y separa del
  * contenido con una línea fina abajo en vez de compartir el mismo fondo
- * plano que el resto de la pantalla.
+ * plano que el resto de la pantalla. El padding inferior va siempre en el
+ * contenedor (no sólo cuando hay `children`): sin `subtitle`/`children`
+ * (p. ej. Carteras, Herramientas) la fila de título quedaba pegada a esa
+ * línea, sin aire.
  */
 export function SectionHeader({ title, subtitle, right, children }: SectionHeaderProps) {
   const insets = useSafeAreaInsets();
@@ -32,7 +35,7 @@ export function SectionHeader({ title, subtitle, right, children }: SectionHeade
   return (
     <GlassSurface radius={0} border={false} className="border-b border-border/50">
       <View
-        className="w-full max-w-[560px] self-center px-4"
+        className="w-full max-w-[560px] self-center px-4 pb-3"
         style={{ paddingTop: insets.top + 8 }}
       >
         <ScreenHeader />
@@ -49,7 +52,7 @@ export function SectionHeader({ title, subtitle, right, children }: SectionHeade
           </View>
           {subtitle ? <View className="mt-1">{subtitle}</View> : null}
         </FadeInView>
-        {children ? <View className="mt-4 pb-1">{children}</View> : null}
+        {children ? <View className="mt-4">{children}</View> : null}
       </View>
     </GlassSurface>
   );

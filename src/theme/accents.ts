@@ -8,7 +8,7 @@
  * tinta) en vez de los colores saturados de antes — el objetivo es un look
  * premium y monocromático con acentos discretos, no vivos.
  */
-export type AccentId = 'moss' | 'clay' | 'stone' | 'sand' | 'ink' | 'navy';
+export type AccentId = 'moss' | 'clay' | 'stone' | 'sand' | 'ink' | 'navy' | 'ember';
 
 interface AccentShade {
   primary: string;
@@ -60,6 +60,15 @@ export const ACCENTS: Accent[] = [
     // el celeste de la marca sobre el fondo casi negro en oscuro.
     light: { primary: '#1D3461', primaryFg: '#FFFFFF' },
     dark: { primary: '#5B93FF', primaryFg: '#FFFFFF' },
+  },
+  {
+    id: 'ember',
+    label: 'Brasa',
+    // Único acento deliberadamente vivo (a pedido): rojo intenso sobre
+    // negro puro, la misma vibra que un fondo de brasas encendidas —
+    // rompe la regla "tierra apagada" del resto de la paleta a propósito.
+    light: { primary: '#C1121F', primaryFg: '#FFFFFF' },
+    dark: { primary: '#FF4B36', primaryFg: '#FFFFFF' },
   },
 ];
 

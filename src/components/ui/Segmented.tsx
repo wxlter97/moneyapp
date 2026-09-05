@@ -13,6 +13,11 @@ interface SegmentedProps<T extends string> {
 
 // Mismo inset que el `p-1` (4px) del contenedor.
 const PADDING = 4;
+// El contenedor usa `rounded-xl` (18px, ver tailwind.config.js). Para que la
+// píldora se vea "igual de redonda" que el borde exterior (concéntrica, no
+// con esquinas más cuadradas que las de afuera) su radio debe ser el del
+// contenedor menos el inset que la separa de ese borde.
+const PILL_RADIUS = 18 - PADDING;
 
 export function Segmented<T extends string>({ value, onChange, options }: SegmentedProps<T>) {
   const colors = useColors();
@@ -44,7 +49,7 @@ export function Segmented<T extends string>({ value, onChange, options }: Segmen
     top: PADDING,
     bottom: PADDING,
     width: segmentWidth,
-    borderRadius: 8,
+    borderRadius: PILL_RADIUS,
     backgroundColor: colors.primary,
   }));
 
