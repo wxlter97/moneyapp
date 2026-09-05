@@ -129,6 +129,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/reset'),
     destructive: true,
   },
+  {
+    icon: 'info',
+    label: 'Acerca de',
+    hint: 'Qué es esta app y quién la hace',
+    onPress: () => router.push('/about'),
+  },
 ];
 
 const THEME_OPTIONS: { value: ThemePref; label: string }[] = [

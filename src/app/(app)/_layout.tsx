@@ -284,6 +284,10 @@ export default function AppLayout() {
           name="backup"
           options={{ presentation: 'modal', headerShown: false }}
         />
+        <Stack.Screen
+          name="about"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
     </AppLockGate>
   );
