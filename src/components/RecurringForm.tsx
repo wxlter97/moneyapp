@@ -171,6 +171,7 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
           value={nextDue}
           onChange={setNextDue}
           error={fields.next_due_date}
+          minToday
         />
 
         <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">

@@ -441,6 +441,14 @@ export function useRestoreCategory() {
   });
 }
 
+export function useHardDeleteCategory() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.categories.purge(id),
+    onSuccess: invalidate,
+  });
+}
+
 export function useReorderCategories() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({

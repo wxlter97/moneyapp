@@ -77,6 +77,8 @@ interface RowProps {
 }
 
 function Row({ index, count, itemHeight, active, offsetY, commit, children }: RowProps) {
+  // Posición objetivo de la fila ACTIVA (la que se está arrastrando), a
+  // partir de su propio índice de origen + el desplazamiento del gesto.
   const targetIndex = () => {
     'worklet';
     return clamp(
@@ -84,6 +86,14 @@ function Row({ index, count, itemHeight, active, offsetY, commit, children }: Ro
       0,
       count - 1,
     );
+  };
+  // Misma cuenta, pero para una fila cualquiera dado el índice de origen de
+  // la ACTIVA (`a`) -- las filas que no se arrastran necesitan saber a dónde
+  // va la activa, no recalcularlo con su propio índice (eso hacía que el
+  // resto de la lista no se corriera para abrir espacio mientras arrastrabas).
+  const targetIndexFrom = (a: number) => {
+    'worklet';
+    return clamp(Math.round((a * itemHeight + offsetY.value) / itemHeight), 0, count - 1);
   };
 
   const style = useAnimatedStyle(() => {
@@ -97,7 +107,7 @@ function Row({ index, count, itemHeight, active, offsetY, commit, children }: Ro
     }
     let pos = index;
     if (a !== -1) {
-      const t = targetIndex();
+      const t = targetIndexFrom(a);
       if (a < t && index > a && index <= t) pos = index - 1;
       else if (a > t && index < a && index >= t) pos = index + 1;
     }

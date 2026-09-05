@@ -248,6 +248,9 @@ export const categories = {
   deleted: () => api.get<Category[]>('/categories/deleted/').then((r) => r.data),
   restore: (id: string) =>
     api.post<Category>(`/categories/${id}/restore/`).then((r) => r.data),
+  /** Borrado definitivo de una categoría ya eliminada (soft-delete) --
+   * sólo para vaciar "Eliminadas". */
+  purge: (id: string) => api.delete(`/categories/${id}/purge/`).then(() => undefined),
   /** Fija `sort_order` según el orden de `ids`. */
   reorder: (ids: string[]) =>
     api.post<{ reordered: number }>('/categories/reorder/', { ids }).then((r) => r.data),

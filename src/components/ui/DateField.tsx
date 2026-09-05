@@ -14,6 +14,8 @@ interface DateFieldProps {
   error?: string;
   /** No permitir fechas futuras. */
   maxToday?: boolean;
+  /** No permitir fechas pasadas (p. ej. próxima fecha de un recurrente). */
+  minToday?: boolean;
 }
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -42,7 +44,14 @@ function formatLong(iso: ISODate): string {
  */
 type PickerMode = 'days' | 'months' | 'years';
 
-export function DateField({ label, value, onChange, error, maxToday = false }: DateFieldProps) {
+export function DateField({
+  label,
+  value,
+  onChange,
+  error,
+  maxToday = false,
+  minToday = false,
+}: DateFieldProps) {
   const colors = useColors();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState(() => parseISO(value));
@@ -75,6 +84,7 @@ export function DateField({ label, value, onChange, error, maxToday = false }: D
 
   function pick(d: Date) {
     if (maxToday && d > today) return;
+    if (minToday && d < today) return;
     haptics.selection();
     onChange(toISO(d));
     setOpen(false);
@@ -160,7 +170,7 @@ export function DateField({ label, value, onChange, error, maxToday = false }: D
                 {cells.map((d, i) => {
                   if (!d) return <View key={i} className="h-9 w-[14.28%]" />;
                   const selected = toISO(d) === value;
-                  const disabled = maxToday && d > today;
+                  const disabled = (maxToday && d > today) || (minToday && d < today);
                   return (
                     <View key={i} className="w-[14.28%] p-0.5">
                       <Pressable
