@@ -252,6 +252,10 @@ export default function AppLayout() {
           name="currencies"
           options={{ presentation: 'modal', headerShown: false }}
         />
+        <Stack.Screen
+          name="split-transaction"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
     </AppLockGate>
   );

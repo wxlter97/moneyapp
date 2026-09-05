@@ -259,9 +259,18 @@ export interface Transaction {
   counts_toward_budget: boolean;
   source: TransactionSource;
   is_recurring: boolean;
+  /** Compartido por todas las partes de una transacción dividida; null si no lo está. */
+  split_group: UUID | null;
   created_by: number | null;
   created_at: ISODateTime;
   updated_at: ISODateTime;
+}
+
+/** Una parte al dividir una transacción — ver `transactions.split`. */
+export interface TransactionSplitPart {
+  category: UUID;
+  amount: Money;
+  description?: string;
 }
 
 /**

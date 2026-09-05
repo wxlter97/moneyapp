@@ -112,6 +112,9 @@ export function TransactionRow({
             {txn.has_receipt ? (
               <Icon name="camera" size={11} color={colors.textMuted} />
             ) : null}
+            {txn.split_group ? (
+              <Icon name="split" size={11} color={colors.textMuted} />
+            ) : null}
           </View>
           <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
             {subtitle}

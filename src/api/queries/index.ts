@@ -20,6 +20,7 @@ import type {
   NotificationPreferences,
   RecurringExpenseInput,
   TransactionInput,
+  TransactionSplitPart,
   WalletInput,
 } from '@/api/types';
 import { currentYearMonth, type YearMonth } from '@/lib/date';
@@ -412,6 +413,15 @@ export function useReceiptImage(id: string | undefined, hasReceipt: boolean) {
     },
     enabled: !!ws && !!id && hasReceipt,
     staleTime: Infinity,
+  });
+}
+
+export function useSplitTransaction() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, parts }: { id: string; parts: TransactionSplitPart[] }) =>
+      res.transactions.split(id, parts),
+    onSuccess: invalidate,
   });
 }
 

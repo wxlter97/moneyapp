@@ -356,6 +356,28 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           onPress={onSubmit}
         />
 
+        {editing && !isTransfer && !confirmingDelete ? (
+          existing.data?.split_group ? (
+            <Text className="text-text-muted text-center text-xs">
+              Es parte de una transacción dividida.
+            </Text>
+          ) : (
+            <Pressable
+              onPress={() => {
+                haptics.tap();
+                router.push(`/split-transaction?id=${transactionId}`);
+              }}
+              disabled={busy}
+              className="items-center py-2 active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                Dividir en varias categorías
+              </Text>
+            </Pressable>
+          )
+        ) : null}
+
         {editing && !confirmingDelete ? (
           <Pressable
             onPress={() => {

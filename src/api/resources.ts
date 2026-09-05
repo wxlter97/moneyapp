@@ -30,6 +30,7 @@ import type {
   ScheduledItem,
   Transaction,
   TransactionInput,
+  TransactionSplitPart,
   Wallet,
   WalletInput,
   WalletKind,
@@ -286,6 +287,11 @@ export const transactions = {
         data: r.data,
         contentType: (r.headers['content-type'] as string | undefined) ?? 'image/jpeg',
       })),
+
+  /** Reemplaza la transacción por N partes (cada una con su categoría y
+   * monto propios) que tienen que sumar exactamente el monto original. */
+  split: (id: string, parts: TransactionSplitPart[]) =>
+    api.post<Transaction[]>(`/transactions/${id}/split/`, { parts }).then((r) => r.data),
 };
 
 // --- snapshots mensuales (solo lectura) -------------------------------
