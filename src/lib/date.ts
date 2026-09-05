@@ -63,6 +63,13 @@ export function formatShortDate(iso: ISODate): string {
   return `${d} ${MONTHS_ES[m - 1]?.slice(0, 3) ?? ''}`;
 }
 
+/** "3 de septiembre de 2026" — fecha completa, para encabezados destacados. */
+export function formatLongDate(iso: ISODate): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return `${d} de ${MONTHS_ES[m - 1] ?? ''} de ${y}`;
+}
+
 /** "31 ago, 14:05" — fecha y hora, p. ej. el último uso de un token. */
 export function formatDateTime(iso: ISODateTime): string {
   const d = new Date(iso);

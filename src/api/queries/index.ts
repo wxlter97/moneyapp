@@ -258,6 +258,26 @@ export function useGoalProjection(id: string | undefined, enabled: boolean) {
   });
 }
 
+/** Estado de cuenta de una tarjeta de crédito a `asOf` (hoy si se omite). */
+export function useCreditCardStatement(id: string | undefined, asOf?: string) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletStatement(id ?? '', asOf),
+    queryFn: () => res.wallets.statement(id!, asOf),
+    enabled: !!ws && !!id,
+  });
+}
+
+/** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
+export function useCreditCardStatements() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletStatements(),
+    queryFn: () => res.wallets.statements(),
+    enabled: !!ws,
+  });
+}
+
 export function useDeleteWallet() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({

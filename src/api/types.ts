@@ -562,6 +562,39 @@ export interface GoalProjection {
   on_track: boolean | null;
 }
 
+/** Compra a plazo que aporta a la deuda de la tarjeta en un estado de cuenta. */
+export interface StatementInstallmentLine {
+  id: UUID;
+  description: string;
+  installments_due: number;
+  installments_total: number;
+  amount_due: Money;
+}
+
+/** Estado de cuenta de una tarjeta de crédito -- ver `wallets/{id}/statement/`. */
+export interface CreditCardStatement {
+  cutoff_date: ISODate;
+  next_cutoff_date: ISODate;
+  payment_due_date: ISODate | null;
+  spent: Money;
+  paid: Money;
+  installments_due: Money;
+  /** Acumulado desde que existe la tarjeta: lo sin pagar de un corte anterior sigue apareciendo. */
+  total_due: Money;
+  /** Actividad del período abierto (desde el corte hasta la fecha consultada), aún no vencida. */
+  current_period_spent: Money;
+  current_period_paid: Money;
+  installment_lines: StatementInstallmentLine[];
+}
+
+/** Fila del resumen `wallets/statements/` (todas las tarjetas del workspace). */
+export interface CreditCardStatementSummary extends CreditCardStatement {
+  wallet_id: UUID;
+  wallet_name: string;
+  currency: string;
+  card_last4: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Errores DRF
 // ---------------------------------------------------------------------------

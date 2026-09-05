@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import {
   useArchiveWallet,
@@ -413,6 +414,21 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 />
               </View>
             </View>
+            {editing && existing.data?.kind === 'credit' && existing.data?.billing_cycle_day ? (
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  router.push(`/statement/${walletId}`);
+                }}
+                className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5 active:opacity-70"
+                accessibilityRole="button"
+              >
+                <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                  Ver estado de cuenta
+                </Text>
+                <Icon name="chevron-right" size={16} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
           </>
         ) : null}
 

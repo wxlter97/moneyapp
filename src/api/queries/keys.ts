@@ -21,6 +21,9 @@ export const qk = {
       ['ws', ws, 'wallets', params ?? {}] as const,
     wallet: (id: string) => ['ws', ws, 'wallet', id] as const,
     walletProjection: (id: string) => ['ws', ws, 'wallet', id, 'projection'] as const,
+    walletStatement: (id: string, asOf?: string) =>
+      ['ws', ws, 'wallet', id, 'statement', asOf ?? 'today'] as const,
+    walletStatements: () => ['ws', ws, 'wallets', 'statements'] as const,
     categories: () => ['ws', ws, 'categories'] as const,
     categoriesDeleted: () => ['ws', ws, 'categories', 'deleted'] as const,
 

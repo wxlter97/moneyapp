@@ -260,6 +260,14 @@ export default function AppLayout() {
           name="trends"
           options={{ presentation: 'modal', headerShown: false }}
         />
+        <Stack.Screen
+          name="statements"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="statement/[id]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
     </AppLockGate>
   );

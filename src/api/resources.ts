@@ -14,6 +14,8 @@ import type {
   CategoryInput,
   CategoryTrendsResponse,
   ConfirmEmailImportInput,
+  CreditCardStatement,
+  CreditCardStatementSummary,
   DashboardSummary,
   EmailImportLog,
   EmailImportStatus,
@@ -171,6 +173,14 @@ export const wallets = {
   /** Solo tiene sentido en una cartera de ahorro con meta -- 404 si no. */
   projection: (id: string) =>
     api.get<GoalProjection>(`/wallets/${id}/projection/`).then((r) => r.data),
+  /** Solo tiene sentido en una tarjeta de crédito con fecha de corte -- 404 si no. */
+  statement: (id: string, asOf?: string) =>
+    api
+      .get<CreditCardStatement>(`/wallets/${id}/statement/`, { params: asOf ? { as_of: asOf } : undefined })
+      .then((r) => r.data),
+  /** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
+  statements: () =>
+    api.get<CreditCardStatementSummary[]>('/wallets/statements/').then((r) => r.data),
 };
 
 // --- categorías / presupuestos ------------------------------------------

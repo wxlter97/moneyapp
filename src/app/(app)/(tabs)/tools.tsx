@@ -93,6 +93,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/installments'),
   },
   {
+    icon: 'card',
+    label: 'Estado de cuenta',
+    hint: 'Cuánto debes en tus tarjetas',
+    onPress: () => router.push('/statements'),
+  },
+  {
     icon: 'download',
     label: 'Exportar datos',
     hint: 'Descarga en CSV',
