@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import type { Category, Transaction, Wallet } from '@/api/types';
+import { CategoryAvatar } from '@/components/ui/CategoryAvatar';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { walletLabel } from '@/api/queries/lookups';
@@ -91,23 +92,12 @@ export function TransactionRow({
         className="flex-row items-center gap-3 py-3"
         accessibilityRole={onPress ? 'button' : undefined}
       >
-        <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
-          {glyph ? (
-            <Text className="text-base">{glyph}</Text>
-          ) : (
-            <Icon
-              name={isTransfer ? 'swap' : isIncome ? 'arrow-up-right' : 'tag'}
-              size={16}
-              color={colors.textMuted}
-            />
-          )}
-          {dotColor ? (
-            <View
-              className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface"
-              style={{ backgroundColor: dotColor }}
-            />
-          ) : null}
-        </View>
+        <CategoryAvatar
+          icon={glyph}
+          color={dotColor}
+          fallbackIcon={isTransfer ? 'swap' : isIncome ? 'arrow-up-right' : 'tag'}
+          size={40}
+        />
 
         <View className="flex-1">
           <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>

@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import type { Category, CategoryType } from '@/api/types';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { CategoryAvatar } from './ui/CategoryAvatar';
 import { FadeInView } from './ui/FadeInView';
 import { Icon } from './ui/Icon';
 
@@ -34,7 +35,6 @@ function Tile({
   selected: boolean;
   onPress: () => void;
 }) {
-  const colors = useColors();
   return (
     <Pressable
       onPress={() => {
@@ -45,23 +45,7 @@ function Tile({
       accessibilityState={{ selected }}
       className="w-1/4 items-center gap-1 px-1 py-2 active:opacity-60"
     >
-      <View
-        className={`h-14 w-14 items-center justify-center rounded-full bg-surface-2 ${
-          selected ? 'border-2 border-primary' : ''
-        }`}
-      >
-        {category.icon ? (
-          <Text className="text-xl">{category.icon}</Text>
-        ) : (
-          <Icon name="tag" size={20} color={category.color || colors.textMuted} />
-        )}
-        {category.color ? (
-          <View
-            className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-surface"
-            style={{ backgroundColor: category.color }}
-          />
-        ) : null}
-      </View>
+      <CategoryAvatar icon={category.icon} color={category.color} size={56} selected={selected} />
       <Text
         className={`text-center text-[11px] leading-tight ${
           selected ? 'text-primary font-semibold' : 'text-text-muted'
