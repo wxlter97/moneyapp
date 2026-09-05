@@ -33,6 +33,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/categories'),
   },
   {
+    icon: 'users',
+    label: 'Miembros',
+    hint: 'Quién ve y edita este presupuesto',
+    onPress: () => router.push('/members'),
+  },
+  {
     icon: 'inbox',
     label: 'Importaciones',
     hint: 'Correos bancarios por revisar',

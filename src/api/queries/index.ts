@@ -8,6 +8,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from '@tanstack/react-query';
+import { fromByteArray as encodeBase64 } from 'base64-js';
 
 import * as res from '@/api/resources';
 import type {
@@ -65,6 +66,60 @@ export function useResetWorkspace() {
     mutationFn: ({ id, scope }: { id: string; scope: res.ResetScope }) =>
       res.workspaces.reset(id, scope),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['ws', ws], type: 'all' }),
+  });
+}
+
+/** Genera una dirección de importación nueva para el workspace; invalida la anterior. */
+export function useRotateInboundToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.workspaces.rotateInboundToken(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workspaces() }),
+  });
+}
+
+// --- miembros del workspace activo ----------------------------------------
+export function useMemberships() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).memberships(),
+    queryFn: () => res.memberships.list(),
+    enabled: !!ws,
+  });
+}
+
+export function useInviteMember() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ email, role }: { email: string; role?: 'owner' | 'member' }) =>
+      res.memberships.invite(email, role),
+    onSuccess: async () => {
+      invalidate();
+      // el `member_count` de la lista de workspaces también cambió
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+export function useUpdateMembershipRole() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: string; role: 'owner' | 'member' }) =>
+      res.memberships.updateRole(id, role),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveMembership() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.memberships.remove(id),
+    onSuccess: async () => {
+      invalidate();
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
   });
 }
 
@@ -236,6 +291,41 @@ export function useDeleteTransaction() {
   return useMutation({
     mutationFn: (id: string) => res.transactions.remove(id),
     onSuccess: invalidate,
+  });
+}
+
+export function useUploadReceipt() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: { uri: string; name: string; type: string } }) =>
+      res.transactions.uploadReceipt(id, file),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveReceipt() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.transactions.removeReceipt(id),
+    onSuccess: invalidate,
+  });
+}
+
+/** Foto del recibo como data URI, lista para `<Image source={{uri}}>`. El
+ * endpoint exige el mismo auth que el resto del API, así que no se puede
+ * apuntar un <Image> directo a la URL — se trae por axios (que ya manda
+ * los headers) y se arma el data URI acá. */
+export function useReceiptImage(id: string | undefined, hasReceipt: boolean) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).receiptImage(id ?? ''),
+    queryFn: async () => {
+      const { data, contentType } = await res.transactions.getReceiptBlob(id!);
+      const base64 = encodeBase64(new Uint8Array(data));
+      return `data:${contentType};base64,${base64}`;
+    },
+    enabled: !!ws && !!id && hasReceipt,
+    staleTime: Infinity,
   });
 }
 

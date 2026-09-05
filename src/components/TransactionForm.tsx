@@ -11,11 +11,13 @@ import {
   useDeleteTransaction,
   useTransaction,
   useUpdateTransaction,
+  useUploadReceipt,
 } from '@/api/queries';
 import { walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import type { TransactionInput, TransactionType } from '@/api/types';
 import { CategoryPickerField } from '@/components/CategoryGrid';
+import { ReceiptField } from '@/components/ReceiptField';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
@@ -25,10 +27,12 @@ import { Segmented } from '@/components/ui/Segmented';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import type { PickedFile } from '@/lib/receipt';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
 import { formatMoney, toNumber } from '@/lib/money';
+import { useSnackbarStore } from '@/store/snackbar';
 
 interface TransactionFormProps {
   transactionId?: string;
@@ -46,6 +50,8 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const create = useCreateTransaction();
   const update = useUpdateTransaction();
   const remove = useDeleteTransaction();
+  const uploadReceipt = useUploadReceipt();
+  const showSnackbar = useSnackbarStore((s) => s.show);
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('0.00');
@@ -61,6 +67,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const [walletDefaulted, setWalletDefaulted] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [openRow, setOpenRow] = useState<OpenRow>(null);
+  const [pendingReceipt, setPendingReceipt] = useState<PickedFile | null>(null);
 
   const isTransfer = type === 'transfer';
 
@@ -155,8 +162,18 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     }
 
     try {
-      if (editing) await update.mutateAsync({ id: transactionId!, input: payload });
-      else await create.mutateAsync(payload);
+      if (editing) {
+        await update.mutateAsync({ id: transactionId!, input: payload });
+      } else {
+        const created = await create.mutateAsync(payload);
+        if (pendingReceipt) {
+          try {
+            await uploadReceipt.mutateAsync({ id: created.id, file: pendingReceipt });
+          } catch {
+            showSnackbar({ message: 'Se guardó, pero no se pudo subir el recibo.' });
+          }
+        }
+      }
       dismissModal();
     } catch (err) {
       setFields(fieldErrors(err));
@@ -298,6 +315,13 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           value={note}
           onChangeText={setNote}
           error={fields.description}
+        />
+
+        <ReceiptField
+          transactionId={transactionId}
+          hasReceipt={existing.data?.has_receipt ?? false}
+          pendingFile={pendingReceipt}
+          onPendingFileChange={setPendingReceipt}
         />
 
         {showBudgetSwitch ? (

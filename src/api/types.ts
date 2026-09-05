@@ -217,6 +217,8 @@ export interface Transaction {
   currency: string;
   description: string;
   date: ISODate;
+  /** El archivo en sí se sube/lee por separado, ver `transactions.receiptUrl`. */
+  has_receipt: boolean;
   /** Si false, el gasto no cuenta contra el presupuesto de su categoría. */
   counts_toward_budget: boolean;
   source: TransactionSource;

@@ -203,6 +203,10 @@ export default function AppLayout() {
         name="wallet-transactions"
         options={{ presentation: 'modal', headerShown: false }}
       />
+      <Stack.Screen
+        name="members"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
     </Stack>
   );
 }
