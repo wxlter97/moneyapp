@@ -25,6 +25,7 @@ import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { muteColor } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
+import { CURRENCIES } from '@/lib/currency';
 import { toNumber } from '@/lib/money';
 import { WALLET_COLORS } from '@/lib/wallets';
 
@@ -58,6 +59,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const unarchive = useUnarchiveWallet();
 
   const [name, setName] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [purpose, setPurpose] = useState<WalletPurpose>('spending');
   const [kind, setKind] = useState<WalletKind>('bank');
   const [color, setColor] = useState('');
@@ -87,6 +89,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
     if (!editing || prefilled || !existing.data) return;
     const w = existing.data;
     setName(w.name);
+    setCurrency(w.currency);
     setPurpose(w.purpose);
     setKind(w.kind);
     setColor(w.color ?? '');
@@ -170,6 +173,9 @@ export function WalletForm({ walletId }: WalletFormProps) {
         : null;
     const payload: WalletInput = {
       name: name.trim(),
+      // Sólo al crear: cambiarla después dejaría el saldo ya acumulado (y
+      // las transacciones ya registradas) en la moneda vieja, sin convertir.
+      ...(!editing && { currency }),
       purpose,
       kind,
       color: color || '',
@@ -239,6 +245,19 @@ export function WalletForm({ walletId }: WalletFormProps) {
           placeholder="Cuenta corriente, Fondo de emergencias…"
           error={fields.name}
         />
+
+        {!editing ? (
+          <Select
+            label="Moneda"
+            value={currency}
+            onChange={setCurrency}
+            options={CURRENCIES.map((c) => ({ value: c.code, label: `${c.code} — ${c.label}` }))}
+          />
+        ) : (
+          <Text className="text-text-muted text-xs">
+            Moneda: {currency} (no se puede cambiar después de crear la cartera)
+          </Text>
+        )}
 
         {!editing ? (
           <View className="gap-1.5">

@@ -69,6 +69,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/net-worth-history'),
   },
   {
+    icon: 'swap',
+    label: 'Monedas',
+    hint: 'Moneda base y tasas de cambio',
+    onPress: () => router.push('/currencies'),
+  },
+  {
     icon: 'repeat',
     label: 'Recurrentes',
     hint: 'Gastos e ingresos fijos',

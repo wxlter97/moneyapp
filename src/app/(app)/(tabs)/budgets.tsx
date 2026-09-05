@@ -16,6 +16,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { useColors } from '@/theme';
 import { currentYearMonth, type YearMonth } from '@/lib/date';
 import { toNumber } from '@/lib/money';
+import { useWorkspaceStore } from '@/store/workspace';
 
 type Tab = 'restante' | 'informacion';
 
@@ -24,7 +25,8 @@ export default function BudgetScreen() {
   const [tab, setTab] = useState<Tab>('restante');
   const [month, setMonth] = useState(currentYearMonth);
   const budget = useBudgetReport(month);
-  const currency = 'USD';
+  const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
+  const currency = activeWorkspace?.base_currency ?? 'USD';
 
   const totals = budget.data?.totals;
   const budgeted = toNumber(totals?.budgeted);

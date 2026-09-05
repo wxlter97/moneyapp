@@ -121,7 +121,11 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     (isTransfer ? !!toWalletId && toWalletId !== walletId : !!categoryId) &&
     !busy;
 
-  const currency = walletsQ.data?.[0]?.currency ?? 'USD';
+  // La de la cartera elegida, no la primera de la lista -- el backend igual
+  // ignora cualquier moneda del cliente y usa siempre la de `wallet`
+  // (ver Transaction.save()), pero mostrar la ajena confundía mientras se
+  // tipeaba el monto.
+  const currency = walletsQ.data?.find((w) => w.id === walletId)?.currency ?? 'USD';
   const showBudgetSwitch = type === 'expense' || (isTransfer && !!categoryId);
 
   function onChangeType(next: TransactionType) {

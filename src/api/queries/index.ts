@@ -79,6 +79,47 @@ export function useRotateInboundToken() {
   });
 }
 
+/** Moneda de los totales agregados (patrimonio, presupuesto, flujo). Solo owner. */
+export function useSetBaseCurrency() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, currency }: { id: string; currency: string }) =>
+      res.workspaces.setBaseCurrency(id, currency),
+    onSuccess: async () => {
+      invalidate(); // los reportes cacheados quedan en la moneda vieja
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+// --- tasas de cambio (workspace activo) -------------------------------
+export function useExchangeRates() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).exchangeRates(),
+    queryFn: () => res.exchangeRates.list(),
+    enabled: !!ws,
+  });
+}
+
+export function useSetExchangeRate() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ currency, rate }: { currency: string; rate: string }) =>
+      res.exchangeRates.set(currency, rate),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteExchangeRate() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.exchangeRates.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
 // --- miembros del workspace activo ----------------------------------------
 export function useMemberships() {
   const ws = useActiveWs();

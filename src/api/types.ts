@@ -57,9 +57,19 @@ export interface Workspace {
   name: string;
   role: WorkspaceRole;
   member_count: number;
+  /** Moneda en la que se expresan los totales agregados (patrimonio, presupuesto, flujo). */
+  base_currency: string;
   inbound_token: string;
   inbound_email: string;
   created_at: ISODateTime;
+  updated_at: ISODateTime;
+}
+
+/** Tasa manual: 1 `currency` = `rate_to_base` de la moneda base del workspace. */
+export interface ExchangeRate {
+  id: UUID;
+  currency: string;
+  rate_to_base: string;
   updated_at: ISODateTime;
 }
 
@@ -432,6 +442,8 @@ export interface ConfirmEmailImportInput {
 export interface NetWorthBreakdown {
   net: Money;
   by_purpose: Record<WalletPurpose, Money>;
+  /** Moneda en la que ya vienen convertidos `net`/`by_purpose`. */
+  base_currency: string;
 }
 
 export interface BudgetRow {
@@ -457,6 +469,7 @@ export interface BudgetGroup {
 export interface BudgetReport {
   year: number;
   month: number;
+  base_currency: string;
   rows: BudgetRow[];
   groups: BudgetGroup[];
   totals: { budgeted: Money; spent: Money; remaining: Money };
@@ -497,6 +510,7 @@ export interface SpendRow {
 export interface DashboardSummary {
   month: CashflowPoint;
   net_worth: Money;
+  base_currency: string;
   pending_email_imports: number;
   top_expense_categories: SpendRow[];
 }

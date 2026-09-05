@@ -16,6 +16,7 @@ import type {
   DashboardSummary,
   EmailImportLog,
   EmailImportStatus,
+  ExchangeRate,
   InstallmentPurchase,
   InstallmentPurchaseInput,
   Membership,
@@ -77,6 +78,20 @@ export const workspaces = {
     api
       .post<Workspace>(`/workspaces/${id}/rotate-inbound-token/`, {}, { skipWorkspace: true })
       .then((r) => r.data),
+  /** Moneda de los totales agregados (patrimonio, presupuesto, flujo). Solo owner. */
+  setBaseCurrency: (id: string, base_currency: string) =>
+    api
+      .patch<Workspace>(`/workspaces/${id}/`, { base_currency }, { skipWorkspace: true })
+      .then((r) => r.data),
+};
+
+// --- tasas de cambio (workspace activo) ------------------------------
+export const exchangeRates = {
+  list: () => fetchAll<ExchangeRate>('/exchange-rates/'),
+  /** Upsert: cargar una moneda ya configurada actualiza su tasa. */
+  set: (currency: string, rate_to_base: string) =>
+    api.post<ExchangeRate>('/exchange-rates/', { currency, rate_to_base }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/exchange-rates/${id}/`).then(() => undefined),
 };
 
 // --- miembros del workspace activo -----------------------------------------

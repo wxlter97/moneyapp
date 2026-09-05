@@ -15,6 +15,7 @@ export const qk = {
 
     memberships: () => ['ws', ws, 'memberships'] as const,
     personalTokens: () => ['ws', ws, 'personal-tokens'] as const,
+    exchangeRates: () => ['ws', ws, 'exchange-rates'] as const,
 
     wallets: (params?: WalletListParams) =>
       ['ws', ws, 'wallets', params ?? {}] as const,

@@ -248,6 +248,10 @@ export default function AppLayout() {
           name="security"
           options={{ presentation: 'modal', headerShown: false }}
         />
+        <Stack.Screen
+          name="currencies"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
     </AppLockGate>
   );

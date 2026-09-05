@@ -37,6 +37,7 @@ import { currentYearMonth, formatDayHeader, formatShortDate, monthRange } from '
 import { toNumber } from '@/lib/money';
 import { groupByDay, summarizeByType } from '@/lib/transactions';
 import { useSnackbarStore } from '@/store/snackbar';
+import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -46,8 +47,11 @@ export default function OverviewScreen() {
   const [month, setMonth] = useState(currentYearMonth);
 
   const netWorth = useNetWorth();
-  const wallets = useWallets();
-  const currency = wallets.data?.[0]?.currency ?? 'USD';
+  // La del workspace (ver Workspace.base_currency): es en la que ya vienen
+  // convertidos los totales agregados -- nunca la de "la primera cartera",
+  // que ni siquiera es la moneda correcta si hay más de una en uso.
+  const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
+  const currency = activeWorkspace?.base_currency ?? 'USD';
 
   return (
     <View className="flex-1 bg-bg">
@@ -85,7 +89,7 @@ export default function OverviewScreen() {
       {tab === 'resumen' ? (
         <ResumenTab currency={currency} />
       ) : (
-        <ListaTab month={month} onMonth={setMonth} />
+        <ListaTab month={month} onMonth={setMonth} currency={currency} />
       )}
 
       <AddTransactionFab />
@@ -274,9 +278,12 @@ type TypeFilter = 'all' | 'income' | 'expense' | 'transfer';
 function ListaTab({
   month,
   onMonth,
+  currency,
 }: {
   month: ReturnType<typeof currentYearMonth>;
   onMonth: (m: ReturnType<typeof currentYearMonth>) => void;
+  /** Moneda base del workspace (ver Workspace.base_currency). */
+  currency: string;
 }) {
   const range = useMemo(() => monthRange(month), [month]);
   const txQuery = useTransactions({ date_after: range.from, date_before: range.to });
@@ -304,9 +311,14 @@ function ListaTab({
     });
   }, [allItems, pendingDeleteIds, typeFilter, search, categories, wallets]);
 
-  const totals = useMemo(() => summarizeByType(items), [items]);
+  // El total de arriba se suma sin convertir (no hay tasas acá) -- se
+  // limita a la moneda base para no mezclar montos de otras carteras; cada
+  // fila de la lista de abajo sí muestra su moneda real, sea cual sea.
+  const totals = useMemo(
+    () => summarizeByType(items.filter((t) => t.currency === currency)),
+    [items, currency],
+  );
   const days = useMemo(() => groupByDay(items), [items]);
-  const currency = items[0]?.currency ?? allItems[0]?.currency ?? 'USD';
 
   const refresh = usePullRefresh(txQuery.isFetching && !txQuery.isLoading, () => txQuery.refetch());
 
