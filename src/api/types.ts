@@ -524,6 +524,44 @@ export interface DashboardSummary {
   top_expense_categories: SpendRow[];
 }
 
+export interface CategoryTrend {
+  category: UUID;
+  category_name: string | null;
+  /** Un monto por mes, mismo orden que `months` de la respuesta. */
+  amounts: Money[];
+  /** Mes en curso vs. el anterior -- puede ser negativo (bajó). */
+  change: Money;
+  change_pct: number | null;
+}
+
+export interface CategoryTrendsResponse {
+  months: { year: number; month: number }[];
+  /** Ordenadas: la que más creció primero. */
+  categories: CategoryTrend[];
+}
+
+/** Candidata a recurrente detectada en el historial -- ver `recurring-expenses/suggestions/`. */
+export interface RecurringSuggestion {
+  type: 'income' | 'expense';
+  category: UUID;
+  category_name: string;
+  wallet: UUID;
+  wallet_name: string;
+  suggested_amount: Money;
+  occurrences: number;
+  last_date: ISODate;
+  suggested_next_due_date: ISODate;
+}
+
+/** Proyección de una meta de ahorro -- ver `wallets/{id}/projection/`. */
+export interface GoalProjection {
+  remaining: Money;
+  monthly_rate: Money | null;
+  months_to_goal: number | null;
+  projected_date: ISODate | null;
+  on_track: boolean | null;
+}
+
 // ---------------------------------------------------------------------------
 // Errores DRF
 // ---------------------------------------------------------------------------

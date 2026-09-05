@@ -32,6 +32,15 @@ export function formatYearMonth({ year, month }: YearMonth): string {
   return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${year}`;
 }
 
+const MONTHS_SHORT_ES = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+/** "ago" -- para etiquetas de eje en gráficos donde no entra el nombre completo. */
+export function formatMonthShort({ month }: YearMonth): string {
+  return MONTHS_SHORT_ES[month - 1] ?? '';
+}
+
 /** Primer y último día del mes como ISODate (YYYY-MM-DD). */
 export function monthRange({ year, month }: YearMonth): { from: ISODate; to: ISODate } {
   const pad = (n: number) => String(n).padStart(2, '0');

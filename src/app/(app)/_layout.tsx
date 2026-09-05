@@ -256,6 +256,10 @@ export default function AppLayout() {
           name="split-transaction"
           options={{ presentation: 'modal', headerShown: false }}
         />
+        <Stack.Screen
+          name="trends"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
     </AppLockGate>
   );

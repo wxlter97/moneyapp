@@ -12,14 +12,17 @@ import type {
   CategoryBudget,
   CategoryBudgetInput,
   CategoryInput,
+  CategoryTrendsResponse,
   ConfirmEmailImportInput,
   DashboardSummary,
   EmailImportLog,
   EmailImportStatus,
   ExchangeRate,
+  GoalProjection,
   InstallmentPurchase,
   InstallmentPurchaseInput,
   Membership,
+  Money,
   MonthlySnapshot,
   NetWorthBreakdown,
   NotificationPreferences,
@@ -27,6 +30,7 @@ import type {
   PersonalAccessToken,
   RecurringExpense,
   RecurringExpenseInput,
+  RecurringSuggestion,
   ScheduledItem,
   Transaction,
   TransactionInput,
@@ -164,6 +168,9 @@ export const wallets = {
   /** Fija `sort_order` según el orden de `ids`. */
   reorder: (ids: string[]) =>
     api.post<{ reordered: number }>('/wallets/reorder/', { ids }).then((r) => r.data),
+  /** Solo tiene sentido en una cartera de ahorro con meta -- 404 si no. */
+  projection: (id: string) =>
+    api.get<GoalProjection>(`/wallets/${id}/projection/`).then((r) => r.data),
 };
 
 // --- categorías / presupuestos ------------------------------------------
@@ -204,6 +211,14 @@ export const recurringExpenses = {
     api.patch<RecurringExpense>(`/recurring-expenses/${id}/`, input).then((r) => r.data),
   remove: (id: string) =>
     api.delete(`/recurring-expenses/${id}/`).then(() => undefined),
+  /** Candidatas detectadas en el historial ("esto parece recurrente"). */
+  suggestions: () =>
+    api.get<RecurringSuggestion[]>('/recurring-expenses/suggestions/').then((r) => r.data),
+  /** "No, gracias" a una sugerencia -- no se le vuelve a mostrar. */
+  dismissSuggestion: (category: string, wallet: string, amount: Money) =>
+    api
+      .post('/recurring-expenses/dismiss-suggestion/', { category, wallet, amount })
+      .then(() => undefined),
 };
 
 // --- compras a plazo (cuotas) ----------------------------------------
@@ -323,6 +338,12 @@ export const reports = {
 
   cashflow: (months = 6) =>
     api.get<CashflowPoint[]>('/reports/cashflow/', { params: { months } }).then((r) => r.data),
+
+  /** Gasto por categoría mes a mes + cuáles crecieron más. */
+  categoryTrends: (months = 6) =>
+    api
+      .get<CategoryTrendsResponse>('/reports/category-trends/', { params: { months } })
+      .then((r) => r.data),
 
   /** Recurrentes + cuotas próximas, sin materializarlas. Fechas ISO. */
   scheduled: (params?: { since?: string; until?: string }) =>

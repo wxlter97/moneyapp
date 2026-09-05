@@ -246,6 +246,18 @@ export function useUpdateWallet() {
   });
 }
 
+/** Solo tiene sentido en una meta de ahorro -- el caller pasa `enabled`
+ * (típicamente `purpose === 'savings' && !!goal_amount`) para no pegarle a
+ * un 404 en cualquier otra cartera. */
+export function useGoalProjection(id: string | undefined, enabled: boolean) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletProjection(id ?? ''),
+    queryFn: () => res.wallets.projection(id!),
+    enabled: !!ws && !!id && enabled,
+  });
+}
+
 export function useDeleteWallet() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({
@@ -504,6 +516,24 @@ export function useDeleteRecurringExpense() {
   });
 }
 
+export function useRecurringSuggestions() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).recurringSuggestions(),
+    queryFn: res.recurringExpenses.suggestions,
+    enabled: !!ws,
+  });
+}
+
+export function useDismissRecurringSuggestion() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ category, wallet, amount }: { category: string; wallet: string; amount: string }) =>
+      res.recurringExpenses.dismissSuggestion(category, wallet, amount),
+    onSuccess: invalidate,
+  });
+}
+
 // --- compras a plazo (cuotas) -----------------------------------
 export function useInstallments() {
   const ws = useActiveWs();
@@ -635,6 +665,15 @@ export function useCashflow(months = 6) {
   return useQuery({
     queryKey: qk.ws(ws).reportCashflow(months),
     queryFn: () => res.reports.cashflow(months),
+    enabled: !!ws,
+  });
+}
+
+export function useCategoryTrends(months = 6) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).reportCategoryTrends(months),
+    queryFn: () => res.reports.categoryTrends(months),
     enabled: !!ws,
   });
 }

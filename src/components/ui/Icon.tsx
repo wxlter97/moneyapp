@@ -34,7 +34,8 @@ export type IconName =
   | 'lock'
   | 'face-id'
   | 'split'
-  | 'filter';
+  | 'filter'
+  | 'bars';
 
 interface IconProps {
   name: IconName;
@@ -227,6 +228,13 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
       )}
       {name === 'filter' && (
         <Path d="M4 5h16l-6 7.5V19l-4 2v-8.5L4 5z" {...p} strokeLinejoin="round" />
+      )}
+      {name === 'bars' && (
+        <>
+          <Line x1={5} y1={19} x2={5} y2={13} {...p} />
+          <Line x1={12} y1={19} x2={12} y2={7} {...p} />
+          <Line x1={19} y1={19} x2={19} y2={10} {...p} />
+        </>
       )}
       {name === 'lock' && (
         <>
