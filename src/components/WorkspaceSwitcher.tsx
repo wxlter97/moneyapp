@@ -81,7 +81,7 @@ export function WorkspaceSwitcher() {
                 <View>
                   <Text className="text-text text-base">{w.name}</Text>
                   <Text className="text-text-muted text-xs">
-                    {w.role || 'miembro'} · {w.member_count}{' '}
+                    {w.role === 'owner' ? 'Dueño' : 'Miembro'} · {w.member_count}{' '}
                     {w.member_count === 1 ? 'miembro' : 'miembros'}
                   </Text>
                 </View>

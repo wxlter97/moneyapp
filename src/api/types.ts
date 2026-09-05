@@ -220,6 +220,9 @@ export interface Category {
   /** true cuando `parent` es null. */
   is_group: boolean;
   sort_order: number;
+  /** Cantidad de transacciones vivas con esta categoría; la usa el picker
+   * de categoría de transacciones para mostrar primero las más usadas. */
+  usage_count: number;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 }
@@ -375,6 +378,8 @@ export const RECURRENCE_LABEL: Record<RecurrenceFrequency, string> = {
 
 export interface RecurringExpense {
   id: UUID;
+  /** Nombre libre ("Netflix", "iCloud+"...); vacío = usar el de la categoría. */
+  name: string;
   category: UUID;
   wallet: UUID;
   amount: Money;
@@ -386,6 +391,7 @@ export interface RecurringExpense {
 }
 
 export interface RecurringExpenseInput {
+  name?: string;
   category: UUID;
   wallet: UUID;
   amount: Money;

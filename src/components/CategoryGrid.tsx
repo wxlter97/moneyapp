@@ -13,7 +13,17 @@ interface GroupTree {
   children: Category[];
 }
 
-function buildTrees(categories: Category[], type: CategoryType | 'all'): GroupTree[] {
+/** Orden estable por uso descendente (más transacciones primero); a igual
+ * uso, conserva el orden original (manual / de creación). */
+function byUsageDesc(a: Category, b: Category): number {
+  return (b.usage_count ?? 0) - (a.usage_count ?? 0);
+}
+
+function buildTrees(
+  categories: Category[],
+  type: CategoryType | 'all',
+  sortByUsage = false,
+): GroupTree[] {
   const list = type === 'all' ? categories : categories.filter((c) => c.type === type);
   const groups = list.filter((c) => c.parent === null);
   const byParent = new Map<string, Category[]>();
@@ -23,7 +33,12 @@ function buildTrees(categories: Category[], type: CategoryType | 'all'): GroupTr
       byParent.get(c.parent)!.push(c);
     }
   }
-  return groups.map((group) => ({ group, children: byParent.get(group.id) ?? [] }));
+  const trees = groups.map((group) => ({ group, children: byParent.get(group.id) ?? [] }));
+  if (!sortByUsage) return trees;
+  // Ordena las subcategorías de cada grupo por uso, y los grupos mismos
+  // (sólo importa para los que son elegibles sin hijas, ver `selfCell`).
+  for (const t of trees) t.children = [...t.children].sort(byUsageDesc);
+  return [...trees].sort((a, b) => byUsageDesc(a.group, b.group));
 }
 
 function Tile({
@@ -70,6 +85,7 @@ export function CategoryGrid({
   onSelect,
   onEditCategory,
   onAddSub,
+  sortByUsage = false,
 }: {
   categories: Category[];
   /** 'all' mezcla ingreso + gasto en una sola rejilla (categorizar transferencias). */
@@ -81,8 +97,14 @@ export function CategoryGrid({
   onEditCategory?: (category: Category) => void;
   /** Modo gestión: muestra "+ Subcategoría" bajo cada grupo. */
   onAddSub?: (groupId: string) => void;
+  /** Muestra primero las categorías más usadas en vez del orden manual
+   * (pensado para elegir categoría al cargar una transacción). */
+  sortByUsage?: boolean;
 }) {
-  const trees = useMemo(() => buildTrees(categories, type), [categories, type]);
+  const trees = useMemo(
+    () => buildTrees(categories, type, sortByUsage),
+    [categories, type, sortByUsage],
+  );
 
   if (trees.length === 0) {
     return (
@@ -233,6 +255,7 @@ export function CategoryPickerField({
                 type={type}
                 selectedId={value}
                 onSelect={onChange}
+                sortByUsage
               />
             </ScrollView>
           </View>

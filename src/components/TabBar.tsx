@@ -3,10 +3,12 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { EdgeInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
+import { SideNav } from './SideNav';
 import { TAB_SCREENS } from './tabBarConfig';
 import { GlassSurface } from './ui/GlassSurface';
 import { TabBarIcon, type TabIconName } from './ui/TabBarIcon';
 import { haptics } from '@/lib/haptics';
+import { useIsDesktop } from '@/lib/responsive';
 import { MAX_CONTENT_WIDTH, useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -50,7 +52,30 @@ const TAB_PILL_RADIUS = BAR_RADIUS - 9;
  */
 export function TabBar({ state, navigation, insets }: TabBarProps) {
   const colors = useColors();
+  const isDesktop = useIsDesktop();
   const bottom = Math.max(insets.bottom, Platform.OS === 'web' ? 18 : 12);
+
+  function navigate(name: string, index: number) {
+    if (index === state.index) return;
+    const route = state.routes[index];
+    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+    if (!event.defaultPrevented) {
+      haptics.tap();
+      navigation.navigate(name);
+    }
+  }
+
+  // Desktop web: barra lateral fija en el margen que ya deja la columna
+  // centrada, en vez de la píldora flotante pensada para pulgares.
+  if (isDesktop) {
+    return (
+      <SideNav
+        routes={state.routes}
+        activeIndex={state.index}
+        onNavigate={(name) => navigate(name, state.routes.findIndex((r) => r.name === name))}
+      />
+    );
+  }
 
   return (
     <View
@@ -62,6 +87,11 @@ export function TabBar({ state, navigation, insets }: TabBarProps) {
           width: '100%',
           maxWidth: MAX_CONTENT_WIDTH + H_MARGIN * 2,
           paddingHorizontal: H_MARGIN,
+          // El radio va también acá (no solo en `GlassSurface`): en web,
+          // `shadow*`/`elevation` se traducen a un box-shadow CSS sobre ESTE
+          // contenedor, que sin `borderRadius` propio queda cuadrado aunque
+          // la superficie de vidrio de adentro sí esté redondeada.
+          borderRadius: BAR_RADIUS,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.22,

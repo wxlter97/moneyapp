@@ -56,13 +56,18 @@ export default function BudgetScreen() {
         subtitle={
           <View>
             <Money
-              value={Math.abs(remaining)}
+              value={tab === 'restante' ? Math.abs(remaining) : spent}
               currency={currency}
               hero
               className="text-[52px] leading-[56px]"
             />
             <Text className="text-text-muted text-sm">
-              {over ? 'te pasaste' : 'te queda'} de <Money value={budgeted} currency={currency} tone="muted" />
+              {tab === 'restante'
+                ? over
+                  ? 'te pasaste'
+                  : 'te queda'
+                : 'gastado hasta la fecha'}{' '}
+              de <Money value={budgeted} currency={currency} tone="muted" />
             </Text>
           </View>
         }
