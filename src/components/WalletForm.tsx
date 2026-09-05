@@ -70,6 +70,10 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [creditLimit, setCreditLimit] = useState('0.00');
   const [isArchived, setIsArchived] = useState(false);
   const [amount, setAmount] = useState('0.00');
+  // Sólo para carteras que no son de deuda (que ya tienen su propio signo vía
+  // "Debo"/"Me deben"): permite arrancar en descubierto, p. ej. una cuenta
+  // bancaria o tarjeta que ya tenía saldo negativo al darla de alta.
+  const [negativeBalance, setNegativeBalance] = useState(false);
   const [debtOwedToUs, setDebtOwedToUs] = useState(false); // deuda: "me deben"
   const [parentId, setParentId] = useState<string | null>(null);
   const [countsNet, setCountsNet] = useState(true);
@@ -102,6 +106,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setIsArchived(w.is_archived);
     const bal = toNumber(w.opening_balance);
     setDebtOwedToUs(w.purpose === 'debt' && bal > 0);
+    setNegativeBalance(w.purpose !== 'debt' && bal < 0);
     setAmount(Math.abs(bal).toFixed(2));
     setParentId(w.parent);
     setCountsNet(w.counts_toward_net_worth);
@@ -194,7 +199,13 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setFormError(null);
     setFields({});
 
-    const signed = isDebt && !debtOwedToUs ? -amountNum : amountNum;
+    const signed = isDebt
+      ? debtOwedToUs
+        ? amountNum
+        : -amountNum
+      : negativeBalance
+        ? -amountNum
+        : amountNum;
     const goalAmountValue = isSavings
       ? toNumber(goalAmount) > 0
         ? toNumber(goalAmount).toFixed(2)
@@ -372,7 +383,28 @@ export function WalletForm({ walletId }: WalletFormProps) {
             </View>
           </>
         ) : (
-          <AmountInput label={amountLabel} value={amount} onChangeText={setAmount} />
+          <>
+            <AmountInput label={amountLabel} value={amount} onChangeText={setAmount} />
+            <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
+              <View className="flex-1 pr-2">
+                <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                  Saldo en descubierto
+                </Text>
+                <Text className="text-text-muted text-xs">
+                  Actívalo si ya arranca en negativo (p. ej. sobregiro).
+                </Text>
+              </View>
+              <Switch
+                value={negativeBalance}
+                onValueChange={(v) => {
+                  haptics.tap();
+                  setNegativeBalance(v);
+                }}
+                trackColor={{ true: colors.primary, false: colors.surface2 }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+          </>
         )}
 
         {parentOptions.length > 0 ? (

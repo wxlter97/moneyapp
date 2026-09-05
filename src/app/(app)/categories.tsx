@@ -5,18 +5,22 @@ import { router } from 'expo-router';
 import {
   useCategories,
   useDeletedCategories,
+  useHardDeleteCategory,
   useReorderCategories,
   useRestoreCategory,
 } from '@/api/queries';
+import { errorMessage } from '@/api/errors';
 import type { Category, CategoryType } from '@/api/types';
-import { CategoryGrid } from '@/components/CategoryGrid';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
+import { CategoryAvatar } from '@/components/ui/CategoryAvatar';
 import { DragList } from '@/components/ui/DragList';
+import { Icon } from '@/components/ui/Icon';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
 const SECTIONS: { type: CategoryType; title: string }[] = [
@@ -30,6 +34,7 @@ interface GroupTree {
 }
 
 export default function CategoriesScreen() {
+  const colors = useColors();
   const categoriesQ = useCategories();
   const reorder = useReorderCategories();
   const [reordering, setReordering] = useState(false);
@@ -159,12 +164,73 @@ export default function CategoriesScreen() {
                 {trees[type].length === 0 ? (
                   <Text className="text-text-muted py-3 text-sm">Ningún grupo todavía.</Text>
                 ) : (
-                  <CategoryGrid
-                    categories={categoriesQ.data ?? []}
-                    type={type}
-                    onEditCategory={(c) => router.push(`/category/${c.id}`)}
-                    onAddSub={(groupId) => router.push(`/category/new?parent=${groupId}`)}
-                  />
+                  <View>
+                    {trees[type].map((t, i) => (
+                      <View key={t.group.id}>
+                        {i > 0 ? <View className="h-px bg-border/30" /> : null}
+
+                        <Pressable
+                          onPress={() => {
+                            haptics.tap();
+                            router.push(`/category/${t.group.id}`);
+                          }}
+                          className="flex-row items-center gap-3 py-2.5 active:opacity-60"
+                          accessibilityRole="button"
+                        >
+                          <CategoryAvatar icon={t.group.icon} color={t.group.color} size={36} />
+                          <Text
+                            className="text-text flex-1 text-sm"
+                            style={{ fontFamily: fonts.semibold }}
+                            numberOfLines={1}
+                          >
+                            {t.group.name}
+                          </Text>
+                          <Icon name="chevron-right" size={16} color={colors.textMuted} />
+                        </Pressable>
+
+                        {t.children.length === 0 ? (
+                          <Text className="text-text-muted pb-1 pl-[52px] text-xs">
+                            Sin subcategorías.
+                          </Text>
+                        ) : (
+                          t.children.map((c) => (
+                            <Pressable
+                              key={c.id}
+                              onPress={() => {
+                                haptics.tap();
+                                router.push(`/category/${c.id}`);
+                              }}
+                              className="flex-row items-center gap-3 py-2 pl-[52px] active:opacity-60"
+                              accessibilityRole="button"
+                            >
+                              <CategoryAvatar icon={c.icon} color={c.color} size={28} />
+                              <Text className="text-text-muted flex-1 text-sm" numberOfLines={1}>
+                                {c.name}
+                              </Text>
+                              <Icon name="chevron-right" size={14} color={colors.textMuted} />
+                            </Pressable>
+                          ))
+                        )}
+
+                        <Pressable
+                          onPress={() => {
+                            haptics.tap();
+                            router.push(`/category/new?parent=${t.group.id}`);
+                          }}
+                          className="flex-row items-center gap-1 py-2 pl-[52px] active:opacity-60"
+                          accessibilityRole="button"
+                        >
+                          <Icon name="plus" size={12} color={colors.primary} />
+                          <Text
+                            className="text-primary text-xs"
+                            style={{ fontFamily: fonts.semibold }}
+                          >
+                            Subcategoría
+                          </Text>
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
                 )}
               </Card>
             ))}
@@ -177,15 +243,20 @@ export default function CategoriesScreen() {
 }
 
 function DeletedCategories() {
+  const colors = useColors();
   const deletedQ = useDeletedCategories();
   const restore = useRestoreCategory();
+  const purge = useHardDeleteCategory();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [purgeError, setPurgeError] = useState<string | null>(null);
 
   const items = deletedQ.data ?? [];
   if (items.length === 0) return null;
 
   async function onRestore(id: string) {
     setBusyId(id);
+    setPurgeError(null);
     try {
       await restore.mutateAsync(id);
     } finally {
@@ -193,31 +264,83 @@ function DeletedCategories() {
     }
   }
 
+  async function onPurge(id: string) {
+    setBusyId(id);
+    setPurgeError(null);
+    try {
+      await purge.mutateAsync(id);
+      setConfirmId(null);
+    } catch (err) {
+      setPurgeError(errorMessage(err, 'No se pudo borrar del todo.'));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <Card title="Eliminadas">
+      {purgeError ? <Text className="text-expense mb-2 text-xs">{purgeError}</Text> : null}
       {items.map((c, i) => (
-        <View
-          key={c.id}
-          className={`flex-row items-center gap-3 py-2.5 ${
-            i > 0 ? 'border-t border-border/30' : ''
-          }`}
-        >
-          <Text className="text-text-muted flex-1 text-sm" numberOfLines={1}>
-            {c.name}
-          </Text>
-          <Pressable
-            onPress={() => {
-              haptics.tap();
-              onRestore(c.id);
-            }}
-            disabled={busyId === c.id}
-            className="rounded-full bg-surface-2 px-2.5 py-1 active:opacity-60"
-            accessibilityRole="button"
-          >
-            <Text className="text-primary text-xs" style={{ fontFamily: fonts.semibold }}>
-              {busyId === c.id ? '…' : 'Restaurar'}
+        <View key={c.id} className={i > 0 ? 'border-t border-border/30' : ''}>
+          <View className="flex-row items-center gap-3 py-2.5">
+            <Text className="text-text-muted flex-1 text-sm" numberOfLines={1}>
+              {c.name}
             </Text>
-          </Pressable>
+            {confirmId !== c.id ? (
+              <>
+                <Pressable
+                  onPress={() => {
+                    haptics.tap();
+                    onRestore(c.id);
+                  }}
+                  disabled={busyId === c.id}
+                  className="rounded-full bg-surface-2 px-2.5 py-1 active:opacity-60"
+                  accessibilityRole="button"
+                >
+                  <Text className="text-primary text-xs" style={{ fontFamily: fonts.semibold }}>
+                    {busyId === c.id ? '…' : 'Restaurar'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    haptics.tap();
+                    setPurgeError(null);
+                    setConfirmId(c.id);
+                  }}
+                  disabled={busyId === c.id}
+                  className="rounded-full bg-surface-2 px-2.5 py-1 active:opacity-60"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Borrar definitivamente ${c.name}`}
+                >
+                  <Icon name="trash" size={13} color={colors.textMuted} />
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text className="text-text-muted text-xs">¿Borrar del todo?</Text>
+                <Pressable
+                  onPress={() => setConfirmId(null)}
+                  className="rounded-full bg-surface-2 px-2.5 py-1 active:opacity-60"
+                  accessibilityRole="button"
+                >
+                  <Text className="text-text-muted text-xs">Cancelar</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    haptics.tap();
+                    onPurge(c.id);
+                  }}
+                  disabled={busyId === c.id}
+                  className="bg-expense/15 rounded-full px-2.5 py-1 active:opacity-60"
+                  accessibilityRole="button"
+                >
+                  <Text className="text-expense text-xs" style={{ fontFamily: fonts.semibold }}>
+                    {busyId === c.id ? '…' : 'Borrar'}
+                  </Text>
+                </Pressable>
+              </>
+            )}
+          </View>
         </View>
       ))}
     </Card>

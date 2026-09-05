@@ -116,6 +116,14 @@ export default function BudgetEditScreen() {
     return cur ? toNumber(cur.amount).toFixed(2) : '';
   }
 
+  // El grupo no tiene presupuesto propio (ver `CategoryBudgetSerializer`):
+  // su monto es siempre la suma de lo que llevan cargado sus subcategorías
+  // visibles, en vivo (incluye lo que se está tipeando sin guardar todavía).
+  function groupSumFor(groupId: string): number {
+    const subcats = shownSubcatsByGroup.get(groupId) ?? [];
+    return subcats.reduce((sum, s) => sum + parseAmount(valueFor(s.id)), 0);
+  }
+
   const dirty = useMemo(() => {
     return allRows.some((c) => {
       if (!(c.id in draft)) return false;
@@ -176,26 +184,28 @@ export default function BudgetEditScreen() {
         ) : (
           <>
             <ScrollView
+              className="flex-1"
               contentContainerClassName="gap-1 py-2"
               keyboardShouldPersistTaps="handled"
             >
               <Text className="text-text-muted px-1 pb-2 text-xs">
-                Monto mensual por grupo (o por subcategoría puntual). Se aplica también a los
-                próximos meses, hasta que edites uno distinto. Deja en blanco (o 0) para quitarlo
-                de este mes.
+                Monto mensual por subcategoría (el grupo muestra la suma de las suyas, no se
+                presupuesta aparte). Se aplica también a los próximos meses, hasta que edites uno
+                distinto. Deja en blanco (o 0) para quitarlo de este mes.
               </Text>
               {groups.map((g) => {
                 const shownSubcats = shownSubcatsByGroup.get(g.id) ?? [];
                 const availableSubcats = (subcatsByGroup.get(g.id) ?? []).filter(
                   (s) => !existingByCat.has(s.id) && !addedSubcats.has(s.id),
                 );
+                const groupSum = groupSumFor(g.id);
                 return (
                   <View key={g.id}>
                     <BudgetRow
                       category={g}
-                      value={valueFor(g.id)}
+                      value={groupSum > 0 ? groupSum.toFixed(2) : ''}
                       spent={spentByCat.get(g.id) ?? 0}
-                      onChange={(text) => setDraft((d) => ({ ...d, [g.id]: text }))}
+                      readOnly
                     />
                     {shownSubcats.map((s) => (
                       <BudgetRow
@@ -259,13 +269,18 @@ function BudgetRow({
   onChange,
   indent = false,
   onRemove,
+  readOnly = false,
 }: {
   category: Category;
   value: string;
   spent: number;
-  onChange: (text: string) => void;
+  /** No aplica (y no se muestra el input editable) cuando `readOnly`. */
+  onChange?: (text: string) => void;
   indent?: boolean;
   onRemove?: () => void;
+  /** El grupo no tiene presupuesto propio: su monto es sólo la suma de sus
+   * subcategorías, se muestra pero no se puede tocar. */
+  readOnly?: boolean;
 }) {
   const colors = useColors();
   return (
@@ -294,17 +309,30 @@ function BudgetRow({
           <Icon name="close" size={14} color={colors.textMuted} />
         </Pressable>
       ) : null}
-      <View className="flex-row items-center gap-1 rounded-xl bg-surface-2 px-2.5">
+      <View
+        className={`flex-row items-center gap-1 rounded-xl px-2.5 ${
+          readOnly ? '' : 'bg-surface-2'
+        }`}
+      >
         <Text className="text-text-muted text-sm">$</Text>
-        <TextInput
-          value={value}
-          onChangeText={(t) => onChange(t.replace(/[^0-9.,]/g, ''))}
-          keyboardType="decimal-pad"
-          placeholder="0.00"
-          placeholderTextColor="#6B7480"
-          style={{ width: 84, minWidth: 0 }}
-          className="text-text h-10 text-right text-base"
-        />
+        {readOnly ? (
+          <Text
+            className="text-text-muted h-10 text-right text-base"
+            style={{ width: 84, lineHeight: 40 }}
+          >
+            {value || '0.00'}
+          </Text>
+        ) : (
+          <TextInput
+            value={value}
+            onChangeText={(t) => onChange?.(t.replace(/[^0-9.,]/g, ''))}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+            placeholderTextColor="#6B7480"
+            style={{ width: 84, minWidth: 0 }}
+            className="text-text h-10 text-right text-base"
+          />
+        )}
       </View>
     </View>
   );

@@ -237,6 +237,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
             onChangeText={onAmountKeyPress}
             keyboardType="decimal-pad"
             selectTextOnFocus
+            autoFocus={!editing}
             accessibilityLabel="Monto"
             className="text-[40px] leading-[44px]"
             style={{

@@ -36,7 +36,7 @@ import { Segmented } from '@/components/ui/Segmented';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { currentYearMonth, formatDayHeader, formatShortDate, monthRange } from '@/lib/date';
-import { toNumber } from '@/lib/money';
+import { formatSigned, toNumber } from '@/lib/money';
 import { groupByDay, summarizeByType } from '@/lib/transactions';
 import { useSnackbarStore } from '@/store/snackbar';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -523,28 +523,41 @@ function ListaTab({
       ) : items.length === 0 ? (
         <EmptyState title="Sin resultados" hint="Probá con otro texto o filtro." />
       ) : (
-        days.map((day, di) => (
-          <FadeInView key={day.date} index={di}>
-            <Text className="text-text-muted pb-1 pt-3 text-xs font-semibold uppercase tracking-wide">
-              {formatDayHeader(day.date)}
-            </Text>
-            <View className="overflow-hidden rounded-3xl border border-border/60 bg-surface/95 px-4">
-              {day.data.map((item, i) => (
-                <View key={item.id}>
-                  {i > 0 ? <View className="h-px bg-border/30" /> : null}
-                  <TransactionRow
-                    txn={item}
-                    category={item.category ? categories.get(item.category) : undefined}
-                    wallet={wallets.get(item.wallet)}
-                    toWallet={item.to_wallet ? wallets.get(item.to_wallet) : undefined}
-                    onPress={() => router.push(`/transaction/${item.id}`)}
-                    onSwipeDelete={() => onSwipeDelete(item.id)}
-                  />
-                </View>
-              ))}
-            </View>
-          </FadeInView>
-        ))
+        days.map((day, di) => {
+          // Mismo criterio que el total del mes: solo suma lo que ya está en
+          // la moneda base, para no mezclar montos de otras carteras.
+          const dayNet = summarizeByType(day.data.filter((t) => t.currency === currency)).net;
+          return (
+            <FadeInView key={day.date} index={di}>
+              <View className="flex-row items-baseline justify-between pb-1 pt-3">
+                <Text className="text-text-muted text-xs font-semibold uppercase tracking-wide">
+                  {formatDayHeader(day.date)}
+                </Text>
+                <Text
+                  className={dayNet >= 0 ? 'text-income text-xs' : 'text-expense text-xs'}
+                  style={{ fontFamily: fonts.semibold }}
+                >
+                  {formatSigned(dayNet, currency)}
+                </Text>
+              </View>
+              <View className="overflow-hidden rounded-3xl border border-border/60 bg-surface/95 px-4">
+                {day.data.map((item, i) => (
+                  <View key={item.id}>
+                    {i > 0 ? <View className="h-px bg-border/30" /> : null}
+                    <TransactionRow
+                      txn={item}
+                      category={item.category ? categories.get(item.category) : undefined}
+                      wallet={wallets.get(item.wallet)}
+                      toWallet={item.to_wallet ? wallets.get(item.to_wallet) : undefined}
+                      onPress={() => router.push(`/transaction/${item.id}`)}
+                      onSwipeDelete={() => onSwipeDelete(item.id)}
+                    />
+                  </View>
+                ))}
+              </View>
+            </FadeInView>
+          );
+        })
       )}
     </ScrollView>
   );
