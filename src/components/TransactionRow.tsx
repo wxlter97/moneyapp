@@ -34,6 +34,7 @@ const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
   email_import: 'correo',
   recurring: 'recurrente',
   installment: 'cuota',
+  quick_add: 'atajo',
 };
 
 /**

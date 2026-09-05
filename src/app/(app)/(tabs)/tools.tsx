@@ -45,6 +45,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/imports'),
   },
   {
+    icon: 'bolt',
+    label: 'Atajos',
+    hint: 'Agregar gastos desde Apple Shortcuts',
+    onPress: () => router.push('/shortcuts'),
+  },
+  {
     icon: 'trending',
     label: 'Patrimonio',
     hint: 'Evolución mes a mes',

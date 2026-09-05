@@ -72,6 +72,22 @@ export interface Membership {
   joined_at: ISODateTime;
 }
 
+/**
+ * Credencial de larga duración para un Atajo de Apple Shortcuts (u otro
+ * cliente externo). `token` sólo viene poblado en la respuesta de creación
+ * — después ni el dueño puede volver a leer el valor real, sólo revocarlo.
+ */
+export interface PersonalAccessToken {
+  id: UUID;
+  name: string;
+  wallet: UUID;
+  wallet_name: string;
+  prefix: string;
+  token: string | null;
+  last_used_at: ISODateTime | null;
+  created_at: ISODateTime;
+}
+
 // ---------------------------------------------------------------------------
 // Carteras (Wallet) / patrimonio
 // ---------------------------------------------------------------------------
@@ -203,7 +219,8 @@ export type TransactionSource =
   | 'manual'
   | 'email_import'
   | 'recurring'
-  | 'installment';
+  | 'installment'
+  | 'quick_add';
 
 export interface Transaction {
   id: UUID;

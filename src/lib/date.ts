@@ -1,4 +1,4 @@
-import type { ISODate } from '@/api/types';
+import type { ISODate, ISODateTime } from '@/api/types';
 
 export interface YearMonth {
   year: number;
@@ -52,6 +52,14 @@ export function formatShortDate(iso: ISODate): string {
   const [y, m, d] = iso.split('-').map(Number);
   if (!y || !m || !d) return iso;
   return `${d} ${MONTHS_ES[m - 1]?.slice(0, 3) ?? ''}`;
+}
+
+/** "31 ago, 14:05" — fecha y hora, p. ej. el último uso de un token. */
+export function formatDateTime(iso: ISODateTime): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getDate()} ${MONTHS_ES[d.getMonth()]?.slice(0, 3) ?? ''}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 const WEEKDAYS_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];

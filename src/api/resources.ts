@@ -22,6 +22,7 @@ import type {
   MonthlySnapshot,
   NetWorthBreakdown,
   Paginated,
+  PersonalAccessToken,
   RecurringExpense,
   RecurringExpenseInput,
   ScheduledItem,
@@ -86,6 +87,17 @@ export const memberships = {
   updateRole: (id: string, role: Exclude<WorkspaceRole, ''>) =>
     api.patch<Membership>(`/memberships/${id}/`, { role }).then((r) => r.data),
   remove: (id: string) => api.delete(`/memberships/${id}/`).then(() => undefined),
+};
+
+// --- tokens personales (Atajos de Apple Shortcuts) ----------------------
+export const personalTokens = {
+  list: () => fetchAll<PersonalAccessToken>('/personal-tokens/'),
+  /** `token` en la respuesta trae el valor crudo — sólo esta vez. */
+  create: (name: string, walletId: string) =>
+    api
+      .post<PersonalAccessToken>('/personal-tokens/', { name, wallet: walletId })
+      .then((r) => r.data),
+  remove: (id: string) => api.delete(`/personal-tokens/${id}/`).then(() => undefined),
 };
 
 // --- carteras (wallets) -------------------------------------------------

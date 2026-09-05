@@ -123,6 +123,33 @@ export function useRemoveMembership() {
   });
 }
 
+// --- tokens personales (Atajos de Apple Shortcuts) --------------------
+export function usePersonalTokens() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).personalTokens(),
+    queryFn: () => res.personalTokens.list(),
+    enabled: !!ws,
+  });
+}
+
+export function useCreatePersonalToken() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ name, walletId }: { name: string; walletId: string }) =>
+      res.personalTokens.create(name, walletId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletePersonalToken() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.personalTokens.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
 // --- carteras (wallets) --------------------------------------------
 export function useWallets(params?: res.WalletListParams) {
   const ws = useActiveWs();

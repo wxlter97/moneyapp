@@ -13,6 +13,7 @@ export const qk = {
     all: ['ws', ws] as const,
 
     memberships: () => ['ws', ws, 'memberships'] as const,
+    personalTokens: () => ['ws', ws, 'personal-tokens'] as const,
 
     wallets: (params?: WalletListParams) =>
       ['ws', ws, 'wallets', params ?? {}] as const,

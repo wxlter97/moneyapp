@@ -207,6 +207,10 @@ export default function AppLayout() {
         name="members"
         options={{ presentation: 'modal', headerShown: false }}
       />
+      <Stack.Screen
+        name="shortcuts"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
     </Stack>
   );
 }

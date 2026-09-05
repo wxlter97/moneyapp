@@ -28,7 +28,8 @@ export type IconName =
   | 'users'
   | 'copy'
   | 'camera'
-  | 'image';
+  | 'image'
+  | 'bolt';
 
 interface IconProps {
   name: IconName;
@@ -205,6 +206,7 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
           <Path d="M4.5 16.5l5-5 4 4 2.5-2.5 4.5 4.5" {...p} />
         </>
       )}
+      {name === 'bolt' && <Path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" {...p} strokeLinejoin="round" />}
     </Svg>
   );
 }
