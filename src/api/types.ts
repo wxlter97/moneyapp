@@ -335,6 +335,16 @@ export interface CategoryBudgetInput {
   year: number;
 }
 
+/** Input de `categoryBudgets.setForward`: fija el monto para ese mes y lo
+ * propaga a los meses futuros hasta el primero que ya haya sido
+ * personalizado con otro valor (ver docstring del endpoint). */
+export type SetForwardBudgetInput = CategoryBudgetInput;
+
+export interface SetForwardBudgetResult extends CategoryBudget {
+  /** Cuántos meses (el editado + los propagados) quedaron con el nuevo monto. */
+  months_touched: number;
+}
+
 // ---------------------------------------------------------------------------
 // Gastos / ingresos recurrentes
 // ---------------------------------------------------------------------------
