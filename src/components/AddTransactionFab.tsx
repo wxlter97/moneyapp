@@ -26,7 +26,7 @@ export function AddTransactionFab() {
         {
           position: 'absolute',
           right: 24,
-          bottom: 104,
+          bottom: 112,
           // El radio también va acá: en la web, el `box-shadow` que generan
           // `shadowColor`/`shadowOffset`/etc. sigue el borde de ESTE nodo (el
           // que tiene el shadow), no el del hijo — sin esto se ve un halo

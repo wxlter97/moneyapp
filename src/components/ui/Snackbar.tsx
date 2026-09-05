@@ -37,7 +37,7 @@ export function SnackbarHost() {
           position: 'absolute',
           left: 16,
           right: 16,
-          bottom: insets.bottom + 100,
+          bottom: insets.bottom + 108,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.2,
