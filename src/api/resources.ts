@@ -6,6 +6,7 @@
  */
 import { api } from './client';
 import type {
+  BankEmailSchema,
   BudgetReport,
   CashflowPoint,
   Category,
@@ -23,6 +24,7 @@ import type {
   GoalProjection,
   InstallmentPurchase,
   InstallmentPurchaseInput,
+  Invitation,
   Membership,
   Money,
   MonthlySnapshot,
@@ -124,12 +126,43 @@ export const exchangeRates = {
 // --- miembros del workspace activo -----------------------------------------
 export const memberships = {
   list: () => fetchAll<Membership>('/memberships/'),
-  /** Invita por correo a alguien ya registrado en la app. Solo owner. */
+  /**
+   * Invita por correo. Si ya hay una cuenta con ese correo, la respuesta es
+   * un Membership (201, entra directo). Si no, es una Invitation (202): se
+   * le mandó un correo con el enlace para sumarse en cuanto tenga cuenta.
+   * `isInvitation` distingue una respuesta de otra.
+   */
   invite: (email: string, role: Exclude<WorkspaceRole, ''> = 'member') =>
-    api.post<Membership>('/memberships/', { email, role }).then((r) => r.data),
+    api.post<Membership | Invitation>('/memberships/', { email, role }).then((r) => r.data),
   updateRole: (id: string, role: Exclude<WorkspaceRole, ''>) =>
     api.patch<Membership>(`/memberships/${id}/`, { role }).then((r) => r.data),
   remove: (id: string) => api.delete(`/memberships/${id}/`).then(() => undefined),
+};
+
+export function isInvitation(x: Membership | Invitation): x is Invitation {
+  return 'status' in x && 'token' in x;
+}
+
+// --- invitaciones a MI (por mi correo, sin workspace todavía) --------------
+export const invitations = {
+  /** Mis invitaciones pendientes, en cualquier workspace. */
+  mine: () => fetchAll<Invitation>('/invitations/', {}),
+  /** Vista pública por token -- para abrir el enlace del correo sin sesión. */
+  preview: (token: string) =>
+    api.get<Invitation>(`/invitations/${token}/`, { skipWorkspace: true }).then((r) => r.data),
+  accept: (token: string) =>
+    api
+      .post<Invitation>(`/invitations/${token}/accept/`, {}, { skipWorkspace: true })
+      .then((r) => r.data),
+  decline: (token: string) =>
+    api
+      .post<Invitation>(`/invitations/${token}/decline/`, {}, { skipWorkspace: true })
+      .then((r) => r.data),
+};
+
+// --- catálogo de bancos soportados por el importador (global, no por workspace) --
+export const bankEmailSchemas = {
+  list: () => fetchAll<BankEmailSchema>('/bank-email-schemas/', {}),
 };
 
 // --- tokens personales (Atajos de Apple Shortcuts) ----------------------

@@ -166,6 +166,43 @@ export function useInviteMember() {
   });
 }
 
+// --- invitaciones A MÍ (por mi correo, en cualquier workspace) -------------
+export function useMyInvitations() {
+  return useQuery({
+    queryKey: qk.myInvitations(),
+    queryFn: () => res.invitations.mine(),
+  });
+}
+
+export function useAcceptInvitation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => res.invitations.accept(token),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: qk.myInvitations() });
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+/** Vista pública del enlace de invitación (`budget://invite/<token>`), sin sesión. */
+export function useInvitationPreview(token: string | undefined) {
+  return useQuery({
+    queryKey: ['invitations', 'preview', token],
+    queryFn: () => res.invitations.preview(token!),
+    enabled: !!token,
+    retry: false,
+  });
+}
+
+export function useDeclineInvitation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => res.invitations.decline(token),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.myInvitations() }),
+  });
+}
+
 export function useUpdateMembershipRole() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({
@@ -245,6 +282,15 @@ export function useDeletePersonalToken() {
 }
 
 // --- carteras (wallets) --------------------------------------------
+/** Catálogo global de bancos soportados por el importador (no cambia por workspace). */
+export function useBankEmailSchemas() {
+  return useQuery({
+    queryKey: qk.bankEmailSchemas(),
+    queryFn: () => res.bankEmailSchemas.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useWallets(params?: res.WalletListParams) {
   const ws = useActiveWs();
   return useQuery({

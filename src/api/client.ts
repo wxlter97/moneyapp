@@ -71,7 +71,12 @@ export function registerAuthFailureHandler(handler: AuthFailureHandler | null): 
 }
 
 // --- endpoints que NO llevan X-Workspace-ID -------------------------------
-const WORKSPACE_EXEMPT = [/^\/auth\//, /^\/workspaces(\/|$|\?)/];
+const WORKSPACE_EXEMPT = [
+  /^\/auth\//,
+  /^\/workspaces(\/|$|\?)/,
+  /^\/invitations(\/|$|\?)/,
+  /^\/bank-email-schemas(\/|$|\?)/,
+];
 
 function needsWorkspaceHeader(url: string | undefined): boolean {
   if (!url) return true;

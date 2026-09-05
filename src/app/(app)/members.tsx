@@ -7,6 +7,7 @@ import {
   useRemoveMembership,
   useUpdateMembershipRole,
 } from '@/api/queries';
+import { isInvitation } from '@/api/resources';
 import { errorMessage } from '@/api/errors';
 import type { Membership } from '@/api/types';
 import { Button } from '@/components/ui/Button';
@@ -43,6 +44,7 @@ export default function MembersScreen() {
 
   const [email, setEmail] = useState('');
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSentTo, setInviteSentTo] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
@@ -56,10 +58,14 @@ export default function MembersScreen() {
     const trimmed = email.trim();
     if (!trimmed) return;
     setInviteError(null);
+    setInviteSentTo(null);
     try {
-      await invite.mutateAsync({ email: trimmed });
+      const result = await invite.mutateAsync({ email: trimmed });
       haptics.success();
       setEmail('');
+      // Si no tenía cuenta todavía, el backend le mandó un correo con el
+      // enlace en vez de sumarla directo -- avisamos que quedó pendiente.
+      if (isInvitation(result)) setInviteSentTo(trimmed);
     } catch (err) {
       haptics.error();
       setInviteError(errorMessage(err, 'No se pudo invitar a esa persona.'));
@@ -198,8 +204,19 @@ export default function MembersScreen() {
         {isOwner ? (
           <Card title="Invitar por correo">
             <Text className="text-text-muted mb-3 text-sm">
-              La persona ya tiene que tener una cuenta creada en Budget con ese correo.
+              Si ya tiene cuenta en Budget con ese correo, entra directo. Si no,
+              le mandamos un correo con un enlace para sumarse en cuanto se registre.
             </Text>
+            {inviteSentTo ? (
+              <View className="mb-3 gap-1 rounded-2xl bg-income/10 p-3">
+                <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                  Le mandamos la invitación a {inviteSentTo}
+                </Text>
+                <Text className="text-text-muted text-xs">
+                  Va a aparecerle en cuanto abra el enlace del correo (o cree una cuenta con ese mismo correo).
+                </Text>
+              </View>
+            ) : null}
             <View className="gap-3">
               <TextField
                 label="Correo"
@@ -211,6 +228,7 @@ export default function MembersScreen() {
                 onChangeText={(t) => {
                   setEmail(t);
                   if (inviteError) setInviteError(null);
+                  if (inviteSentTo) setInviteSentTo(null);
                 }}
                 error={inviteError ?? undefined}
                 onSubmitEditing={onInvite}

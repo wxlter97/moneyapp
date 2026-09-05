@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-nat
 import { Link, Redirect } from 'expo-router';
 
 import { BrandMark } from '@/components/BrandMark';
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
 import { FadeInView } from '@/components/ui/FadeInView';
 import { Screen } from '@/components/ui/Screen';
@@ -89,6 +90,8 @@ export default function LoginScreen() {
             disabled={!username || !password}
             onPress={onSubmit}
           />
+
+          <GoogleSignInButton />
 
           <Link href="/register" asChild>
             <Pressable className="items-center py-2 active:opacity-60">

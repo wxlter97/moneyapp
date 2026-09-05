@@ -35,6 +35,8 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
+  /** La llena "Continuar con Google"; vacía para cuentas usuario/contraseña. */
+  profile_photo_url: string;
   date_joined: ISODateTime;
 }
 
@@ -45,6 +47,12 @@ export interface TokenPairResponse {
 
 export interface RegisterResponse extends TokenPairResponse {
   user: User;
+}
+
+export interface GoogleLoginResponse extends TokenPairResponse {
+  user: User;
+  /** true = primera vez que entra con esta cuenta (se creó recién). */
+  created: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -80,6 +88,26 @@ export interface Membership {
   user_email: string;
   role: Exclude<WorkspaceRole, ''>;
   joined_at: ISODateTime;
+}
+
+export type InvitationStatus = 'pending' | 'accepted' | 'declined';
+
+/**
+ * Invitación a un workspace por correo, para alguien sin cuenta todavía.
+ * `POST /memberships/` devuelve esto (202) en vez de un Membership (201)
+ * cuando el correo no corresponde a un usuario ya registrado.
+ */
+export interface Invitation {
+  id: UUID;
+  workspace: UUID;
+  workspace_name: string;
+  email: string;
+  role: Exclude<WorkspaceRole, ''>;
+  status: InvitationStatus;
+  token: string;
+  invited_by_name: string | null;
+  created_at: ISODateTime;
+  responded_at: ISODateTime | null;
 }
 
 /**
@@ -166,6 +194,9 @@ export interface Wallet {
   interest_rate: string | null;
   due_date: ISODate | null;
   counterparty: string;
+  /** Banco emisor (opcional), para detectar sola esta cartera al llegar un correo bancario. */
+  bank_schema: UUID | null;
+  bank_name: string | null;
   visibility: Visibility;
   owner: number | null;
   is_active: boolean;
@@ -197,6 +228,7 @@ export interface WalletInput {
   interest_rate?: string | null;
   due_date?: ISODate | null;
   counterparty?: string;
+  bank_schema?: UUID | null;
   visibility?: Visibility;
   is_active?: boolean;
   is_archived?: boolean;
@@ -460,6 +492,15 @@ export interface MonthlySnapshot {
 // Importación bancaria por correo (bandeja de revisión)
 // ---------------------------------------------------------------------------
 export type EmailImportStatus = 'pending' | 'confirmed' | 'rejected' | 'failed';
+
+/** Catálogo de bancos soportados por el importador -- para el selector de "banco" al crear una cartera. */
+export interface BankEmailSchema {
+  id: UUID;
+  bank_name: string;
+  sender_pattern: string;
+  parser_version: string;
+  is_active: boolean;
+}
 
 export interface EmailImportLog {
   id: UUID;

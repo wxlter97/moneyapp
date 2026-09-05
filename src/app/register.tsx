@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Link, Redirect, router } from 'expo-router';
 
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Screen } from '@/components/ui/Screen';
@@ -128,6 +129,8 @@ export default function RegisterScreen() {
             disabled={!canSubmit}
             onPress={onSubmit}
           />
+
+          <GoogleSignInButton />
 
           <Link href="/login" asChild>
             <Pressable className="items-center py-1 active:opacity-60">

@@ -1,6 +1,6 @@
 /** Llamadas de autenticación contra el backend Django (simplejwt). */
 import { api, setTokens, clearTokens } from './client';
-import type { RegisterResponse, TokenPairResponse, User } from './types';
+import type { GoogleLoginResponse, RegisterResponse, TokenPairResponse, User } from './types';
 
 export interface LoginCredentials {
   /** El backend usa `username` (TokenObtainPairView por defecto), no email. */
@@ -32,6 +32,21 @@ export async function register(input: RegisterInput): Promise<User> {
   });
   await setTokens({ access: data.access, refresh: data.refresh });
   return data.user;
+}
+
+/**
+ * POST /auth/google/ — "Continuar con Google": el cliente ya hizo el login
+ * nativo/web y trae el `id_token`; el backend lo valida y crea la cuenta la
+ * primera vez. Devuelve también `created`, para poder saludar distinto.
+ */
+export async function loginWithGoogle(idToken: string): Promise<{ user: User; created: boolean }> {
+  const { data } = await api.post<GoogleLoginResponse>(
+    '/auth/google/',
+    { id_token: idToken },
+    { skipWorkspace: true },
+  );
+  await setTokens({ access: data.access, refresh: data.refresh });
+  return { user: data.user, created: data.created };
 }
 
 /** GET /auth/me/ — usuario autenticado. */
