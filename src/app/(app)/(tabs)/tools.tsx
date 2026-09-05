@@ -105,7 +105,7 @@ export default function ToolsScreen() {
                     }}
                     disabled={!tool.onPress}
                     accessibilityRole="button"
-                    className={`rounded-xl bg-surface-2 p-3 ${
+                    className={`rounded-3xl bg-surface-2 p-3 ${
                       tool.onPress ? 'active:opacity-60' : 'opacity-50'
                     }`}
                   >

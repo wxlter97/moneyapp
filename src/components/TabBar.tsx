@@ -30,13 +30,18 @@ interface TabBarProps {
 
 const BAR_HEIGHT = 68;
 const H_MARGIN = 16;
+// Mismo radio que el resto de los "containers" grandes de la app (`Card`,
+// `rounded-3xl` = 32px) — antes era la mitad de la altura (una píldora
+// completa), lo que no coincidía con el radio de las demás superficies.
+const BAR_RADIUS = 32;
 
 /**
  * Barra de pestañas flotante, estilo "liquid glass": vidrio + degradado del
- * tema, esquinas totalmente redondeadas y separada del borde. Misma
- * apariencia en iOS/Android/Web (usa `GlassSurface`, no APIs exclusivas).
- * Etiqueta siempre visible bajo el ícono; la pestaña activa se distingue con
- * una píldora sólida del color de acento (no un tinte de 10% como antes).
+ * tema, esquinas redondeadas (mismo radio que el resto de las cards) y
+ * separada del borde. Misma apariencia en iOS/Android/Web (usa
+ * `GlassSurface`, no APIs exclusivas). Etiqueta siempre visible bajo el
+ * ícono; la pestaña activa se distingue con una píldora sólida del color de
+ * acento (no un tinte de 10% como antes).
  */
 export function TabBar({ state, navigation, insets }: TabBarProps) {
   const colors = useColors();
@@ -59,7 +64,7 @@ export function TabBar({ state, navigation, insets }: TabBarProps) {
           elevation: 10,
         }}
       >
-        <GlassSurface radius={BAR_HEIGHT / 2}>
+        <GlassSurface radius={BAR_RADIUS}>
           <View style={{ flexDirection: 'row', height: BAR_HEIGHT, paddingHorizontal: 6 }}>
             {state.routes.map((route, index) => {
               const cfg = TAB_SCREENS.find((s) => s.name === route.name);

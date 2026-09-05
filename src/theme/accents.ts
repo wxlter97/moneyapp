@@ -8,7 +8,7 @@
  * tinta) en vez de los colores saturados de antes — el objetivo es un look
  * premium y monocromático con acentos discretos, no vivos.
  */
-export type AccentId = 'moss' | 'clay' | 'stone' | 'sand' | 'ink';
+export type AccentId = 'moss' | 'clay' | 'stone' | 'sand' | 'ink' | 'navy';
 
 interface AccentShade {
   primary: string;
@@ -52,6 +52,14 @@ export const ACCENTS: Accent[] = [
     label: 'Tinta',
     light: { primary: '#33363D', primaryFg: '#FFFFFF' },
     dark: { primary: '#6B7280', primaryFg: '#FFFFFF' },
+  },
+  {
+    id: 'navy',
+    label: 'Navy',
+    // Mismos tonos del splash de la app: azul marino profundo en claro,
+    // el celeste de la marca sobre el fondo casi negro en oscuro.
+    light: { primary: '#1D3461', primaryFg: '#FFFFFF' },
+    dark: { primary: '#5B93FF', primaryFg: '#FFFFFF' },
   },
 ];
 

@@ -6,7 +6,8 @@ import { useColors } from '@/theme';
 
 interface GlassSurfaceProps {
   children?: ReactNode;
-  /** Radio de esquina (default 24, estilo "pill" en HIG). */
+  /** Radio de esquina (default 32, el mismo de `rounded-3xl` — el estándar
+   * de "container" de toda la app, ver `Card`). */
   radius?: number;
   /** Intensidad del blur nativo, 1–100. */
   intensity?: number;
@@ -26,7 +27,7 @@ interface GlassSurfaceProps {
  */
 export function GlassSurface({
   children,
-  radius = 24,
+  radius = 32,
   intensity = 40,
   style,
   className,

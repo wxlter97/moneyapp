@@ -57,7 +57,7 @@ export function NetWorthPager({
   return (
     <View>
       <View
-        className="overflow-hidden rounded-2xl border border-border bg-surface"
+        className="overflow-hidden rounded-3xl border border-border bg-surface"
         style={{
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 10 },

@@ -14,7 +14,7 @@ export function SummaryTriple({ income, expenses, net, currency = 'USD' }: Summa
   const netValue = net ?? income - expenses;
 
   return (
-    <View className="flex-row rounded-2xl border border-border/60 bg-surface/95">
+    <View className="flex-row rounded-3xl border border-border/60 bg-surface/95">
       <Cell label="Ingresos">
         <Money value={income} currency={currency} tone="income" className="text-base font-semibold" />
       </Cell>
