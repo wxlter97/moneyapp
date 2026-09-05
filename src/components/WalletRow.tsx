@@ -18,6 +18,15 @@ interface WalletRowProps {
 export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowProps) {
   const balance = toNumber(hasChildren ? wallet.aggregated_balance : wallet.current_balance);
   const goal = toNumber(wallet.goal_amount);
+  // En una deuda, `current_balance` es lo que queda pendiente (con signo
+  // según "debo"/"me deben"), no lo ya aportado -- mostrarlo tal cual contra
+  // la meta (el monto total de la deuda) daba una barra en 0 o negativa. Lo
+  // aportado es `total - |pendiente|`, y crece de 0 hacia la meta igual que
+  // un ahorro.
+  const isDebtGoal = wallet.purpose === 'debt' && goal > 0;
+  const contributed = isDebtGoal
+    ? Math.max(0, goal - Math.abs(toNumber(wallet.current_balance)))
+    : toNumber(wallet.current_balance);
   const hasCredit =
     wallet.kind === 'credit' &&
     wallet.credit_limit != null &&
@@ -54,10 +63,11 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
 
       {goal > 0 ? (
         <View className="mt-2 gap-1 pl-[18px]">
-          <ProgressBar progress={toNumber(wallet.current_balance) / goal} tone="income" />
+          <ProgressBar progress={contributed / goal} tone="income" />
           <Text className="text-text-muted text-[11px]">
-            <Money value={wallet.current_balance} currency={wallet.currency} tone="muted" /> /{' '}
-            <Money value={goal} currency={wallet.currency} tone="muted" /> de meta
+            <Money value={contributed} currency={wallet.currency} tone="muted" /> /{' '}
+            <Money value={goal} currency={wallet.currency} tone="muted" /> de{' '}
+            {isDebtGoal ? 'la deuda' : 'meta'}
           </Text>
         </View>
       ) : null}
