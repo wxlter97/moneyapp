@@ -85,7 +85,7 @@ export default function CategoryTransactionsScreen() {
               <Text className="text-text-muted pb-1 pt-3 text-xs font-semibold uppercase tracking-wide">
                 {formatDayHeader(day.date)}
               </Text>
-              <View className="rounded-2xl border border-border/60 bg-surface/95 px-4">
+              <View className="rounded-3xl border border-border/60 bg-surface/95 px-4">
                 {day.data.map((item, i) => (
                   <View key={item.id}>
                     {i > 0 ? <View className="h-px bg-border/30" /> : null}

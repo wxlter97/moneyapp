@@ -67,7 +67,7 @@ export function WorkspaceSwitcher() {
 
       {open ? (
         <FadeInView>
-          <View className="mt-2 rounded-2xl border border-border/70 bg-surface-2 p-2">
+          <View className="mt-2 rounded-3xl border border-border/70 bg-surface-2 p-2">
             {workspaces.map((w) => (
               <Pressable
                 key={w.id}

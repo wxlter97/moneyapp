@@ -23,6 +23,7 @@ import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { muteColor } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 import { toNumber } from '@/lib/money';
 import { WALLET_COLORS } from '@/lib/wallets';
@@ -271,7 +272,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 className={`h-9 w-9 items-center justify-center rounded-full ${
                   color === c ? 'border-2 border-text' : ''
                 }`}
-                style={{ backgroundColor: c }}
+                style={{ backgroundColor: muteColor(c) ?? c }}
               >
                 {color === c ? <Icon name="check" size={14} color="#FFFFFF" /> : null}
               </Pressable>

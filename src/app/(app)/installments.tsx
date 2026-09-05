@@ -8,6 +8,7 @@ import type { InstallmentPurchase } from '@/api/types';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
+import { CategoryAvatar } from '@/components/ui/CategoryAvatar';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
@@ -96,19 +97,12 @@ export default function InstallmentsScreen() {
                   accessibilityRole="button"
                 >
                   <View className="flex-row items-center gap-3">
-                    <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
-                      {cat?.icon ? (
-                        <Text className="text-base">{cat.icon}</Text>
-                      ) : (
-                        <Icon name="receipt" size={16} color={colors.textMuted} />
-                      )}
-                      {cat?.color ? (
-                        <View
-                          className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface"
-                          style={{ backgroundColor: cat.color }}
-                        />
-                      ) : null}
-                    </View>
+                    <CategoryAvatar
+                      icon={cat?.icon}
+                      color={cat?.color}
+                      fallbackIcon="receipt"
+                      size={40}
+                    />
                     <View className="flex-1">
                       <Text
                         className="text-text text-base"
@@ -136,7 +130,7 @@ export default function InstallmentsScreen() {
                   </View>
                 </Pressable>
 
-                <View className="mt-3 gap-1">
+                <View className="mt-3 gap-1 pl-[52px]">
                   <ProgressBar progress={progress} tone="income" />
                   <Text className="text-text-muted text-[11px]">
                     Falta <Money value={p.remaining_amount} currency={currency} tone="muted" />

@@ -4,7 +4,8 @@ import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import type { NetWorthBreakdown } from '@/api/types';
 import { PURPOSE_LABEL, WALLET_PURPOSES } from '@/api/types';
 import { Money } from '@/components/ui/Money';
-import { MAX_CONTENT_WIDTH } from '@/theme';
+import { Icon } from '@/components/ui/Icon';
+import { MAX_CONTENT_WIDTH, useColors } from '@/theme';
 import { toNumber } from '@/lib/money';
 
 interface Page {
@@ -15,8 +16,12 @@ interface Page {
 }
 
 /**
- * Tarjeta de valor neto. El recuadro morado NO se mueve: sólo el contenido
- * (cifra + etiqueta) se desliza dentro de un ScrollView horizontal paginado.
+ * Tarjeta de valor neto. La tarjeta (superficie neutra, sin relleno de
+ * color) NO se mueve: sólo el contenido (cifra + etiqueta) se desliza
+ * dentro de un ScrollView horizontal paginado. El acento queda reducido al
+ * ícono y a los puntos de paginación — la cifra en sí, al ser lo más
+ * grande de la pantalla, se lee en el color de texto normal para no
+ * competir con el resto del look monocromático.
  */
 export function NetWorthPager({
   data,
@@ -25,6 +30,7 @@ export function NetWorthPager({
   data: NetWorthBreakdown;
   currency: string;
 }) {
+  const colors = useColors();
   const { width } = useWindowDimensions();
   const innerWidth = Math.min(width, MAX_CONTENT_WIDTH) - 32; // menos el px-4 de la pantalla
   const [index, setIndex] = useState(0);
@@ -50,7 +56,16 @@ export function NetWorthPager({
 
   return (
     <View>
-      <View className="overflow-hidden rounded-2xl bg-primary">
+      <View
+        className="overflow-hidden rounded-3xl border border-border bg-surface"
+        style={{
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.06,
+          shadowRadius: 24,
+          elevation: 1,
+        }}
+      >
         <ScrollView
           ref={scroller}
           horizontal
@@ -67,16 +82,19 @@ export function NetWorthPager({
             <View
               key={item.key}
               style={{ width: innerWidth }}
-              className="items-center justify-center py-10"
+              className="items-center justify-center gap-2 py-9"
             >
+              <View className="h-8 w-8 items-center justify-center rounded-full bg-surface-2">
+                <Icon name="trending" size={16} color={colors.primary} />
+              </View>
               <Money
                 value={item.value}
                 currency={currency}
                 signed={item.signed}
                 hero
-                className="text-primary-fg text-[42px] leading-[46px]"
+                className="text-text text-[40px] leading-[44px]"
               />
-              <Text className="text-primary-fg/80 mt-1 text-sm">{item.title}</Text>
+              <Text className="text-text-muted text-sm">{item.title}</Text>
             </View>
           ))}
         </ScrollView>

@@ -22,33 +22,34 @@ select,
 
 @layer base {
   :root {
-    /* Tema claro: neutro y suave (un solo acento), estilo "glass".
-       Valores RGB separados por espacio para soportar alpha (bg-surface/80). */
+    /* Tema claro: base neutra (gris frío, sin tinte cálido) + un solo
+       acento tierra (musgo por defecto, ver theme/accents.ts). Valores RGB
+       separados por espacio para soportar alpha (bg-surface/80). */
     --color-bg: 246 246 248;
     --color-surface: 255 255 255;
     --color-surface-2: 241 241 244;
     --color-border: 231 231 236;
     --color-text: 22 23 26;
     --color-text-muted: 142 142 150;
-    --color-primary: 61 116 250;
+    --color-primary: 81 107 69;
     --color-primary-fg: 255 255 255;
-    --color-income: 33 158 106;
-    --color-expense: 224 73 62;
-    --color-warning: 199 138 46;
+    --color-income: 79 112 71;
+    --color-expense: 181 87 62;
+    --color-warning: 150 116 46;
   }
 
   :root.dark {
-    /* Tema oscuro (por defecto, dark-first). Mismo lenguaje neutro. */
+    /* Tema oscuro (por defecto, dark-first). Misma base neutra. */
     --color-bg: 10 11 13;
     --color-surface: 23 24 28;
     --color-surface-2: 31 33 38;
     --color-border: 41 43 49;
     --color-text: 244 244 246;
     --color-text-muted: 148 150 158;
-    --color-primary: 91 147 255;
+    --color-primary: 107 138 90;
     --color-primary-fg: 255 255 255;
-    --color-income: 52 199 135;
-    --color-expense: 255 107 96;
-    --color-warning: 240 169 62;
+    --color-income: 124 154 107;
+    --color-expense: 201 123 99;
+    --color-warning: 201 161 90;
   }
 }
