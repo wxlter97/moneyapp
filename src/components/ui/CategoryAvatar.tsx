@@ -1,5 +1,4 @@
 import { Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { Icon, type IconName } from './Icon';
 import { useColors } from '@/theme';
@@ -18,18 +17,14 @@ interface CategoryAvatarProps {
 }
 
 /**
- * Avatar de categoría: emoji (o ícono genérico) sobre un degradado suave del
- * color de la categoría — nunca el color a pleno relleno detrás del glyph
- * (eso daba mal contraste según el emoji). El degradado va de un tono más
- * saturado en una esquina a casi transparente en la opuesta, sobre una base
- * neutra (`bg-surface-2`) que sigue asomando por abajo: da la sensación de
- * "vidrio teñido" en vez de una ficha de color plano, y mantiene el fondo lo
- * bastante neutro como para no comprometer la legibilidad del emoji.
- *
- * Se probó primero un halo (varios círculos concéntricos alrededor, sin
- * blur real): en la rejilla de 4 columnas se veía como un ojo de buey, no
- * como un degradado. `LinearGradient` (ya usado en el FAB) da un resultado
- * mucho más prolijo y 100% consistente entre iOS/Android/web.
+ * Avatar de categoría: emoji (o ícono genérico) sobre un fondo neutro
+ * (`bg-surface-2`) — nunca el color de la categoría relleno o en degradado
+ * detrás del glyph. Se probaron ambas variantes y quedaban con demasiado
+ * color a la vez en pantallas con varias categorías juntas (rejilla,
+ * listas) — lejos del look "premium" que se busca. El color de la
+ * categoría queda como un punto discreto en la esquina (o tiñendo el
+ * ícono genérico cuando no hay emoji): alcanza para distinguir, sin
+ * competir con el contenido.
  */
 export function CategoryAvatar({
   icon,
@@ -41,41 +36,29 @@ export function CategoryAvatar({
   const colors = useColors();
   const emojiSize = Math.round(size * 0.42);
   const iconSize = Math.round(size * 0.38);
+  const dotSize = Math.min(16, Math.max(10, Math.round(size * 0.3)));
 
-  const content = icon ? (
-    <Text style={{ fontSize: emojiSize, lineHeight: emojiSize * 1.15 }}>{icon}</Text>
-  ) : (
-    <Icon name={fallbackIcon} size={iconSize} color={color || colors.textMuted} />
-  );
-
-  if (!color) {
-    return (
+  return (
+    <View style={{ width: size, height: size }} className="items-center justify-center">
       <View
         style={{ width: size, height: size, borderRadius: size }}
         className={`items-center justify-center bg-surface-2 ${
           selected ? 'border-2 border-primary' : ''
         }`}
       >
-        {content}
+        {icon ? (
+          <Text style={{ fontSize: emojiSize, lineHeight: emojiSize * 1.15 }}>{icon}</Text>
+        ) : (
+          <Icon name={fallbackIcon} size={iconSize} color={color || colors.textMuted} />
+        )}
       </View>
-    );
-  }
-
-  return (
-    <View
-      style={{ width: size, height: size, borderRadius: size, overflow: 'hidden' }}
-      className={selected ? 'border-2 border-primary' : ''}
-    >
-      <View style={{ width: size, height: size }} className="bg-surface-2">
-        <LinearGradient
-          colors={[`${color}80`, `${color}0D`]}
-          start={{ x: 0.15, y: 0.1 }}
-          end={{ x: 0.85, y: 0.95 }}
-          style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
-        >
-          {content}
-        </LinearGradient>
-      </View>
+      {color ? (
+        <View
+          pointerEvents="none"
+          className="absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-surface"
+          style={{ width: dotSize, height: dotSize, backgroundColor: color }}
+        />
+      ) : null}
     </View>
   );
 }

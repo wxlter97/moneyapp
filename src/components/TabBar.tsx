@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { EdgeInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
@@ -8,6 +8,7 @@ import { GlassSurface } from './ui/GlassSurface';
 import { TabBarIcon, type TabIconName } from './ui/TabBarIcon';
 import { haptics } from '@/lib/haptics';
 import { MAX_CONTENT_WIDTH, useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 // Forma mínima de `BottomTabBarProps` de React Navigation que realmente
 // usamos: evita importar tipos de rutas internas (`expo-router/build/...`)
@@ -27,14 +28,15 @@ interface TabBarProps {
   insets: EdgeInsets;
 }
 
-const BAR_HEIGHT = 60;
+const BAR_HEIGHT = 68;
 const H_MARGIN = 16;
 
 /**
  * Barra de pestañas flotante, estilo "liquid glass": vidrio + degradado del
  * tema, esquinas totalmente redondeadas y separada del borde. Misma
  * apariencia en iOS/Android/Web (usa `GlassSurface`, no APIs exclusivas).
- * Indicador de tab activo animado + resorte al presionar + haptics.
+ * Etiqueta siempre visible bajo el ícono; la pestaña activa se distingue con
+ * una píldora sólida del color de acento (no un tinte de 10% como antes).
  */
 export function TabBar({ state, navigation, insets }: TabBarProps) {
   const colors = useColors();
@@ -69,7 +71,7 @@ export function TabBar({ state, navigation, insets }: TabBarProps) {
                   focused={focused}
                   icon={cfg.icon}
                   label={cfg.title}
-                  color={focused ? colors.primary : colors.textMuted}
+                  colors={colors}
                   onPress={() => {
                     const event = navigation.emit({
                       type: 'tabPress',
@@ -95,13 +97,13 @@ function TabBarButton({
   focused,
   icon,
   label,
-  color,
+  colors,
   onPress,
 }: {
   focused: boolean;
   icon: TabIconName;
   label: string;
-  color: string;
+  colors: { primary: string; primaryFg: string; textMuted: string };
   onPress: () => void;
 }) {
   const press = useSharedValue(1);
@@ -112,18 +114,21 @@ function TabBarButton({
   }, [focused, lift]);
 
   const bubbleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: press.value }, { translateY: lift.value * -2 }],
+    transform: [{ scale: press.value }],
   }));
+  // Aparece con un fundido + leve "pop" de escala en vez de saltar de golpe.
   const pillStyle = useAnimatedStyle(() => ({
     opacity: lift.value,
-    transform: [{ scale: 0.85 + lift.value * 0.15 }],
+    transform: [{ scale: 0.9 + lift.value * 0.1 }],
   }));
+
+  const fg = focused ? colors.primaryFg : colors.textMuted;
 
   return (
     <Pressable
       onPress={onPress}
       onPressIn={() => {
-        press.value = withSpring(0.86, { damping: 14, stiffness: 320 });
+        press.value = withSpring(0.94, { damping: 14, stiffness: 320 });
       }}
       onPressOut={() => {
         press.value = withSpring(1, { damping: 14, stiffness: 320 });
@@ -131,23 +136,31 @@ function TabBarButton({
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}
       accessibilityLabel={label}
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}
     >
-      <Animated.View
-        style={[
-          { height: 40, width: 52, alignItems: 'center', justifyContent: 'center', borderRadius: 14 },
-          bubbleStyle,
-        ]}
-      >
+      <Animated.View style={[{ borderRadius: 18 }, bubbleStyle]}>
         <Animated.View
           pointerEvents="none"
           style={[
             StyleSheet.absoluteFill,
-            { borderRadius: 14, backgroundColor: color + '1A' },
+            { borderRadius: 18, backgroundColor: colors.primary },
             pillStyle,
           ]}
         />
-        <TabBarIcon name={icon} color={color} focused={focused} />
+        <View style={{ paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center', gap: 2 }}>
+          <TabBarIcon name={icon} color={fg} focused={focused} />
+          <Text
+            numberOfLines={1}
+            style={{
+              color: fg,
+              fontSize: 10.5,
+              fontFamily: focused ? fonts.semibold : fonts.medium,
+              maxWidth: 72,
+            }}
+          >
+            {label}
+          </Text>
+        </View>
       </Animated.View>
     </Pressable>
   );

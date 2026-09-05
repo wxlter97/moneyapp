@@ -101,7 +101,7 @@ export default function WalletsScreen() {
                   <View key={node.wallet.id}>
                     {i > 0 ? <View className="h-px bg-border/30" /> : null}
                     <Pressable
-                      onPress={() => router.push(`/wallet/${node.wallet.id}`)}
+                      onPress={() => router.push(`/wallet-transactions?wallet=${node.wallet.id}`)}
                       className="active:opacity-60"
                       accessibilityRole="button"
                     >

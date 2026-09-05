@@ -37,7 +37,7 @@ describe('monthRange', () => {
 
 describe('formatYearMonth / formatShortDate', () => {
   it('usa nombres de mes en español', () => {
-    expect(formatYearMonth({ year: 2026, month: 8 })).toBe('agosto 2026');
+    expect(formatYearMonth({ year: 2026, month: 8 })).toBe('Agosto 2026');
     expect(formatShortDate('2026-08-31')).toBe('31 ago');
   });
 });

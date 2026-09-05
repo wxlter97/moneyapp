@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
@@ -11,6 +11,9 @@ interface SegmentedProps<T extends string> {
   options: { value: T; label: string }[];
 }
 
+// Mismo inset que el `p-1` (4px) del contenedor.
+const PADDING = 4;
+
 export function Segmented<T extends string>({ value, onChange, options }: SegmentedProps<T>) {
   const colors = useColors();
   const index = Math.max(
@@ -19,25 +22,37 @@ export function Segmented<T extends string>({ value, onChange, options }: Segmen
   );
   const count = options.length;
   const pos = useSharedValue(index);
+  // Ancho real del contenedor, medido: un `left`/`width` en % no descuenta el
+  // padding del contenedor (para RN es % del layout box completo, borde
+  // incluido), así que la píldora del primer/último segmento quedaba pegada
+  // al borde redondeado en vez de respetar el mismo margen que el resto.
+  // Con píxeles exactos (como ya hacemos con los gráficos SVG) el inset da
+  // igual en los cuatro costados.
+  const [containerWidth, setContainerWidth] = useState(0);
 
   useEffect(() => {
     pos.value = withSpring(index, { damping: 18, stiffness: 220 });
   }, [index, pos]);
 
+  const segmentWidth = count > 0 ? Math.max(containerWidth - PADDING * 2, 0) / count : 0;
+
   // `className` no se resuelve en `Animated.View` de reanimated: todo el
   // estilo va en `style` (nativewind sólo intercepta los primitivos de RN).
   const pillStyle = useAnimatedStyle(() => ({
-    left: `${(pos.value / count) * 100}%`,
+    left: PADDING + pos.value * segmentWidth,
     position: 'absolute',
-    top: 4,
-    bottom: 4,
-    width: `${100 / count}%`,
+    top: PADDING,
+    bottom: PADDING,
+    width: segmentWidth,
     borderRadius: 8,
     backgroundColor: colors.primary,
   }));
 
   return (
-    <View className="flex-row rounded-xl border border-border bg-surface p-1">
+    <View
+      className="flex-row rounded-xl border border-border bg-surface p-1"
+      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+    >
       <Animated.View pointerEvents="none" style={pillStyle} />
       {options.map((opt) => {
         const active = opt.value === value;

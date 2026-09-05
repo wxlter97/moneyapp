@@ -12,6 +12,9 @@ interface GlassSurfaceProps {
   intensity?: number;
   style?: StyleProp<ViewStyle>;
   className?: string;
+  /** Borde de 1px alrededor de todo el panel (default true). La cabecera
+   * fija pasa `false` y agrega ella misma sólo el de abajo, vía `className`. */
+  border?: boolean;
 }
 
 /**
@@ -21,7 +24,14 @@ interface GlassSurfaceProps {
  * (SDK 31+; en versiones viejas cae a una vista semitransparente) y Web
  * (backdrop-filter) — sin depender de Liquid Glass nativo de iOS.
  */
-export function GlassSurface({ children, radius = 24, intensity = 40, style, className }: GlassSurfaceProps) {
+export function GlassSurface({
+  children,
+  radius = 24,
+  intensity = 40,
+  style,
+  className,
+  border = true,
+}: GlassSurfaceProps) {
   const colors = useColors();
 
   return (
@@ -43,11 +53,9 @@ export function GlassSurface({ children, radius = 24, intensity = 40, style, cla
       />
       <View
         pointerEvents="box-none"
-        style={{
-          borderRadius: radius,
-          borderWidth: 1,
-          borderColor: colors.border + '80',
-        }}
+        style={
+          border ? { borderRadius: radius, borderWidth: 1, borderColor: colors.border + '80' } : undefined
+        }
       >
         {children}
       </View>

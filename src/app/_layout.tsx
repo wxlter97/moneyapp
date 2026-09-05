@@ -1,6 +1,6 @@
 import '../../global.css';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Appearance } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -8,7 +8,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { colorScheme } from 'nativewind';
+import * as SystemUI from 'expo-system-ui';
+import { colorScheme, vars } from 'nativewind';
 import {
   Manrope_400Regular,
   Manrope_500Medium,
@@ -21,8 +22,10 @@ import {
 import { queryClient } from '@/lib/queryClient';
 import { applyGlobalFont } from '@/lib/globalFont';
 import { darkColors, lightColors } from '@/theme';
+import { getAccent, hexToRgbTriplet } from '@/theme/accents';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
+import { useAccentStore } from '@/store/accent';
 import { SplashOverlay } from '@/components/SplashOverlay';
 import { SnackbarHost } from '@/components/ui/Snackbar';
 
@@ -31,14 +34,14 @@ import { SnackbarHost } from '@/components/ui/Snackbar';
 void SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({ fade: false });
 
-function navThemeFor(scheme: 'light' | 'dark') {
+function navThemeFor(scheme: 'light' | 'dark', primary: string) {
   const c = scheme === 'light' ? lightColors : darkColors;
   const base = scheme === 'light' ? DefaultTheme : DarkTheme;
   return {
     ...base,
     colors: {
       ...base.colors,
-      primary: c.primary,
+      primary,
       background: c.bg,
       card: c.surface,
       text: c.text,
@@ -73,6 +76,22 @@ export default function RootLayout() {
   const scheme: 'light' | 'dark' =
     pref === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : pref;
 
+  // Tema de color (acento): independiente de claro/oscuro. `useColors()` ya
+  // lo aplica para el JS de la app, pero las clases de Tailwind
+  // (`bg-primary`, `text-primary`…) leen la CSS var `--color-primary` — acá
+  // la pisamos con `vars()` (API de nativewind para esto, no un hack) para
+  // que también reaccionen, en las tres plataformas.
+  const accentId = useAccentStore((s) => s.accent);
+  const accentShade = getAccent(accentId)[scheme];
+  const accentVars = useMemo(
+    () =>
+      vars({
+        'color-primary': hexToRgbTriplet(accentShade.primary),
+        'color-primary-fg': hexToRgbTriplet(accentShade.primaryFg),
+      }),
+    [accentShade.primary, accentShade.primaryFg],
+  );
+
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
     Manrope_500Medium,
@@ -93,6 +112,16 @@ export default function RootLayout() {
     colorScheme.set(scheme);
   }, [scheme]);
 
+  // Fondo de la ventana nativa (no del árbol de React): sin esto, el área
+  // detrás del status bar / Dynamic Island en iOS queda con el fondo que
+  // trae la build (fijo, el de `app.json`) en vez de seguir al tema activo —
+  // se nota como una franja del color equivocado justo arriba, alrededor
+  // del recorte. `expo-system-ui` es justamente la API para esto (no hay
+  // forma de pintarlo sólo con Views de RN, es más abajo que eso).
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(scheme === 'light' ? lightColors.bg : darkColors.bg);
+  }, [scheme]);
+
   useEffect(() => {
     // Recién cuando la fuente ya está registrada montamos el árbol real
     // (más abajo): así ningún `<Text>` llega a pintarse una vez con la
@@ -107,10 +136,10 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={[{ flex: 1 }, accentVars]}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <ThemeProvider value={navThemeFor(scheme)}>
+          <ThemeProvider value={navThemeFor(scheme, accentShade.primary)}>
             <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
             {fontsLoaded ? (
               <Stack
