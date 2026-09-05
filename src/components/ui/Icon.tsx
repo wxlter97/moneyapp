@@ -23,7 +23,8 @@ export type IconName =
   | 'grip'
   | 'inbox'
   | 'trending'
-  | 'search';
+  | 'search'
+  | 'pencil';
 
 interface IconProps {
   name: IconName;
@@ -165,6 +166,12 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
         <>
           <Circle cx={11} cy={11} r={7} {...p} />
           <Line x1={21} y1={21} x2={16.2} y2={16.2} {...p} />
+        </>
+      )}
+      {name === 'pencil' && (
+        <>
+          <Path d="M4 20l1-4.5L15.5 5 19 8.5 8.5 19 4 20z" {...p} />
+          <Line x1={13.5} y1={6.5} x2={17} y2={10} {...p} />
         </>
       )}
     </Svg>

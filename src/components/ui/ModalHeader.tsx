@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
@@ -16,7 +16,7 @@ export { dismissModal };
  * Cabecera de hoja modal, estilo HIG: manija de arrastre + título + botón de
  * cierre circular (en vez del texto "Cerrar" de un sitio web).
  */
-export function ModalHeader({ title }: { title: string }) {
+export function ModalHeader({ title, right }: { title: string; right?: ReactNode }) {
   const colors = useColors();
   const press = useSharedValue(1);
   const enter = useSharedValue(0);
@@ -57,6 +57,7 @@ export function ModalHeader({ title }: { title: string }) {
           >
             {title}
           </Text>
+          {right ? <View className="mr-2">{right}</View> : null}
           <Pressable
             onPress={() => {
               haptics.tap();

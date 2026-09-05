@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FadeInView } from './ui/FadeInView';
+import { GlassSurface } from './ui/GlassSurface';
 import { ScreenHeader } from './ScreenHeader';
 
 interface SectionHeaderProps {
@@ -17,33 +18,39 @@ interface SectionHeaderProps {
 }
 
 /**
- * Cabecera de pantalla: neutra, sin banda de color — el foco es el
- * contenido (una cifra grande), no el chrome. Reemplaza el degradado por
- * sección de la versión anterior (demasiado saturado / "sitio web de 2018").
+ * Cabecera de pantalla: panel de vidrio fijo (mismo lenguaje que la barra de
+ * pestañas), no una sección más de la página — con esto se lee como el
+ * chrome de una app y no como el encabezado de una web. Se extiende por
+ * detrás del status bar / Dynamic Island (el panel arranca en y=0; el
+ * contenido se acomoda con `insets.top`, no al revés) y separa del
+ * contenido con una línea fina abajo en vez de compartir el mismo fondo
+ * plano que el resto de la pantalla.
  */
 export function SectionHeader({ title, subtitle, right, children }: SectionHeaderProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View
-      className="w-full max-w-[560px] self-center px-4"
-      style={{ paddingTop: insets.top + 8 }}
-    >
-      <ScreenHeader />
-      <FadeInView>
-        <View className="flex-row items-center justify-between pt-1">
-          {title ? (
-            <Text className="text-text-muted text-[13px] font-semibold uppercase tracking-wide">
-              {title}
-            </Text>
-          ) : (
-            <View />
-          )}
-          {right}
-        </View>
-        {subtitle ? <View className="mt-1">{subtitle}</View> : null}
-      </FadeInView>
-      {children ? <View className="mt-4 pb-1">{children}</View> : null}
-    </View>
+    <GlassSurface radius={0} border={false} className="border-b border-border/50">
+      <View
+        className="w-full max-w-[560px] self-center px-4"
+        style={{ paddingTop: insets.top + 8 }}
+      >
+        <ScreenHeader />
+        <FadeInView>
+          <View className="flex-row items-center justify-between pt-1">
+            {title ? (
+              <Text className="text-text-muted text-[13px] font-semibold uppercase tracking-wide">
+                {title}
+              </Text>
+            ) : (
+              <View />
+            )}
+            {right}
+          </View>
+          {subtitle ? <View className="mt-1">{subtitle}</View> : null}
+        </FadeInView>
+        {children ? <View className="mt-4 pb-1">{children}</View> : null}
+      </View>
+    </GlassSurface>
   );
 }

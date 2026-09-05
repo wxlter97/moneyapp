@@ -26,9 +26,10 @@ const MONTHS_ES = [
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ];
 
-/** "agosto 2026" */
+/** "Agosto 2026" */
 export function formatYearMonth({ year, month }: YearMonth): string {
-  return `${MONTHS_ES[month - 1]} ${year}`;
+  const name = MONTHS_ES[month - 1] ?? '';
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${year}`;
 }
 
 /** Primer y último día del mes como ISODate (YYYY-MM-DD). */

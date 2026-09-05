@@ -8,6 +8,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
 import { colorScheme, vars } from 'nativewind';
 import {
   Manrope_400Regular,
@@ -109,6 +110,16 @@ export default function RootLayout() {
   // Aplica el esquema ya resuelto (nunca el literal 'system', ver arriba).
   useEffect(() => {
     colorScheme.set(scheme);
+  }, [scheme]);
+
+  // Fondo de la ventana nativa (no del árbol de React): sin esto, el área
+  // detrás del status bar / Dynamic Island en iOS queda con el fondo que
+  // trae la build (fijo, el de `app.json`) en vez de seguir al tema activo —
+  // se nota como una franja del color equivocado justo arriba, alrededor
+  // del recorte. `expo-system-ui` es justamente la API para esto (no hay
+  // forma de pintarlo sólo con Views de RN, es más abajo que eso).
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(scheme === 'light' ? lightColors.bg : darkColors.bg);
   }, [scheme]);
 
   useEffect(() => {

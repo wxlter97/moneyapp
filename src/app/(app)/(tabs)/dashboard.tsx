@@ -170,7 +170,16 @@ function ResumenTab({ currency }: { currency: string }) {
           spendingWallets.map((w, i) => (
             <View key={w.id}>
               {i > 0 ? <View className="h-px bg-border/30" /> : null}
-              <WalletRow wallet={w} />
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  router.push(`/wallet-transactions?wallet=${w.id}`);
+                }}
+                className="active:opacity-60"
+                accessibilityRole="button"
+              >
+                <WalletRow wallet={w} />
+              </Pressable>
             </View>
           ))
         )}
