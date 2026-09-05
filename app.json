@@ -46,7 +46,8 @@
           "cameraPermission": "Budget usa la cámara para fotografiar el recibo de una transacción.",
           "photosPermission": "Budget accede a tus fotos para adjuntar el recibo de una transacción."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

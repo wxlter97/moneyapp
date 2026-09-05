@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, router, Stack } from 'expo-router';
 
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useCreateWorkspace, useWorkspaces } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
+import { pushDevices } from '@/api/resources';
+import { addNotificationTapListener, registerForPushNotificationsAsync } from '@/lib/notifications';
 import { useAuthStore } from '@/store/auth';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
@@ -22,6 +24,7 @@ export default function AppLayout() {
   const wsHydrated = useWorkspaceStore((s) => s.hydrated);
   const activeId = useWorkspaceStore((s) => s.activeId);
   const setWorkspaces = useWorkspaceStore((s) => s.setWorkspaces);
+  const setActiveId = useWorkspaceStore((s) => s.setActiveId);
 
   const enabled = status === 'authenticated';
   const wsQuery = useWorkspaces({ enabled });
@@ -42,6 +45,26 @@ export default function AppLayout() {
   useEffect(() => {
     if (wsQuery.data) setWorkspaces(wsQuery.data);
   }, [wsQuery.data, setWorkspaces]);
+
+  // Registro del dispositivo para recordatorios push: best-effort, sin
+  // molestar si no hay permiso, es un simulador, o falta el dev build (ver
+  // lib/notifications.ts) — el usuario siempre puede reintentar a mano
+  // desde Herramientas → Notificaciones.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    registerForPushNotificationsAsync()
+      .then((device) => (device ? pushDevices.register(device.token, device.platform) : undefined))
+      .catch(() => {});
+  }, [status]);
+
+  // Tocar un push (recurrente/cuota/presupuesto) salta al workspace y a la
+  // pantalla correspondiente, en vez de simplemente abrir la app.
+  useEffect(() => {
+    return addNotificationTapListener((data) => {
+      if (typeof data.workspace === 'string') setActiveId(data.workspace);
+      router.push(data.type === 'budget_threshold' ? '/budgets' : '/dashboard');
+    });
+  }, [setActiveId]);
 
   if (status === 'loading') {
     return (
@@ -209,6 +232,10 @@ export default function AppLayout() {
       />
       <Stack.Screen
         name="shortcuts"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
+      <Stack.Screen
+        name="notifications"
         options={{ presentation: 'modal', headerShown: false }}
       />
     </Stack>

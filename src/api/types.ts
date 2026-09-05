@@ -88,6 +88,15 @@ export interface PersonalAccessToken {
   created_at: ISODateTime;
 }
 
+/** Qué recordatorios push quiere recibir el usuario (una fila, no por workspace). */
+export interface NotificationPreferences {
+  remind_recurring: boolean;
+  remind_installments: boolean;
+  warn_budget: boolean;
+  /** % del presupuesto de una categoría a partir del cual avisar (50-100). */
+  budget_threshold_pct: number;
+}
+
 // ---------------------------------------------------------------------------
 // Carteras (Wallet) / patrimonio
 // ---------------------------------------------------------------------------

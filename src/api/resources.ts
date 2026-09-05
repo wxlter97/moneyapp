@@ -21,6 +21,7 @@ import type {
   Membership,
   MonthlySnapshot,
   NetWorthBreakdown,
+  NotificationPreferences,
   Paginated,
   PersonalAccessToken,
   RecurringExpense,
@@ -98,6 +99,29 @@ export const personalTokens = {
       .post<PersonalAccessToken>('/personal-tokens/', { name, wallet: walletId })
       .then((r) => r.data),
   remove: (id: string) => api.delete(`/personal-tokens/${id}/`).then(() => undefined),
+};
+
+// --- notificaciones push (sin X-Workspace-ID: son por usuario) --------
+export const pushDevices = {
+  register: (token: string, platform: 'ios' | 'android') =>
+    api
+      .post('/push-devices/', { token, platform }, { skipWorkspace: true })
+      .then(() => undefined),
+  unregister: (token: string) =>
+    api
+      .post('/push-devices/unregister/', { token }, { skipWorkspace: true })
+      .then(() => undefined),
+};
+
+export const notificationPreferences = {
+  get: () =>
+    api
+      .get<NotificationPreferences>('/notification-preferences/', { skipWorkspace: true })
+      .then((r) => r.data),
+  update: (input: Partial<NotificationPreferences>) =>
+    api
+      .patch<NotificationPreferences>('/notification-preferences/', input, { skipWorkspace: true })
+      .then((r) => r.data),
 };
 
 // --- carteras (wallets) -------------------------------------------------

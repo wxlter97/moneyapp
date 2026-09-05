@@ -8,6 +8,7 @@ import type { YearMonth } from '@/lib/date';
 export const qk = {
   me: () => ['me'] as const,
   workspaces: () => ['workspaces'] as const,
+  notificationPreferences: () => ['notification-preferences'] as const,
 
   ws: (ws: string | null) => ({
     all: ['ws', ws] as const,

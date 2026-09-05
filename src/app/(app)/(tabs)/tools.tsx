@@ -51,6 +51,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/shortcuts'),
   },
   {
+    icon: 'bell',
+    label: 'Notificaciones',
+    hint: 'Recordatorios de recurrentes, cuotas y presupuesto',
+    onPress: () => router.push('/notifications'),
+  },
+  {
     icon: 'trending',
     label: 'Patrimonio',
     hint: 'Evolución mes a mes',

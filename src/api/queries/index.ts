@@ -17,6 +17,7 @@ import type {
   ConfirmEmailImportInput,
   EmailImportStatus,
   InstallmentPurchaseInput,
+  NotificationPreferences,
   RecurringExpenseInput,
   TransactionInput,
   WalletInput,
@@ -120,6 +121,23 @@ export function useRemoveMembership() {
       invalidate();
       await qc.invalidateQueries({ queryKey: qk.workspaces() });
     },
+  });
+}
+
+// --- preferencias de notificaciones (por usuario, no por workspace) ----
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: qk.notificationPreferences(),
+    queryFn: res.notificationPreferences.get,
+  });
+}
+
+export function useUpdateNotificationPreferences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<NotificationPreferences>) =>
+      res.notificationPreferences.update(input),
+    onSuccess: (data) => qc.setQueryData(qk.notificationPreferences(), data),
   });
 }
 
