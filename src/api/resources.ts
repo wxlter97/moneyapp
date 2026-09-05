@@ -204,6 +204,37 @@ export const transactions = {
     api.patch<Transaction>(`/transactions/${id}/`, input).then((r) => r.data),
 
   remove: (id: string) => api.delete(`/transactions/${id}/`).then(() => undefined),
+
+  /**
+   * Sube (o reemplaza) la foto del recibo. `uri` es la que devuelve el
+   * picker/cámara — se re-lee con `fetch` para obtener un Blob real: es lo
+   * único que funciona igual en RN (uri `file://`) y en web (uri `blob:`
+   * o `data:`), a diferencia del objeto `{uri,name,type}` que sólo entiende
+   * el FormData de RN nativo.
+   */
+  uploadReceipt: async (id: string, file: { uri: string; name: string; type: string }) => {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    const form = new FormData();
+    form.append('file', blob, file.name);
+    return api
+      .post<Transaction>(`/transactions/${id}/receipt/`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
+
+  removeReceipt: (id: string) => api.delete(`/transactions/${id}/receipt/`).then(() => undefined),
+
+  /** Bytes crudos + content-type, para armar un data URI y mostrarlo en <Image>
+   * (el endpoint exige el mismo auth que el resto del API — un <Image
+   * source={{uri}}> directo no podría mandar el header Authorization). */
+  getReceiptBlob: (id: string) =>
+    api
+      .get<ArrayBuffer>(`/transactions/${id}/receipt/`, { responseType: 'arraybuffer' })
+      .then((r) => ({
+        data: r.data,
+        contentType: (r.headers['content-type'] as string | undefined) ?? 'image/jpeg',
+      })),
 };
 
 // --- snapshots mensuales (solo lectura) -------------------------------

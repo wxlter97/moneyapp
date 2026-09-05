@@ -100,9 +100,18 @@ export function TransactionRow({
         />
 
         <View className="flex-1">
-          <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>
-            {title}
-          </Text>
+          <View className="flex-row items-center gap-1">
+            <Text
+              className="text-text shrink text-base"
+              style={{ fontFamily: fonts.semibold }}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+            {txn.has_receipt ? (
+              <Icon name="camera" size={11} color={colors.textMuted} />
+            ) : null}
+          </View>
           <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
             {subtitle}
           </Text>

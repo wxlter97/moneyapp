@@ -23,6 +23,7 @@ export const qk = {
     transactions: (params?: TransactionListParams) =>
       ['ws', ws, 'transactions', params ?? {}] as const,
     transaction: (id: string) => ['ws', ws, 'transaction', id] as const,
+    receiptImage: (id: string) => ['ws', ws, 'transaction', id, 'receipt'] as const,
 
     categoryBudgets: (ym?: YearMonth) =>
       ['ws', ws, 'category-budgets', ym ?? {}] as const,

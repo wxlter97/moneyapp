@@ -8,6 +8,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from '@tanstack/react-query';
+import { fromByteArray as encodeBase64 } from 'base64-js';
 
 import * as res from '@/api/resources';
 import type {
@@ -290,6 +291,41 @@ export function useDeleteTransaction() {
   return useMutation({
     mutationFn: (id: string) => res.transactions.remove(id),
     onSuccess: invalidate,
+  });
+}
+
+export function useUploadReceipt() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: { uri: string; name: string; type: string } }) =>
+      res.transactions.uploadReceipt(id, file),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveReceipt() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.transactions.removeReceipt(id),
+    onSuccess: invalidate,
+  });
+}
+
+/** Foto del recibo como data URI, lista para `<Image source={{uri}}>`. El
+ * endpoint exige el mismo auth que el resto del API, así que no se puede
+ * apuntar un <Image> directo a la URL — se trae por axios (que ya manda
+ * los headers) y se arma el data URI acá. */
+export function useReceiptImage(id: string | undefined, hasReceipt: boolean) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).receiptImage(id ?? ''),
+    queryFn: async () => {
+      const { data, contentType } = await res.transactions.getReceiptBlob(id!);
+      const base64 = encodeBase64(new Uint8Array(data));
+      return `data:${contentType};base64,${base64}`;
+    },
+    enabled: !!ws && !!id && hasReceipt,
+    staleTime: Infinity,
   });
 }
 
