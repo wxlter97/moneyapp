@@ -34,6 +34,8 @@ import type {
   RecurringExpenseInput,
   RecurringSuggestion,
   ScheduledItem,
+  SetForwardBudgetInput,
+  SetForwardBudgetResult,
   Tag,
   TagSummary,
   Transaction,
@@ -236,6 +238,11 @@ export const categoryBudgets = {
   update: (id: string, input: Partial<CategoryBudgetInput>) =>
     api.patch<CategoryBudget>(`/category-budgets/${id}/`, input).then((r) => r.data),
   remove: (id: string) => api.delete(`/category-budgets/${id}/`).then(() => undefined),
+  /** Fija el monto de un mes y lo propaga hacia adelante (ver tipo). */
+  setForward: (input: SetForwardBudgetInput) =>
+    api
+      .post<SetForwardBudgetResult>('/category-budgets/set-forward/', input)
+      .then((r) => r.data),
 };
 
 // --- recurrentes -------------------------------------------------------

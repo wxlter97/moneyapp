@@ -19,6 +19,7 @@ import type {
   InstallmentPurchaseInput,
   NotificationPreferences,
   RecurringExpenseInput,
+  SetForwardBudgetInput,
   TransactionInput,
   TransactionSplitPart,
   WalletInput,
@@ -566,6 +567,16 @@ export function useDeleteCategoryBudget() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({
     mutationFn: (id: string) => res.categoryBudgets.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
+/** Fija el presupuesto del mes y lo propaga a los meses futuros (ver tipo
+ * `SetForwardBudgetResult`); el histórico de meses anteriores no se toca. */
+export function useSetForwardCategoryBudget() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (input: SetForwardBudgetInput) => res.categoryBudgets.setForward(input),
     onSuccess: invalidate,
   });
 }
