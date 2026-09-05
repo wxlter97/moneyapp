@@ -27,6 +27,11 @@ export function AddTransactionFab() {
           position: 'absolute',
           right: 24,
           bottom: 104,
+          // El radio también va acá: en la web, el `box-shadow` que generan
+          // `shadowColor`/`shadowOffset`/etc. sigue el borde de ESTE nodo (el
+          // que tiene el shadow), no el del hijo — sin esto se ve un halo
+          // cuadrado (blanco en claro, negro en oscuro) detrás del círculo.
+          borderRadius: 29,
           shadowColor: '#4F8CFF',
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.4,
@@ -55,7 +60,18 @@ export function AddTransactionFab() {
           colors={['#6AA3FF', '#4F8CFF']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ height: 58, width: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' }}
+          // `overflow: hidden` es necesario en react-native-web: sin él el
+          // degradado no se recorta al `borderRadius` y quedan las esquinas
+          // cuadradas del fondo de la pantalla asomando (blancas en claro,
+          // negras en oscuro).
+          style={{
+            height: 58,
+            width: 58,
+            borderRadius: 29,
+            overflow: 'hidden',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
           <Icon name="plus" size={26} color="#FFFFFF" strokeWidth={2.4} />
         </LinearGradient>

@@ -158,7 +158,7 @@ export default function BudgetEditScreen() {
             {formError ? (
               <Text className="text-expense px-1 pb-2 text-sm">{formError}</Text>
             ) : null}
-            <View className="py-2">
+            <View className="pb-4 pt-2">
               <Button
                 label="Guardar"
                 loading={busy}

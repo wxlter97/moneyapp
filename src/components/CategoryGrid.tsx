@@ -12,8 +12,8 @@ interface GroupTree {
   children: Category[];
 }
 
-function buildTrees(categories: Category[], type: CategoryType): GroupTree[] {
-  const list = categories.filter((c) => c.type === type);
+function buildTrees(categories: Category[], type: CategoryType | 'all'): GroupTree[] {
+  const list = type === 'all' ? categories : categories.filter((c) => c.type === type);
   const groups = list.filter((c) => c.parent === null);
   const byParent = new Map<string, Category[]>();
   for (const c of list) {
@@ -34,6 +34,7 @@ function Tile({
   selected: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={() => {
@@ -45,16 +46,21 @@ function Tile({
       className="w-1/4 items-center gap-1 px-1 py-2 active:opacity-60"
     >
       <View
-        className={`h-14 w-14 items-center justify-center rounded-full ${
+        className={`h-14 w-14 items-center justify-center rounded-full bg-surface-2 ${
           selected ? 'border-2 border-primary' : ''
         }`}
-        style={{ backgroundColor: category.color || '#334155' }}
       >
         {category.icon ? (
           <Text className="text-xl">{category.icon}</Text>
         ) : (
-          <Icon name="tag" size={20} color="#FFFFFF" />
+          <Icon name="tag" size={20} color={category.color || colors.textMuted} />
         )}
+        {category.color ? (
+          <View
+            className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-surface"
+            style={{ backgroundColor: category.color }}
+          />
+        ) : null}
       </View>
       <Text
         className={`text-center text-[11px] leading-tight ${
@@ -82,7 +88,8 @@ export function CategoryGrid({
   onAddSub,
 }: {
   categories: Category[];
-  type: CategoryType;
+  /** 'all' mezcla ingreso + gasto en una sola rejilla (categorizar transferencias). */
+  type: CategoryType | 'all';
   selectedId?: string | null;
   /** Modo selección: se llama con el id de la subcategoría elegida. */
   onSelect?: (id: string) => void;
@@ -96,7 +103,7 @@ export function CategoryGrid({
   if (trees.length === 0) {
     return (
       <Text className="text-text-muted px-1 py-3 text-sm">
-        Sin categorías de {type === 'income' ? 'ingreso' : 'gasto'}.
+        {type === 'all' ? 'Sin categorías.' : `Sin categorías de ${type === 'income' ? 'ingreso' : 'gasto'}.`}
       </Text>
     );
   }
@@ -164,15 +171,22 @@ export function CategoryPickerField({
   onChange,
   loading = false,
   error,
+  label = 'Categoría',
+  /** Permite dejar sin categoría (transferencias): agrega "Sin categoría"
+   * arriba de la rejilla, que llama a `onChange('')`. */
+  allowClear = false,
 }: {
   categories: Category[];
-  type: CategoryType;
+  /** 'all' mezcla ingreso + gasto (categorizar transferencias). */
+  type: CategoryType | 'all';
   value: string | null;
   open: boolean;
   onToggle: () => void;
   onChange: (id: string) => void;
   loading?: boolean;
   error?: string;
+  label?: string;
+  allowClear?: boolean;
 }) {
   const selected = categories.find((c) => c.id === value) ?? null;
   const colors = useColors();
@@ -189,22 +203,19 @@ export function CategoryPickerField({
           error ? 'border-expense' : 'border-border/60'
         } active:opacity-70`}
       >
-        <Text className="text-text-muted text-sm">Categoría</Text>
+        <Text className="text-text-muted text-sm">{label}</Text>
         <View className="flex-row items-center gap-2">
           {selected ? (
-            <View
-              className="h-6 w-6 items-center justify-center rounded-full"
-              style={{ backgroundColor: selected.color || '#334155' }}
-            >
+            <View className="h-6 w-6 items-center justify-center rounded-full bg-surface-2">
               {selected.icon ? (
                 <Text className="text-xs">{selected.icon}</Text>
               ) : (
-                <Icon name="tag" size={12} color="#FFFFFF" />
+                <Icon name="tag" size={12} color={selected.color || colors.textMuted} />
               )}
             </View>
           ) : null}
           <Text className={selected ? 'text-text' : 'text-text-muted'} numberOfLines={1}>
-            {loading ? 'Cargando…' : (selected?.name ?? 'Elegir')}
+            {loading ? 'Cargando…' : (selected?.name ?? (allowClear ? 'Sin categoría' : 'Elegir'))}
           </Text>
           <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
         </View>
@@ -216,6 +227,23 @@ export function CategoryPickerField({
         <FadeInView>
           <View className="mt-2 rounded-xl border border-border bg-surface p-3">
             <ScrollView className="max-h-80" keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+              {allowClear ? (
+                <Pressable
+                  onPress={() => {
+                    haptics.selection();
+                    onChange('');
+                  }}
+                  accessibilityRole="button"
+                  className="mb-2 flex-row items-center gap-2 px-1 py-1.5 active:opacity-60"
+                >
+                  <View className="h-6 w-6 items-center justify-center rounded-full bg-surface-2">
+                    <Icon name="close" size={12} color={colors.textMuted} />
+                  </View>
+                  <Text className={!value ? 'text-primary font-semibold' : 'text-text-muted'}>
+                    Sin categoría
+                  </Text>
+                </Pressable>
+              ) : null}
               <CategoryGrid
                 categories={categories}
                 type={type}

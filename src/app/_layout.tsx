@@ -2,12 +2,13 @@ import '../../global.css';
 
 import { useCallback, useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Appearance } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { colorScheme, useColorScheme } from 'nativewind';
+import { colorScheme } from 'nativewind';
 import {
   Manrope_400Regular,
   Manrope_500Medium,
@@ -50,8 +51,27 @@ export default function RootLayout() {
   const bootstrap = useAuthStore((s) => s.bootstrap);
   const authStatus = useAuthStore((s) => s.status);
   const pref = useThemeStore((s) => s.pref);
-  const { colorScheme: active } = useColorScheme();
-  const scheme = active === 'light' ? 'light' : 'dark';
+  // No delegamos "sistema" a `colorScheme.set('system')`: en la versión web de
+  // nativewind eso sólo resetea el observable interno pero además fuerza la
+  // clase `.dark` a "quitada" sin importar el sistema real (ver
+  // react-native-css-interop/runtime/web/color-scheme.js) — con el SO en
+  // oscuro, la variante "sistema" se quedaba mostrando la paleta clara en
+  // todo lo que se pinta con clases de Tailwind (o sea, casi toda la UI).
+  // Resolvemos nosotros mismos a un valor concreto ('light' | 'dark') a
+  // partir del `Appearance` real del sistema y se lo pasamos siempre así:
+  // más simple y sin ese caso especial roto, en ambas plataformas.
+  // Ojo: NO usar el hook `useColorScheme` de 'react-native' acá — en este
+  // bundle web no re-renderiza al cambiar el esquema del SO en caliente
+  // (`Appearance.addChangeListener` sí lo hace, y es lo mismo que usa por
+  // dentro; posible desajuste de instancias entre bundlers). Suscripción
+  // manual, misma API, funciona en las tres plataformas.
+  const [systemScheme, setSystemScheme] = useState(() => Appearance.getColorScheme());
+  useEffect(() => {
+    const sub = Appearance.addChangeListener(({ colorScheme: next }) => setSystemScheme(next));
+    return () => sub.remove();
+  }, []);
+  const scheme: 'light' | 'dark' =
+    pref === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : pref;
 
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
@@ -68,10 +88,10 @@ export default function RootLayout() {
     void bootstrap();
   }, [bootstrap]);
 
-  // Aplica la preferencia persistida (claro / oscuro / sistema).
+  // Aplica el esquema ya resuelto (nunca el literal 'system', ver arriba).
   useEffect(() => {
-    colorScheme.set(pref);
-  }, [pref]);
+    colorScheme.set(scheme);
+  }, [scheme]);
 
   useEffect(() => {
     // Recién cuando la fuente ya está registrada montamos el árbol real

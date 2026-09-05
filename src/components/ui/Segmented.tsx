@@ -48,7 +48,7 @@ export function Segmented<T extends string>({ value, onChange, options }: Segmen
               if (!active) haptics.selection();
               onChange(opt.value);
             }}
-            className="flex-1 items-center rounded-lg py-2"
+            className="flex-1 items-center rounded-lg px-2 py-2"
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
           >

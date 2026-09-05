@@ -74,7 +74,10 @@ export function TransactionRow({
   const row = (
     // `className` no se resuelve en `Animated.View` de reanimated: el fondo
     // (necesario para tapar la acción roja mientras no se desliza) va inline.
-    <Animated.View style={[pressStyle, { backgroundColor: colors.bg }]}>
+    // Debe ser el mismo tono que la card contenedora (`colors.surface`), no el
+    // del fondo de pantalla (`colors.bg`) — si no, cada fila se ve como un
+    // recuadro de otro tono flotando dentro de la card.
+    <Animated.View style={[pressStyle, { backgroundColor: colors.surface }]}>
       <Pressable
         onPress={onPress}
         disabled={!onPress}
