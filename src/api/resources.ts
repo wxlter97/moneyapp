@@ -34,6 +34,8 @@ import type {
   RecurringExpenseInput,
   RecurringSuggestion,
   ScheduledItem,
+  Tag,
+  TagSummary,
   Transaction,
   TransactionInput,
   TransactionSplitPart,
@@ -42,6 +44,7 @@ import type {
   WalletKind,
   WalletPurpose,
   Workspace,
+  WorkspaceBackup,
   WorkspaceRole,
 } from './types';
 
@@ -89,6 +92,21 @@ export const workspaces = {
   setBaseCurrency: (id: string, base_currency: string) =>
     api
       .patch<Workspace>(`/workspaces/${id}/`, { base_currency }, { skipWorkspace: true })
+      .then((r) => r.data),
+  /** Respaldo completo en JSON (carteras, categorías, etiquetas, presupuestos,
+   * recurrentes, compras a plazo y transacciones). Solo owner. */
+  backup: (id: string) =>
+    api
+      .get<WorkspaceBackup>(`/workspaces/${id}/backup/`, { skipWorkspace: true })
+      .then((r) => r.data),
+  /** Reemplaza TODO el contenido del workspace por el de `backup`. Irreversible; solo owner. */
+  restore: (id: string, backup: WorkspaceBackup) =>
+    api
+      .post<{ restored: Record<string, number> }>(
+        `/workspaces/${id}/restore/`,
+        { ...backup, confirm: true },
+        { skipWorkspace: true },
+      )
       .then((r) => r.data),
 };
 
@@ -200,6 +218,16 @@ export const categories = {
     api.post<{ reordered: number }>('/categories/reorder/', { ids }).then((r) => r.data),
 };
 
+export const tags = {
+  list: () => fetchAll<Tag>('/tags/'),
+  create: (name: string) => api.post<Tag>('/tags/', { name }).then((r) => r.data),
+  update: (id: string, name: string) =>
+    api.patch<Tag>(`/tags/${id}/`, { name }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/tags/${id}/`).then(() => undefined),
+  /** Ingresos/gastos/cantidad acumulados por etiqueta. */
+  summary: () => api.get<TagSummary[]>('/tags/summary/').then((r) => r.data),
+};
+
 export const categoryBudgets = {
   list: (params?: { year?: number; month?: number }) =>
     fetchAll<CategoryBudget>('/category-budgets/', params),
@@ -259,6 +287,8 @@ export interface TransactionListParams {
   counts_toward_budget?: boolean;
   /** Coincidencia parcial en descripción, categoría o cartera. */
   search?: string;
+  /** ID de una etiqueta. */
+  tag?: string;
   limit?: number;
   offset?: number;
 }

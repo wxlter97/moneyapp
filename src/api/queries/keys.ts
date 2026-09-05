@@ -27,6 +27,9 @@ export const qk = {
     categories: () => ['ws', ws, 'categories'] as const,
     categoriesDeleted: () => ['ws', ws, 'categories', 'deleted'] as const,
 
+    tags: () => ['ws', ws, 'tags'] as const,
+    tagSummary: () => ['ws', ws, 'tags', 'summary'] as const,
+
     transactions: (params?: TransactionListParams) =>
       ['ws', ws, 'transactions', params ?? {}] as const,
     transaction: (id: string) => ['ws', ws, 'transaction', id] as const,

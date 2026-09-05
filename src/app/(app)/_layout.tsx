@@ -268,6 +268,18 @@ export default function AppLayout() {
           name="statement/[id]"
           options={{ presentation: 'modal', headerShown: false }}
         />
+        <Stack.Screen
+          name="tags"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="tag-transactions"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="backup"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
     </AppLockGate>
   );

@@ -22,6 +22,7 @@ import type {
   TransactionInput,
   TransactionSplitPart,
   WalletInput,
+  WorkspaceBackup,
 } from '@/api/types';
 import { currentYearMonth, type YearMonth } from '@/lib/date';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -67,6 +68,25 @@ export function useResetWorkspace() {
   return useMutation({
     mutationFn: ({ id, scope }: { id: string; scope: res.ResetScope }) =>
       res.workspaces.reset(id, scope),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ws', ws], type: 'all' }),
+  });
+}
+
+/** Trae el respaldo completo del workspace (para descargarlo). No cachea:
+ * cada llamada pide un snapshot fresco. */
+export function useDownloadBackup() {
+  return useMutation({
+    mutationFn: (id: string) => res.workspaces.backup(id),
+  });
+}
+
+/** Reemplaza TODO el contenido del workspace por el de un respaldo. Irreversible. */
+export function useRestoreWorkspace() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, backup }: { id: string; backup: WorkspaceBackup }) =>
+      res.workspaces.restore(id, backup),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['ws', ws], type: 'all' }),
   });
 }
@@ -365,6 +385,51 @@ export function useReorderCategories() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({
     mutationFn: (ids: string[]) => res.categories.reorder(ids),
+    onSuccess: invalidate,
+  });
+}
+
+// --- etiquetas (tags) --------------------------------------------------
+export function useTags() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).tags(),
+    queryFn: res.tags.list,
+    enabled: !!ws,
+  });
+}
+
+/** Ingresos/gastos/cantidad acumulados por etiqueta -- "cuánto llevo gastado
+ * en el viaje X" sin importar en qué categoría cayó cada gasto. */
+export function useTagSummary() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).tagSummary(),
+    queryFn: res.tags.summary,
+    enabled: !!ws,
+  });
+}
+
+export function useCreateTag() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (name: string) => res.tags.create(name),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateTag() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => res.tags.update(id, name),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteTag() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.tags.remove(id),
     onSuccess: invalidate,
   });
 }

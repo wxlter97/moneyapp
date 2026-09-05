@@ -261,6 +261,8 @@ export interface Transaction {
   is_recurring: boolean;
   /** Compartido por todas las partes de una transacción dividida; null si no lo está. */
   split_group: UUID | null;
+  /** Etiquetas libres asignadas -- ver `tag_names` en TransactionInput para escribirlas. */
+  tags: Tag[];
   created_by: number | null;
   created_at: ISODateTime;
   updated_at: ISODateTime;
@@ -288,6 +290,28 @@ export interface TransactionInput {
   description?: string;
   currency?: string;
   counts_toward_budget?: boolean;
+  /** Nombres de etiqueta tal como los escribe el usuario -- se reusan las
+   * que ya existen (sin distinguir mayúsculas) y se crean las que no.
+   * Omitir deja las etiquetas actuales sin cambios al editar. */
+  tag_names?: string[];
+}
+
+/** Etiqueta libre, transversal a la categoría (p. ej. "viaje-cancún"). */
+export interface Tag {
+  id: UUID;
+  name: string;
+  created_at: ISODateTime;
+}
+
+/** Fila de `tags/summary/`: total acumulado de una etiqueta. */
+export interface TagSummary {
+  id: UUID;
+  name: string;
+  income: Money;
+  expense: Money;
+  count: number;
+  first_date: ISODate | null;
+  last_date: ISODate | null;
 }
 
 export interface CategoryBudget {
@@ -594,6 +618,15 @@ export interface CreditCardStatementSummary extends CreditCardStatement {
   currency: string;
   card_last4: string | null;
 }
+
+/**
+ * Respaldo completo de un workspace (`workspaces/{id}/backup/`): carteras,
+ * categorías, etiquetas, presupuestos, recurrentes, compras a plazo y
+ * transacciones. El cliente nunca interpreta su contenido campo por campo
+ * -- solo lo descarga como JSON y, más adelante, lo vuelve a mandar tal
+ * cual a `workspaces/{id}/restore/`.
+ */
+export type WorkspaceBackup = Record<string, unknown>;
 
 // ---------------------------------------------------------------------------
 // Errores DRF

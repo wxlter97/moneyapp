@@ -11,6 +11,7 @@ import {
   useDeleteTransaction,
   useNetWorth,
   useScheduled,
+  useTags,
   useTransactions,
   useWallets,
 } from '@/api/queries';
@@ -290,6 +291,7 @@ function ListaTab({
   const range = useMemo(() => monthRange(month), [month]);
   const txQuery = useTransactions({ date_after: range.from, date_before: range.to });
   const walletsQuery = useWallets();
+  const tagsQuery = useTags();
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
   const deleteTxn = useDeleteTransaction();
@@ -298,6 +300,7 @@ function ListaTab({
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [walletFilter, setWalletFilter] = useState<string | null>(null);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [amountMin, setAmountMin] = useState('0.00');
   const [amountMax, setAmountMax] = useState('0.00');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -308,11 +311,15 @@ function ListaTab({
   // Cuántos filtros avanzados (aparte de texto y tipo, que ya se ven en su
   // propio control) están activos -- para el numerito sobre el ícono.
   const activeFilterCount =
-    (walletFilter ? 1 : 0) + (toNumber(amountMin) > 0 ? 1 : 0) + (toNumber(amountMax) > 0 ? 1 : 0);
+    (walletFilter ? 1 : 0) +
+    (tagFilter ? 1 : 0) +
+    (toNumber(amountMin) > 0 ? 1 : 0) +
+    (toNumber(amountMax) > 0 ? 1 : 0);
 
   function clearAdvancedFilters() {
     haptics.tap();
     setWalletFilter(null);
+    setTagFilter(null);
     setAmountMin('0.00');
     setAmountMax('0.00');
   }
@@ -326,6 +333,7 @@ function ListaTab({
       if (pendingDeleteIds.has(t.id)) return false;
       if (typeFilter !== 'all' && t.type !== typeFilter) return false;
       if (walletFilter && t.wallet !== walletFilter) return false;
+      if (tagFilter && !(t.tags ?? []).some((tag) => tag.id === tagFilter)) return false;
       const amount = toNumber(t.amount);
       if (min > 0 && amount < min) return false;
       if (max > 0 && amount > max) return false;
@@ -339,6 +347,7 @@ function ListaTab({
     pendingDeleteIds,
     typeFilter,
     walletFilter,
+    tagFilter,
     amountMin,
     amountMax,
     search,
@@ -441,6 +450,7 @@ function ListaTab({
               <Text className="text-text-muted text-xs uppercase tracking-wide">Cartera</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
                 <FilterChip
+                  group="Cartera"
                   label="Todas"
                   active={!walletFilter}
                   onPress={() => setWalletFilter(null)}
@@ -448,6 +458,7 @@ function ListaTab({
                 {(walletsQuery.data ?? []).map((w) => (
                   <FilterChip
                     key={w.id}
+                    group="Cartera"
                     label={w.name}
                     active={walletFilter === w.id}
                     onPress={() => setWalletFilter(walletFilter === w.id ? null : w.id)}
@@ -455,6 +466,29 @@ function ListaTab({
                 ))}
               </ScrollView>
             </View>
+
+            {(tagsQuery.data?.length ?? 0) > 0 ? (
+              <View className="gap-1.5">
+                <Text className="text-text-muted text-xs uppercase tracking-wide">Etiqueta</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
+                  <FilterChip
+                    group="Etiqueta"
+                    label="Todas"
+                    active={!tagFilter}
+                    onPress={() => setTagFilter(null)}
+                  />
+                  {(tagsQuery.data ?? []).map((t) => (
+                    <FilterChip
+                      key={t.id}
+                      group="Etiqueta"
+                      label={t.name}
+                      active={tagFilter === t.id}
+                      onPress={() => setTagFilter(tagFilter === t.id ? null : t.id)}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
 
             <View className="flex-row gap-3">
               <View className="flex-1">
@@ -516,12 +550,16 @@ function ListaTab({
   );
 }
 
-/** Pastilla de una sola opción para el panel de filtros avanzados (cartera). */
+/** Pastilla de una sola opción para el panel de filtros avanzados (cartera o etiqueta). */
 function FilterChip({
+  group,
   label,
   active,
   onPress,
 }: {
+  /** Distingue el `accessibilityLabel` cuando dos grupos comparten una
+   * etiqueta (p. ej. "Todas" aparece en Cartera y en Etiqueta). */
+  group: string;
   label: string;
   active: boolean;
   onPress: () => void;
@@ -533,7 +571,7 @@ function FilterChip({
         onPress();
       }}
       accessibilityRole="button"
-      accessibilityLabel={`Cartera: ${label}`}
+      accessibilityLabel={`${group}: ${label}`}
       accessibilityState={{ selected: active }}
       className={`rounded-full border px-3 py-1.5 active:opacity-70 ${
         active ? 'border-primary bg-primary' : 'border-border bg-surface-2'

@@ -36,7 +36,9 @@ export type IconName =
   | 'split'
   | 'filter'
   | 'bars'
-  | 'card';
+  | 'card'
+  | 'hash'
+  | 'archive';
 
 interface IconProps {
   name: IconName;
@@ -229,6 +231,21 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
       )}
       {name === 'filter' && (
         <Path d="M4 5h16l-6 7.5V19l-4 2v-8.5L4 5z" {...p} strokeLinejoin="round" />
+      )}
+      {name === 'archive' && (
+        <>
+          <Rect x={3} y={4} width={18} height={4} rx={1} {...p} />
+          <Path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" {...p} />
+          <Line x1={10} y1={12.5} x2={14} y2={12.5} {...p} />
+        </>
+      )}
+      {name === 'hash' && (
+        <>
+          <Line x1={9} y1={3} x2={7} y2={21} {...p} />
+          <Line x1={17} y1={3} x2={15} y2={21} {...p} />
+          <Line x1={4} y1={9} x2={20} y2={9} {...p} />
+          <Line x1={3} y1={15} x2={19} y2={15} {...p} />
+        </>
       )}
       {name === 'card' && (
         <>
