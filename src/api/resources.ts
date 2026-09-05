@@ -18,6 +18,7 @@ import type {
   EmailImportStatus,
   InstallmentPurchase,
   InstallmentPurchaseInput,
+  Membership,
   MonthlySnapshot,
   NetWorthBreakdown,
   Paginated,
@@ -31,6 +32,7 @@ import type {
   WalletKind,
   WalletPurpose,
   Workspace,
+  WorkspaceRole,
 } from './types';
 
 // --- paginación --------------------------------------------------------------
@@ -68,6 +70,22 @@ export const workspaces = {
         { skipWorkspace: true },
       )
       .then((r) => r.data),
+  /** Genera una dirección de importación nueva; invalida la anterior. Solo owner. */
+  rotateInboundToken: (id: string) =>
+    api
+      .post<Workspace>(`/workspaces/${id}/rotate-inbound-token/`, {}, { skipWorkspace: true })
+      .then((r) => r.data),
+};
+
+// --- miembros del workspace activo -----------------------------------------
+export const memberships = {
+  list: () => fetchAll<Membership>('/memberships/'),
+  /** Invita por correo a alguien ya registrado en la app. Solo owner. */
+  invite: (email: string, role: Exclude<WorkspaceRole, ''> = 'member') =>
+    api.post<Membership>('/memberships/', { email, role }).then((r) => r.data),
+  updateRole: (id: string, role: Exclude<WorkspaceRole, ''>) =>
+    api.patch<Membership>(`/memberships/${id}/`, { role }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/memberships/${id}/`).then(() => undefined),
 };
 
 // --- carteras (wallets) -------------------------------------------------

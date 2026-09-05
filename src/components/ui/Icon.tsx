@@ -24,7 +24,9 @@ export type IconName =
   | 'inbox'
   | 'trending'
   | 'search'
-  | 'pencil';
+  | 'pencil'
+  | 'users'
+  | 'copy';
 
 interface IconProps {
   name: IconName;
@@ -172,6 +174,20 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
         <>
           <Path d="M4 20l1-4.5L15.5 5 19 8.5 8.5 19 4 20z" {...p} />
           <Line x1={13.5} y1={6.5} x2={17} y2={10} {...p} />
+        </>
+      )}
+      {name === 'users' && (
+        <>
+          <Circle cx={9} cy={8} r={3.3} {...p} />
+          <Path d="M2.5 20a6.5 6.5 0 0 1 13 0" {...p} />
+          <Path d="M15.5 5.3a3.3 3.3 0 0 1 0 6.4" {...p} />
+          <Path d="M14.5 13.3A6.5 6.5 0 0 1 21.5 20" {...p} />
+        </>
+      )}
+      {name === 'copy' && (
+        <>
+          <Rect x={8} y={8} width={12} height={12} rx={2.5} {...p} />
+          <Path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" {...p} />
         </>
       )}
     </Svg>

@@ -68,6 +68,60 @@ export function useResetWorkspace() {
   });
 }
 
+/** Genera una dirección de importación nueva para el workspace; invalida la anterior. */
+export function useRotateInboundToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.workspaces.rotateInboundToken(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workspaces() }),
+  });
+}
+
+// --- miembros del workspace activo ----------------------------------------
+export function useMemberships() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).memberships(),
+    queryFn: () => res.memberships.list(),
+    enabled: !!ws,
+  });
+}
+
+export function useInviteMember() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ email, role }: { email: string; role?: 'owner' | 'member' }) =>
+      res.memberships.invite(email, role),
+    onSuccess: async () => {
+      invalidate();
+      // el `member_count` de la lista de workspaces también cambió
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+export function useUpdateMembershipRole() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: string; role: 'owner' | 'member' }) =>
+      res.memberships.updateRole(id, role),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveMembership() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.memberships.remove(id),
+    onSuccess: async () => {
+      invalidate();
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
 // --- carteras (wallets) --------------------------------------------
 export function useWallets(params?: res.WalletListParams) {
   const ws = useActiveWs();
