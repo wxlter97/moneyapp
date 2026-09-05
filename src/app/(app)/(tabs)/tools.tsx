@@ -57,6 +57,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/notifications'),
   },
   {
+    icon: 'lock',
+    label: 'Seguridad',
+    hint: 'Bloqueo con Face ID o PIN',
+    onPress: () => router.push('/security'),
+  },
+  {
     icon: 'trending',
     label: 'Patrimonio',
     hint: 'Evolución mes a mes',

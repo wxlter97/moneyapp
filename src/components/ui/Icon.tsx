@@ -30,7 +30,9 @@ export type IconName =
   | 'camera'
   | 'image'
   | 'bolt'
-  | 'bell';
+  | 'bell'
+  | 'lock'
+  | 'face-id';
 
 interface IconProps {
   name: IconName;
@@ -212,6 +214,24 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
         <>
           <Path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z" {...p} />
           <Path d="M10 20a2 2 0 0 0 4 0" {...p} />
+        </>
+      )}
+      {name === 'lock' && (
+        <>
+          <Rect x={5} y={11} width={14} height={10} rx={2.5} {...p} />
+          <Path d="M8 11V7a4 4 0 0 1 8 0v4" {...p} />
+          <Circle cx={12} cy={16} r={1.4} fill={color} stroke="none" />
+        </>
+      )}
+      {name === 'face-id' && (
+        <>
+          <Path d="M4 8V6a2 2 0 0 1 2-2h2" {...p} />
+          <Path d="M20 8V6a2 2 0 0 0-2-2h-2" {...p} />
+          <Path d="M4 16v2a2 2 0 0 0 2 2h2" {...p} />
+          <Path d="M20 16v2a2 2 0 0 1-2 2h-2" {...p} />
+          <Line x1={9} y1={10} x2={9} y2={11} {...p} />
+          <Line x1={15} y1={10} x2={15} y2={11} {...p} />
+          <Path d="M9 15c.7.7 1.8 1 3 1s2.3-.3 3-1" {...p} />
         </>
       )}
     </Svg>

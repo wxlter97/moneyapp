@@ -7,8 +7,10 @@ import { TextField } from '@/components/ui/TextField';
 import { useCreateWorkspace, useWorkspaces } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
 import { pushDevices } from '@/api/resources';
+import { AppLockGate } from '@/components/security/AppLockGate';
 import { addNotificationTapListener, registerForPushNotificationsAsync } from '@/lib/notifications';
 import { useAuthStore } from '@/store/auth';
+import { useSecurityStore } from '@/store/security';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 
@@ -25,6 +27,7 @@ export default function AppLayout() {
   const activeId = useWorkspaceStore((s) => s.activeId);
   const setWorkspaces = useWorkspaceStore((s) => s.setWorkspaces);
   const setActiveId = useWorkspaceStore((s) => s.setActiveId);
+  const securityHydrated = useSecurityStore((s) => s.hydrated);
 
   const enabled = status === 'authenticated';
   const wsQuery = useWorkspaces({ enabled });
@@ -76,8 +79,10 @@ export default function AppLayout() {
 
   if (status === 'anonymous') return <Redirect href="/login" />;
 
-  // Autenticado: esperamos a conocer los workspaces del usuario.
-  if (!wsHydrated || wsQuery.isLoading) {
+  // Autenticado: esperamos a conocer los workspaces del usuario (+ el store
+  // de seguridad, para que `AppLockGate` pueda leer `enabled` ya hidratado
+  // en su primer render y no arriesgue un flash de contenido sin bloquear).
+  if (!wsHydrated || !securityHydrated || wsQuery.isLoading) {
     return (
       <Centered>
         <ActivityIndicator color={colors.primary} />
@@ -140,104 +145,110 @@ export default function AppLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen
-        name="transaction/new"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="transaction/[id]"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="wallet/new"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="wallet/[id]"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="categories"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="budget-edit"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="recurring"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="recurring/new"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="recurring/[id]"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="installments"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="installment/new"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="installment/[id]"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="export"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="reset"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="category/new"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="category/[id]"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="imports"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="import/[id]"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="net-worth-history"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="category-transactions"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="wallet-transactions"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="members"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="shortcuts"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-      <Stack.Screen
-        name="notifications"
-        options={{ presentation: 'modal', headerShown: false }}
-      />
-    </Stack>
+    <AppLockGate>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="transaction/new"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="transaction/[id]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="wallet/new"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="wallet/[id]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="categories"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="budget-edit"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="recurring"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="recurring/new"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="recurring/[id]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="installments"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="installment/new"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="installment/[id]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="export"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="reset"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="category/new"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="category/[id]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="imports"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="import/[id]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="net-worth-history"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="category-transactions"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="wallet-transactions"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="members"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="shortcuts"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="notifications"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="security"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+      </Stack>
+    </AppLockGate>
   );
 }
