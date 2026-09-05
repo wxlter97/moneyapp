@@ -237,6 +237,10 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="invitations"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="shortcuts"
           options={{ presentation: 'modal', headerShown: false }}
         />

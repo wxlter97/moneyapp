@@ -38,7 +38,8 @@ export type IconName =
   | 'bars'
   | 'card'
   | 'hash'
-  | 'archive';
+  | 'archive'
+  | 'mail';
 
 interface IconProps {
   name: IconName;
@@ -168,6 +169,12 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
         <>
           <Path d="M4 12h4l2 3h4l2-3h4" {...p} />
           <Path d="M5.5 5h13L21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6L5.5 5z" {...p} />
+        </>
+      )}
+      {name === 'mail' && (
+        <>
+          <Rect x="3" y="5" width="18" height="14" rx="2" {...p} />
+          <Path d="M3 7l9 6 9-6" {...p} />
         </>
       )}
       {name === 'trending' && (

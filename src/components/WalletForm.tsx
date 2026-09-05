@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 
 import {
   useArchiveWallet,
+  useBankEmailSchemas,
   useCreateWallet,
   useDeleteWallet,
   useGoalProjection,
@@ -80,6 +81,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [interestRate, setInterestRate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [cardLast4, setCardLast4] = useState('');
+  const [bankSchemaId, setBankSchemaId] = useState<string | null>(null);
   const [billingDay, setBillingDay] = useState('');
   const [paymentDueDay, setPaymentDueDay] = useState('');
   const [counterparty, setCounterparty] = useState('');
@@ -111,6 +113,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setInterestRate(w.interest_rate ? toNumber(w.interest_rate).toString() : '');
     setDueDate(w.due_date ?? '');
     setCardLast4(w.card_last4 ?? '');
+    setBankSchemaId(w.bank_schema);
     setBillingDay(w.billing_cycle_day ? String(w.billing_cycle_day) : '');
     setPaymentDueDay(w.payment_due_day ? String(w.payment_due_day) : '');
     setCounterparty(w.counterparty ?? '');
@@ -123,6 +126,12 @@ export function WalletForm({ walletId }: WalletFormProps) {
         .filter((w) => w.id !== walletId && w.purpose === purpose)
         .map((w) => ({ value: w.id, label: w.name })),
     [walletsQ.data, walletId, purpose],
+  );
+
+  const bankSchemasQ = useBankEmailSchemas();
+  const bankOptions = useMemo(
+    () => (bankSchemasQ.data ?? []).map((b) => ({ value: b.id, label: b.bank_name })),
+    [bankSchemasQ.data],
   );
 
   const isDebt = purpose === 'debt';
@@ -216,6 +225,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
       interest_rate: isDebt && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
       due_date: isDebt && dueDate ? dueDate : null,
       card_last4: cardNumberEligible && cardLast4.trim() ? cardLast4.trim() : null,
+      bank_schema: cardNumberEligible ? bankSchemaId || null : null,
       billing_cycle_day: cardStatementEligible ? parseDay(billingDay) : null,
       payment_due_day: cardStatementEligible ? parseDay(paymentDueDay) : null,
       counterparty: isDebt ? counterparty.trim() : '',
@@ -422,13 +432,24 @@ export function WalletForm({ walletId }: WalletFormProps) {
         ) : null}
 
         {cardNumberEligible ? (
-          <TextField
-            label="Últimos 4 dígitos (tarjeta, opcional)"
-            value={cardLast4}
-            onChangeText={(t) => setCardLast4(t.replace(/\D/g, '').slice(0, 4))}
-            keyboardType="number-pad"
-            placeholder="4242"
-          />
+          <>
+            <TextField
+              label="Últimos 4 dígitos (tarjeta, opcional)"
+              value={cardLast4}
+              onChangeText={(t) => setCardLast4(t.replace(/\D/g, '').slice(0, 4))}
+              keyboardType="number-pad"
+              placeholder="4242"
+            />
+            {bankOptions.length > 0 ? (
+              <Select
+                label="Banco (opcional)"
+                value={bankSchemaId}
+                onChange={setBankSchemaId}
+                options={[{ value: '', label: 'Sin especificar' }, ...bankOptions]}
+                placeholder="Sin especificar"
+              />
+            ) : null}
+          </>
         ) : null}
 
         {cardStatementEligible ? (

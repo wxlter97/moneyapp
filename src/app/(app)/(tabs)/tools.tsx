@@ -45,6 +45,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/members'),
   },
   {
+    icon: 'mail',
+    label: 'Invitaciones',
+    hint: 'Presupuestos a los que te invitaron',
+    onPress: () => router.push('/invitations'),
+  },
+  {
     icon: 'inbox',
     label: 'Importaciones',
     hint: 'Correos bancarios por revisar',

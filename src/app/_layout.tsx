@@ -154,6 +154,7 @@ export default function RootLayout() {
                 <Stack.Screen name="index" options={{ animation: 'fade' }} />
                 <Stack.Screen name="login" options={{ animation: 'fade' }} />
                 <Stack.Screen name="register" />
+                <Stack.Screen name="invite/[token]" options={{ animation: 'fade' }} />
                 <Stack.Screen name="(app)" options={{ animation: 'fade' }} />
               </Stack>
             ) : null}
