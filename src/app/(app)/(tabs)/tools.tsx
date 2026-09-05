@@ -33,6 +33,12 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/categories'),
   },
   {
+    icon: 'hash',
+    label: 'Etiquetas',
+    hint: 'Agrupa gasto transversal a la categoría',
+    onPress: () => router.push('/tags'),
+  },
+  {
     icon: 'users',
     label: 'Miembros',
     hint: 'Quién ve y edita este presupuesto',
@@ -103,6 +109,12 @@ const TOOLS: Tool[] = [
     label: 'Exportar datos',
     hint: 'Descarga en CSV',
     onPress: () => router.push('/export'),
+  },
+  {
+    icon: 'archive',
+    label: 'Respaldo',
+    hint: 'Descargar o restaurar todo el presupuesto',
+    onPress: () => router.push('/backup'),
   },
   {
     icon: 'reset',

@@ -18,6 +18,7 @@ import { errorMessage, fieldErrors } from '@/api/errors';
 import type { TransactionInput, TransactionType } from '@/api/types';
 import { CategoryPickerField } from '@/components/CategoryGrid';
 import { ReceiptField } from '@/components/ReceiptField';
+import { TagPicker } from '@/components/TagPicker';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { Icon } from '@/components/ui/Icon';
@@ -60,6 +61,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const [toWalletId, setToWalletId] = useState<string | null>(null);
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState('');
+  const [tagNames, setTagNames] = useState<string[]>([]);
   const [inBudget, setInBudget] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -92,6 +94,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     setToWalletId(t.to_wallet);
     setDate(t.date);
     setNote(t.description ?? '');
+    setTagNames((t.tags ?? []).map((tag) => tag.name));
     setInBudget(t.counts_toward_budget);
     setPrefilled(true);
   }, [editing, prefilled, existing.data, categoriesQ.data]);
@@ -155,6 +158,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
       amount: amountNum.toFixed(2),
       date,
       description: note.trim() || undefined,
+      tag_names: tagNames,
     };
     if (isTransfer) {
       payload.to_wallet = toWalletId;
@@ -320,6 +324,8 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           onChangeText={setNote}
           error={fields.description}
         />
+
+        <TagPicker value={tagNames} onChange={setTagNames} />
 
         <ReceiptField
           transactionId={transactionId}
