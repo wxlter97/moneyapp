@@ -34,6 +34,11 @@ const H_MARGIN = 16;
 // `rounded-3xl` = 32px) — antes era la mitad de la altura (una píldora
 // completa), lo que no coincidía con el radio de las demás superficies.
 const BAR_RADIUS = 32;
+// Radio de la píldora de la pestaña activa: concéntrico con el radio de la
+// barra (32) descontando el inset que la separa de ese borde (~9px entre el
+// padding de la fila y el del botón) — si no, se ve más cuadrada que el
+// contenedor que la rodea.
+const TAB_PILL_RADIUS = BAR_RADIUS - 9;
 
 /**
  * Barra de pestañas flotante, estilo "liquid glass": vidrio + degradado del
@@ -143,12 +148,12 @@ function TabBarButton({
       accessibilityLabel={label}
       style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}
     >
-      <Animated.View style={[{ borderRadius: 18 }, bubbleStyle]}>
+      <Animated.View style={[{ borderRadius: TAB_PILL_RADIUS, alignSelf: 'stretch' }, bubbleStyle]}>
         <Animated.View
           pointerEvents="none"
           style={[
             StyleSheet.absoluteFill,
-            { borderRadius: 18, backgroundColor: colors.primary },
+            { borderRadius: TAB_PILL_RADIUS, backgroundColor: colors.primary },
             pillStyle,
           ]}
         />
