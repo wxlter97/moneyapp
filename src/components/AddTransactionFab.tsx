@@ -6,9 +6,12 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 
 import { Icon } from '@/components/ui/Icon';
 import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
+import { lighten } from '@/theme/accents';
 
 /** Botón flotante "+" para abrir el alta de transacción. */
 export function AddTransactionFab() {
+  const colors = useColors();
   const enter = useSharedValue(0);
   const press = useSharedValue(1);
 
@@ -32,7 +35,7 @@ export function AddTransactionFab() {
           // que tiene el shadow), no el del hijo — sin esto se ve un halo
           // cuadrado (blanco en claro, negro en oscuro) detrás del círculo.
           borderRadius: 29,
-          shadowColor: '#4F8CFF',
+          shadowColor: colors.primary,
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.4,
           shadowRadius: 16,
@@ -57,7 +60,7 @@ export function AddTransactionFab() {
         accessibilityLabel="Agregar transacción"
       >
         <LinearGradient
-          colors={['#6AA3FF', '#4F8CFF']}
+          colors={[lighten(colors.primary, 0.18), colors.primary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           // `overflow: hidden` es necesario en react-native-web: sin él el

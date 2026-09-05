@@ -8,12 +8,14 @@ import { useCreateWorkspace, useWorkspaces } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
 import { useAuthStore } from '@/store/auth';
 import { useWorkspaceStore } from '@/store/workspace';
+import { useColors } from '@/theme';
 
 function Centered({ children }: { children: React.ReactNode }) {
   return <View className="flex-1 items-center justify-center bg-bg px-8 gap-4">{children}</View>;
 }
 
 export default function AppLayout() {
+  const colors = useColors();
   const status = useAuthStore((s) => s.status);
   const signOut = useAuthStore((s) => s.signOut);
 
@@ -44,7 +46,7 @@ export default function AppLayout() {
   if (status === 'loading') {
     return (
       <Centered>
-        <ActivityIndicator color="#4F8CFF" />
+        <ActivityIndicator color={colors.primary} />
       </Centered>
     );
   }
@@ -55,7 +57,7 @@ export default function AppLayout() {
   if (!wsHydrated || wsQuery.isLoading) {
     return (
       <Centered>
-        <ActivityIndicator color="#4F8CFF" />
+        <ActivityIndicator color={colors.primary} />
       </Centered>
     );
   }
@@ -109,7 +111,7 @@ export default function AppLayout() {
     // la lista llegó pero el store aún no fijó el activo: un frame de espera
     return (
       <Centered>
-        <ActivityIndicator color="#4F8CFF" />
+        <ActivityIndicator color={colors.primary} />
       </Centered>
     );
   }

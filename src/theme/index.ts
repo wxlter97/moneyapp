@@ -6,10 +6,15 @@
  * Para código dentro de React usa `useColors()` (reacciona al tema). El export
  * `colors` es el tema OSCURO, como fallback sincrónico donde no hay hook.
  *
- * Paleta neutra con un solo acento (azul): sin colores de sección — el
- * énfasis visual lo dan la tipografía y las cards "glass", no el color.
+ * Paleta neutra con un solo acento (azul por defecto, elegible en
+ * Herramientas → Apariencia, ver `theme/accents.ts`): sin colores de
+ * sección — el énfasis visual lo dan la tipografía y las cards "glass",
+ * no el color.
  */
 import { useColorScheme } from 'nativewind';
+
+import { useAccentStore } from '@/store/accent';
+import { getAccent } from './accents';
 
 export interface ThemeColors {
   bg: string;
@@ -56,10 +61,18 @@ export const lightColors: ThemeColors = {
 /** Fallback sincrónico (tema oscuro). Dentro de React preferí `useColors()`. */
 export const colors = darkColors;
 
-/** Paleta activa según el tema. Reacciona a los cambios de `colorScheme`. */
+/**
+ * Paleta activa: reacciona a claro/oscuro/sistema (`colorScheme`) y al
+ * acento elegido (`useAccentStore`) — ambos son independientes. El acento
+ * sólo pisa `primary`/`primaryFg`; el resto de la paleta no cambia.
+ */
 export function useColors(): ThemeColors {
   const { colorScheme } = useColorScheme();
-  return colorScheme === 'light' ? lightColors : darkColors;
+  const accentId = useAccentStore((s) => s.accent);
+  const scheme = colorScheme === 'light' ? 'light' : 'dark';
+  const base = scheme === 'light' ? lightColors : darkColors;
+  const accent = getAccent(accentId)[scheme];
+  return { ...base, primary: accent.primary, primaryFg: accent.primaryFg };
 }
 
 /** Ancho máximo del contenido en pantallas grandes (web desktop). */

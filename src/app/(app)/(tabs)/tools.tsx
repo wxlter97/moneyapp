@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Card } from '@/components/ui/Card';
@@ -9,8 +10,10 @@ import { Icon, type IconName } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { ACCENTS } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 import { useThemeStore, type ThemePref } from '@/store/theme';
+import { useAccentStore } from '@/store/accent';
 
 interface Tool {
   icon: IconName;
@@ -79,6 +82,10 @@ export default function ToolsScreen() {
   const version = Constants.expoConfig?.version ?? '—';
   const themePref = useThemeStore((s) => s.pref);
   const setThemePref = useThemeStore((s) => s.setPref);
+  const { colorScheme } = useColorScheme();
+  const scheme = colorScheme === 'light' ? 'light' : 'dark';
+  const accentId = useAccentStore((s) => s.accent);
+  const setAccent = useAccentStore((s) => s.setAccent);
 
   return (
     <View className="flex-1 bg-bg">
@@ -125,6 +132,29 @@ export default function ToolsScreen() {
 
         <Card title="Apariencia">
           <Segmented value={themePref} onChange={setThemePref} options={THEME_OPTIONS} />
+
+          <Text className="text-text-muted mb-2 mt-4 text-xs">Acento</Text>
+          <View className="flex-row flex-wrap gap-3">
+            {ACCENTS.map((accent) => {
+              const active = accent.id === accentId;
+              return (
+                <Pressable
+                  key={accent.id}
+                  onPress={() => {
+                    if (!active) haptics.selection();
+                    setAccent(accent.id);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={accent.label}
+                  style={{ backgroundColor: accent[scheme].primary }}
+                  className={`h-9 w-9 rounded-full border-2 ${
+                    active ? 'border-text' : 'border-transparent'
+                  }`}
+                />
+              );
+            })}
+          </View>
         </Card>
 
         <Text className="text-text-muted self-center text-xs">Versión {version}</Text>
