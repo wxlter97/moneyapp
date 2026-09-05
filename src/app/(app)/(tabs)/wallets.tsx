@@ -13,6 +13,7 @@ import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { useColors } from '@/theme';
 import { flattenTree } from '@/lib/wallets';
+import { useWorkspaceStore } from '@/store/workspace';
 
 export default function WalletsScreen() {
   const colors = useColors();
@@ -21,7 +22,10 @@ export default function WalletsScreen() {
   const reorder = useReorderWallets();
   const [reordering, setReordering] = useState(false);
 
-  const currency = wallets.data?.[0]?.currency ?? 'USD';
+  // La del workspace, no la de "la primera cartera" -- es la que ya viene
+  // convertido `netWorth.data.net` (ver Workspace.base_currency).
+  const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
+  const currency = activeWorkspace?.base_currency ?? 'USD';
   const nodes = useMemo(() => flattenTree(wallets.data ?? []), [wallets.data]);
   const loading = netWorth.isLoading || wallets.isLoading;
   const refreshing = (netWorth.isFetching || wallets.isFetching) && !loading;

@@ -28,7 +28,15 @@ export type IconName =
   | 'users'
   | 'copy'
   | 'camera'
-  | 'image';
+  | 'image'
+  | 'bolt'
+  | 'bell'
+  | 'lock'
+  | 'face-id'
+  | 'split'
+  | 'filter'
+  | 'bars'
+  | 'card';
 
 interface IconProps {
   name: IconName;
@@ -203,6 +211,55 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
           <Rect x={3} y={4} width={18} height={16} rx={2.5} {...p} />
           <Circle cx={9} cy={10} r={1.6} fill={color} stroke="none" />
           <Path d="M4.5 16.5l5-5 4 4 2.5-2.5 4.5 4.5" {...p} />
+        </>
+      )}
+      {name === 'bolt' && <Path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" {...p} strokeLinejoin="round" />}
+      {name === 'bell' && (
+        <>
+          <Path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z" {...p} />
+          <Path d="M10 20a2 2 0 0 0 4 0" {...p} />
+        </>
+      )}
+      {name === 'split' && (
+        <>
+          <Path d="M6 4v6a4 4 0 0 0 4 4h4" {...p} />
+          <Path d="M14 10l4 4-4 4" {...p} />
+          <Path d="M6 14v2a4 4 0 0 0 4 4" {...p} />
+        </>
+      )}
+      {name === 'filter' && (
+        <Path d="M4 5h16l-6 7.5V19l-4 2v-8.5L4 5z" {...p} strokeLinejoin="round" />
+      )}
+      {name === 'card' && (
+        <>
+          <Rect x={2.5} y={5.5} width={19} height={13} rx={2.5} {...p} />
+          <Line x1={2.5} y1={10} x2={21.5} y2={10} {...p} />
+          <Line x1={5.5} y1={14.5} x2={10} y2={14.5} {...p} />
+        </>
+      )}
+      {name === 'bars' && (
+        <>
+          <Line x1={5} y1={19} x2={5} y2={13} {...p} />
+          <Line x1={12} y1={19} x2={12} y2={7} {...p} />
+          <Line x1={19} y1={19} x2={19} y2={10} {...p} />
+        </>
+      )}
+      {name === 'lock' && (
+        <>
+          <Rect x={5} y={11} width={14} height={10} rx={2.5} {...p} />
+          <Path d="M8 11V7a4 4 0 0 1 8 0v4" {...p} />
+          <Circle cx={12} cy={16} r={1.4} fill={color} stroke="none" />
+        </>
+      )}
+      {name === 'face-id' && (
+        <>
+          <Path d="M4 8V6a2 2 0 0 1 2-2h2" {...p} />
+          <Path d="M20 8V6a2 2 0 0 0-2-2h-2" {...p} />
+          <Path d="M4 16v2a2 2 0 0 0 2 2h2" {...p} />
+          <Path d="M20 16v2a2 2 0 0 1-2 2h-2" {...p} />
+          <Line x1={9} y1={10} x2={9} y2={11} {...p} />
+          <Line x1={15} y1={10} x2={15} y2={11} {...p} />
+          <Path d="M9 15c.7.7 1.8 1 3 1s2.3-.3 3-1" {...p} />
         </>
       )}
     </Svg>

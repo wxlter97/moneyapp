@@ -34,6 +34,7 @@ const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
   email_import: 'correo',
   recurring: 'recurrente',
   installment: 'cuota',
+  quick_add: 'atajo',
 };
 
 /**
@@ -110,6 +111,9 @@ export function TransactionRow({
             </Text>
             {txn.has_receipt ? (
               <Icon name="camera" size={11} color={colors.textMuted} />
+            ) : null}
+            {txn.split_group ? (
+              <Icon name="split" size={11} color={colors.textMuted} />
             ) : null}
           </View>
           <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>

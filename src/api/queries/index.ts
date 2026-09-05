@@ -17,8 +17,10 @@ import type {
   ConfirmEmailImportInput,
   EmailImportStatus,
   InstallmentPurchaseInput,
+  NotificationPreferences,
   RecurringExpenseInput,
   TransactionInput,
+  TransactionSplitPart,
   WalletInput,
 } from '@/api/types';
 import { currentYearMonth, type YearMonth } from '@/lib/date';
@@ -78,6 +80,47 @@ export function useRotateInboundToken() {
   });
 }
 
+/** Moneda de los totales agregados (patrimonio, presupuesto, flujo). Solo owner. */
+export function useSetBaseCurrency() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, currency }: { id: string; currency: string }) =>
+      res.workspaces.setBaseCurrency(id, currency),
+    onSuccess: async () => {
+      invalidate(); // los reportes cacheados quedan en la moneda vieja
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+// --- tasas de cambio (workspace activo) -------------------------------
+export function useExchangeRates() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).exchangeRates(),
+    queryFn: () => res.exchangeRates.list(),
+    enabled: !!ws,
+  });
+}
+
+export function useSetExchangeRate() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ currency, rate }: { currency: string; rate: string }) =>
+      res.exchangeRates.set(currency, rate),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteExchangeRate() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.exchangeRates.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
 // --- miembros del workspace activo ----------------------------------------
 export function useMemberships() {
   const ws = useActiveWs();
@@ -123,6 +166,50 @@ export function useRemoveMembership() {
   });
 }
 
+// --- preferencias de notificaciones (por usuario, no por workspace) ----
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: qk.notificationPreferences(),
+    queryFn: res.notificationPreferences.get,
+  });
+}
+
+export function useUpdateNotificationPreferences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<NotificationPreferences>) =>
+      res.notificationPreferences.update(input),
+    onSuccess: (data) => qc.setQueryData(qk.notificationPreferences(), data),
+  });
+}
+
+// --- tokens personales (Atajos de Apple Shortcuts) --------------------
+export function usePersonalTokens() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).personalTokens(),
+    queryFn: () => res.personalTokens.list(),
+    enabled: !!ws,
+  });
+}
+
+export function useCreatePersonalToken() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ name, walletId }: { name: string; walletId: string }) =>
+      res.personalTokens.create(name, walletId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletePersonalToken() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.personalTokens.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
 // --- carteras (wallets) --------------------------------------------
 export function useWallets(params?: res.WalletListParams) {
   const ws = useActiveWs();
@@ -156,6 +243,38 @@ export function useUpdateWallet() {
     mutationFn: ({ id, input }: { id: string; input: Partial<WalletInput> }) =>
       res.wallets.update(id, input),
     onSuccess: invalidate,
+  });
+}
+
+/** Solo tiene sentido en una meta de ahorro -- el caller pasa `enabled`
+ * (típicamente `purpose === 'savings' && !!goal_amount`) para no pegarle a
+ * un 404 en cualquier otra cartera. */
+export function useGoalProjection(id: string | undefined, enabled: boolean) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletProjection(id ?? ''),
+    queryFn: () => res.wallets.projection(id!),
+    enabled: !!ws && !!id && enabled,
+  });
+}
+
+/** Estado de cuenta de una tarjeta de crédito a `asOf` (hoy si se omite). */
+export function useCreditCardStatement(id: string | undefined, asOf?: string) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletStatement(id ?? '', asOf),
+    queryFn: () => res.wallets.statement(id!, asOf),
+    enabled: !!ws && !!id,
+  });
+}
+
+/** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
+export function useCreditCardStatements() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletStatements(),
+    queryFn: () => res.wallets.statements(),
+    enabled: !!ws,
   });
 }
 
@@ -329,6 +448,15 @@ export function useReceiptImage(id: string | undefined, hasReceipt: boolean) {
   });
 }
 
+export function useSplitTransaction() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, parts }: { id: string; parts: TransactionSplitPart[] }) =>
+      res.transactions.split(id, parts),
+    onSuccess: invalidate,
+  });
+}
+
 // --- presupuestos --------------------------------------------------
 export function useCategoryBudgets(ym: YearMonth = currentYearMonth()) {
   const ws = useActiveWs();
@@ -404,6 +532,24 @@ export function useDeleteRecurringExpense() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({
     mutationFn: (id: string) => res.recurringExpenses.remove(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRecurringSuggestions() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).recurringSuggestions(),
+    queryFn: res.recurringExpenses.suggestions,
+    enabled: !!ws,
+  });
+}
+
+export function useDismissRecurringSuggestion() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ category, wallet, amount }: { category: string; wallet: string; amount: string }) =>
+      res.recurringExpenses.dismissSuggestion(category, wallet, amount),
     onSuccess: invalidate,
   });
 }
@@ -539,6 +685,15 @@ export function useCashflow(months = 6) {
   return useQuery({
     queryKey: qk.ws(ws).reportCashflow(months),
     queryFn: () => res.reports.cashflow(months),
+    enabled: !!ws,
+  });
+}
+
+export function useCategoryTrends(months = 6) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).reportCategoryTrends(months),
+    queryFn: () => res.reports.categoryTrends(months),
     enabled: !!ws,
   });
 }

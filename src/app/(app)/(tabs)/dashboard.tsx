@@ -25,6 +25,7 @@ import { SubTabs } from '@/components/SubTabs';
 import { SummaryTriple } from '@/components/SummaryTriple';
 import { TransactionRow } from '@/components/TransactionRow';
 import { WalletRow } from '@/components/WalletRow';
+import { AmountInput } from '@/components/ui/AmountInput';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
@@ -37,6 +38,7 @@ import { currentYearMonth, formatDayHeader, formatShortDate, monthRange } from '
 import { toNumber } from '@/lib/money';
 import { groupByDay, summarizeByType } from '@/lib/transactions';
 import { useSnackbarStore } from '@/store/snackbar';
+import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -46,8 +48,11 @@ export default function OverviewScreen() {
   const [month, setMonth] = useState(currentYearMonth);
 
   const netWorth = useNetWorth();
-  const wallets = useWallets();
-  const currency = wallets.data?.[0]?.currency ?? 'USD';
+  // La del workspace (ver Workspace.base_currency): es en la que ya vienen
+  // convertidos los totales agregados -- nunca la de "la primera cartera",
+  // que ni siquiera es la moneda correcta si hay más de una en uso.
+  const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
+  const currency = activeWorkspace?.base_currency ?? 'USD';
 
   return (
     <View className="flex-1 bg-bg">
@@ -85,7 +90,7 @@ export default function OverviewScreen() {
       {tab === 'resumen' ? (
         <ResumenTab currency={currency} />
       ) : (
-        <ListaTab month={month} onMonth={setMonth} />
+        <ListaTab month={month} onMonth={setMonth} currency={currency} />
       )}
 
       <AddTransactionFab />
@@ -274,12 +279,17 @@ type TypeFilter = 'all' | 'income' | 'expense' | 'transfer';
 function ListaTab({
   month,
   onMonth,
+  currency,
 }: {
   month: ReturnType<typeof currentYearMonth>;
   onMonth: (m: ReturnType<typeof currentYearMonth>) => void;
+  /** Moneda base del workspace (ver Workspace.base_currency). */
+  currency: string;
 }) {
+  const colors = useColors();
   const range = useMemo(() => monthRange(month), [month]);
   const txQuery = useTransactions({ date_after: range.from, date_before: range.to });
+  const walletsQuery = useWallets();
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
   const deleteTxn = useDeleteTransaction();
@@ -287,26 +297,63 @@ function ListaTab({
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [walletFilter, setWalletFilter] = useState<string | null>(null);
+  const [amountMin, setAmountMin] = useState('0.00');
+  const [amountMax, setAmountMax] = useState('0.00');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   // Ocultas de inmediato al deslizar-borrar; el borrado real llega con el
   // timeout del snackbar si nadie toca "Deshacer" antes.
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
 
+  // Cuántos filtros avanzados (aparte de texto y tipo, que ya se ven en su
+  // propio control) están activos -- para el numerito sobre el ícono.
+  const activeFilterCount =
+    (walletFilter ? 1 : 0) + (toNumber(amountMin) > 0 ? 1 : 0) + (toNumber(amountMax) > 0 ? 1 : 0);
+
+  function clearAdvancedFilters() {
+    haptics.tap();
+    setWalletFilter(null);
+    setAmountMin('0.00');
+    setAmountMax('0.00');
+  }
+
   const allItems = txQuery.data ?? [];
   const items = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const min = toNumber(amountMin);
+    const max = toNumber(amountMax);
     return allItems.filter((t) => {
       if (pendingDeleteIds.has(t.id)) return false;
       if (typeFilter !== 'all' && t.type !== typeFilter) return false;
+      if (walletFilter && t.wallet !== walletFilter) return false;
+      const amount = toNumber(t.amount);
+      if (min > 0 && amount < min) return false;
+      if (max > 0 && amount > max) return false;
       if (!q) return true;
       const cat = t.category ? categories.get(t.category)?.name : undefined;
       const haystack = `${t.description ?? ''} ${cat ?? ''} ${wallets.get(t.wallet)?.name ?? ''}`;
       return haystack.toLowerCase().includes(q);
     });
-  }, [allItems, pendingDeleteIds, typeFilter, search, categories, wallets]);
+  }, [
+    allItems,
+    pendingDeleteIds,
+    typeFilter,
+    walletFilter,
+    amountMin,
+    amountMax,
+    search,
+    categories,
+    wallets,
+  ]);
 
-  const totals = useMemo(() => summarizeByType(items), [items]);
+  // El total de arriba se suma sin convertir (no hay tasas acá) -- se
+  // limita a la moneda base para no mezclar montos de otras carteras; cada
+  // fila de la lista de abajo sí muestra su moneda real, sea cual sea.
+  const totals = useMemo(
+    () => summarizeByType(items.filter((t) => t.currency === currency)),
+    [items, currency],
+  );
   const days = useMemo(() => groupByDay(items), [items]);
-  const currency = items[0]?.currency ?? allItems[0]?.currency ?? 'USD';
 
   const refresh = usePullRefresh(txQuery.isFetching && !txQuery.isLoading, () => txQuery.refetch());
 
@@ -347,7 +394,35 @@ function ListaTab({
       <MonthSwitcher value={month} onChange={onMonth} />
       <SummaryTriple income={totals.income} expenses={totals.expenses} currency={currency} />
 
-      <SearchField value={search} onChange={setSearch} placeholder="Buscar movimientos" />
+      <View className="flex-row items-center gap-2">
+        <View className="flex-1">
+          <SearchField value={search} onChange={setSearch} placeholder="Buscar movimientos" />
+        </View>
+        <Pressable
+          onPress={() => {
+            haptics.tap();
+            setFiltersOpen((v) => !v);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Más filtros"
+          accessibilityState={{ selected: filtersOpen }}
+          className={`h-11 w-11 items-center justify-center rounded-full ${
+            filtersOpen || activeFilterCount > 0 ? 'bg-primary' : 'bg-surface-2'
+          } active:opacity-70`}
+        >
+          <Icon
+            name="filter"
+            size={16}
+            color={filtersOpen || activeFilterCount > 0 ? colors.primaryFg : colors.textMuted}
+          />
+          {activeFilterCount > 0 ? (
+            <View className="bg-expense absolute -right-0.5 -top-0.5 h-4 w-4 items-center justify-center rounded-full">
+              <Text className="text-[9px] font-bold text-white">{activeFilterCount}</Text>
+            </View>
+          ) : null}
+        </Pressable>
+      </View>
+
       <Segmented
         value={typeFilter}
         onChange={setTypeFilter}
@@ -358,6 +433,52 @@ function ListaTab({
           { value: 'transfer', label: 'Transfer.' },
         ]}
       />
+
+      {filtersOpen ? (
+        <FadeInView>
+          <View className="gap-3 rounded-2xl border border-border/60 bg-surface p-3">
+            <View className="gap-1.5">
+              <Text className="text-text-muted text-xs uppercase tracking-wide">Cartera</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
+                <FilterChip
+                  label="Todas"
+                  active={!walletFilter}
+                  onPress={() => setWalletFilter(null)}
+                />
+                {(walletsQuery.data ?? []).map((w) => (
+                  <FilterChip
+                    key={w.id}
+                    label={w.name}
+                    active={walletFilter === w.id}
+                    onPress={() => setWalletFilter(walletFilter === w.id ? null : w.id)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <AmountInput label="Monto mín." currency={currency} value={amountMin} onChangeText={setAmountMin} />
+              </View>
+              <View className="flex-1">
+                <AmountInput label="Monto máx." currency={currency} value={amountMax} onChangeText={setAmountMax} />
+              </View>
+            </View>
+
+            {activeFilterCount > 0 ? (
+              <Pressable
+                onPress={clearAdvancedFilters}
+                accessibilityRole="button"
+                className="items-center py-1 active:opacity-60"
+              >
+                <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                  Limpiar filtros
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </FadeInView>
+      ) : null}
 
       {txQuery.isLoading ? (
         <LoadingState />
@@ -392,5 +513,35 @@ function ListaTab({
         ))
       )}
     </ScrollView>
+  );
+}
+
+/** Pastilla de una sola opción para el panel de filtros avanzados (cartera). */
+function FilterChip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        haptics.selection();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`Cartera: ${label}`}
+      accessibilityState={{ selected: active }}
+      className={`rounded-full border px-3 py-1.5 active:opacity-70 ${
+        active ? 'border-primary bg-primary' : 'border-border bg-surface-2'
+      }`}
+    >
+      <Text className={active ? 'text-primary-fg text-xs font-semibold' : 'text-text-muted text-xs'} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }

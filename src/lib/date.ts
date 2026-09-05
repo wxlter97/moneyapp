@@ -1,4 +1,4 @@
-import type { ISODate } from '@/api/types';
+import type { ISODate, ISODateTime } from '@/api/types';
 
 export interface YearMonth {
   year: number;
@@ -32,6 +32,15 @@ export function formatYearMonth({ year, month }: YearMonth): string {
   return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${year}`;
 }
 
+const MONTHS_SHORT_ES = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+/** "ago" -- para etiquetas de eje en gráficos donde no entra el nombre completo. */
+export function formatMonthShort({ month }: YearMonth): string {
+  return MONTHS_SHORT_ES[month - 1] ?? '';
+}
+
 /** Primer y último día del mes como ISODate (YYYY-MM-DD). */
 export function monthRange({ year, month }: YearMonth): { from: ISODate; to: ISODate } {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -52,6 +61,21 @@ export function formatShortDate(iso: ISODate): string {
   const [y, m, d] = iso.split('-').map(Number);
   if (!y || !m || !d) return iso;
   return `${d} ${MONTHS_ES[m - 1]?.slice(0, 3) ?? ''}`;
+}
+
+/** "3 de septiembre de 2026" — fecha completa, para encabezados destacados. */
+export function formatLongDate(iso: ISODate): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return `${d} de ${MONTHS_ES[m - 1] ?? ''} de ${y}`;
+}
+
+/** "31 ago, 14:05" — fecha y hora, p. ej. el último uso de un token. */
+export function formatDateTime(iso: ISODateTime): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getDate()} ${MONTHS_ES[d.getMonth()]?.slice(0, 3) ?? ''}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 const WEEKDAYS_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];

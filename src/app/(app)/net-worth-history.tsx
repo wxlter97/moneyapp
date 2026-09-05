@@ -12,6 +12,7 @@ import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { formatYearMonth } from '@/lib/date';
 import { toNumber } from '@/lib/money';
+import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -29,7 +30,10 @@ export default function NetWorthHistoryScreen() {
   const ascending = useMemo(() => [...(q.data ?? [])].reverse(), [q.data]);
   const latest = q.data?.[0];
   const previous = q.data?.[1];
-  const currency = 'USD';
+  // Ver Workspace.base_currency: es en la que `close_month()` ya convierte
+  // cada MonthlySnapshot al guardarlo.
+  const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
+  const currency = activeWorkspace?.base_currency ?? 'USD';
 
   const delta = latest && previous ? toNumber(latest.total_net_worth) - toNumber(previous.total_net_worth) : null;
 

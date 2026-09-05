@@ -46,6 +46,13 @@
           "cameraPermission": "Budget usa la cámara para fotografiar el recibo de una transacción.",
           "photosPermission": "Budget accede a tus fotos para adjuntar el recibo de una transacción."
         }
+      ],
+      "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Budget usa Face ID para desbloquear la app en vez de un PIN."
+        }
       ]
     ],
     "experiments": {

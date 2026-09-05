@@ -57,9 +57,19 @@ export interface Workspace {
   name: string;
   role: WorkspaceRole;
   member_count: number;
+  /** Moneda en la que se expresan los totales agregados (patrimonio, presupuesto, flujo). */
+  base_currency: string;
   inbound_token: string;
   inbound_email: string;
   created_at: ISODateTime;
+  updated_at: ISODateTime;
+}
+
+/** Tasa manual: 1 `currency` = `rate_to_base` de la moneda base del workspace. */
+export interface ExchangeRate {
+  id: UUID;
+  currency: string;
+  rate_to_base: string;
   updated_at: ISODateTime;
 }
 
@@ -70,6 +80,31 @@ export interface Membership {
   user_email: string;
   role: Exclude<WorkspaceRole, ''>;
   joined_at: ISODateTime;
+}
+
+/**
+ * Credencial de larga duración para un Atajo de Apple Shortcuts (u otro
+ * cliente externo). `token` sólo viene poblado en la respuesta de creación
+ * — después ni el dueño puede volver a leer el valor real, sólo revocarlo.
+ */
+export interface PersonalAccessToken {
+  id: UUID;
+  name: string;
+  wallet: UUID;
+  wallet_name: string;
+  prefix: string;
+  token: string | null;
+  last_used_at: ISODateTime | null;
+  created_at: ISODateTime;
+}
+
+/** Qué recordatorios push quiere recibir el usuario (una fila, no por workspace). */
+export interface NotificationPreferences {
+  remind_recurring: boolean;
+  remind_installments: boolean;
+  warn_budget: boolean;
+  /** % del presupuesto de una categoría a partir del cual avisar (50-100). */
+  budget_threshold_pct: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -203,7 +238,8 @@ export type TransactionSource =
   | 'manual'
   | 'email_import'
   | 'recurring'
-  | 'installment';
+  | 'installment'
+  | 'quick_add';
 
 export interface Transaction {
   id: UUID;
@@ -223,9 +259,18 @@ export interface Transaction {
   counts_toward_budget: boolean;
   source: TransactionSource;
   is_recurring: boolean;
+  /** Compartido por todas las partes de una transacción dividida; null si no lo está. */
+  split_group: UUID | null;
   created_by: number | null;
   created_at: ISODateTime;
   updated_at: ISODateTime;
+}
+
+/** Una parte al dividir una transacción — ver `transactions.split`. */
+export interface TransactionSplitPart {
+  category: UUID;
+  amount: Money;
+  description?: string;
 }
 
 /**
@@ -406,6 +451,8 @@ export interface ConfirmEmailImportInput {
 export interface NetWorthBreakdown {
   net: Money;
   by_purpose: Record<WalletPurpose, Money>;
+  /** Moneda en la que ya vienen convertidos `net`/`by_purpose`. */
+  base_currency: string;
 }
 
 export interface BudgetRow {
@@ -431,6 +478,7 @@ export interface BudgetGroup {
 export interface BudgetReport {
   year: number;
   month: number;
+  base_currency: string;
   rows: BudgetRow[];
   groups: BudgetGroup[];
   totals: { budgeted: Money; spent: Money; remaining: Money };
@@ -471,8 +519,80 @@ export interface SpendRow {
 export interface DashboardSummary {
   month: CashflowPoint;
   net_worth: Money;
+  base_currency: string;
   pending_email_imports: number;
   top_expense_categories: SpendRow[];
+}
+
+export interface CategoryTrend {
+  category: UUID;
+  category_name: string | null;
+  /** Un monto por mes, mismo orden que `months` de la respuesta. */
+  amounts: Money[];
+  /** Mes en curso vs. el anterior -- puede ser negativo (bajó). */
+  change: Money;
+  change_pct: number | null;
+}
+
+export interface CategoryTrendsResponse {
+  months: { year: number; month: number }[];
+  /** Ordenadas: la que más creció primero. */
+  categories: CategoryTrend[];
+}
+
+/** Candidata a recurrente detectada en el historial -- ver `recurring-expenses/suggestions/`. */
+export interface RecurringSuggestion {
+  type: 'income' | 'expense';
+  category: UUID;
+  category_name: string;
+  wallet: UUID;
+  wallet_name: string;
+  suggested_amount: Money;
+  occurrences: number;
+  last_date: ISODate;
+  suggested_next_due_date: ISODate;
+}
+
+/** Proyección de una meta de ahorro -- ver `wallets/{id}/projection/`. */
+export interface GoalProjection {
+  remaining: Money;
+  monthly_rate: Money | null;
+  months_to_goal: number | null;
+  projected_date: ISODate | null;
+  on_track: boolean | null;
+}
+
+/** Compra a plazo que aporta a la deuda de la tarjeta en un estado de cuenta. */
+export interface StatementInstallmentLine {
+  id: UUID;
+  description: string;
+  installments_due: number;
+  installments_total: number;
+  amount_due: Money;
+}
+
+/** Estado de cuenta de una tarjeta de crédito -- ver `wallets/{id}/statement/`. */
+export interface CreditCardStatement {
+  cutoff_date: ISODate;
+  next_cutoff_date: ISODate;
+  payment_due_date: ISODate | null;
+  spent: Money;
+  paid: Money;
+  installments_due: Money;
+  /** Acumulado desde que existe la tarjeta: lo sin pagar de un corte anterior sigue apareciendo. */
+  total_due: Money;
+  /** Actividad del período abierto (desde el corte hasta la fecha consultada), aún no vencida. */
+  current_period_spent: Money;
+  current_period_paid: Money;
+  installment_lines: StatementInstallmentLine[];
+}
+
+/** Fila del resumen `wallets/statements/` (todas las tarjetas del workspace). */
+export interface CreditCardStatementSummary extends CreditCardStatement {
+  wallet_id: UUID;
+  wallet_name: string;
+  currency: string;
+  card_last4: string | null;
 }
 
 // ---------------------------------------------------------------------------

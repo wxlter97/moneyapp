@@ -12,21 +12,31 @@ import type {
   CategoryBudget,
   CategoryBudgetInput,
   CategoryInput,
+  CategoryTrendsResponse,
   ConfirmEmailImportInput,
+  CreditCardStatement,
+  CreditCardStatementSummary,
   DashboardSummary,
   EmailImportLog,
   EmailImportStatus,
+  ExchangeRate,
+  GoalProjection,
   InstallmentPurchase,
   InstallmentPurchaseInput,
   Membership,
+  Money,
   MonthlySnapshot,
   NetWorthBreakdown,
+  NotificationPreferences,
   Paginated,
+  PersonalAccessToken,
   RecurringExpense,
   RecurringExpenseInput,
+  RecurringSuggestion,
   ScheduledItem,
   Transaction,
   TransactionInput,
+  TransactionSplitPart,
   Wallet,
   WalletInput,
   WalletKind,
@@ -75,6 +85,20 @@ export const workspaces = {
     api
       .post<Workspace>(`/workspaces/${id}/rotate-inbound-token/`, {}, { skipWorkspace: true })
       .then((r) => r.data),
+  /** Moneda de los totales agregados (patrimonio, presupuesto, flujo). Solo owner. */
+  setBaseCurrency: (id: string, base_currency: string) =>
+    api
+      .patch<Workspace>(`/workspaces/${id}/`, { base_currency }, { skipWorkspace: true })
+      .then((r) => r.data),
+};
+
+// --- tasas de cambio (workspace activo) ------------------------------
+export const exchangeRates = {
+  list: () => fetchAll<ExchangeRate>('/exchange-rates/'),
+  /** Upsert: cargar una moneda ya configurada actualiza su tasa. */
+  set: (currency: string, rate_to_base: string) =>
+    api.post<ExchangeRate>('/exchange-rates/', { currency, rate_to_base }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/exchange-rates/${id}/`).then(() => undefined),
 };
 
 // --- miembros del workspace activo -----------------------------------------
@@ -86,6 +110,40 @@ export const memberships = {
   updateRole: (id: string, role: Exclude<WorkspaceRole, ''>) =>
     api.patch<Membership>(`/memberships/${id}/`, { role }).then((r) => r.data),
   remove: (id: string) => api.delete(`/memberships/${id}/`).then(() => undefined),
+};
+
+// --- tokens personales (Atajos de Apple Shortcuts) ----------------------
+export const personalTokens = {
+  list: () => fetchAll<PersonalAccessToken>('/personal-tokens/'),
+  /** `token` en la respuesta trae el valor crudo — sólo esta vez. */
+  create: (name: string, walletId: string) =>
+    api
+      .post<PersonalAccessToken>('/personal-tokens/', { name, wallet: walletId })
+      .then((r) => r.data),
+  remove: (id: string) => api.delete(`/personal-tokens/${id}/`).then(() => undefined),
+};
+
+// --- notificaciones push (sin X-Workspace-ID: son por usuario) --------
+export const pushDevices = {
+  register: (token: string, platform: 'ios' | 'android') =>
+    api
+      .post('/push-devices/', { token, platform }, { skipWorkspace: true })
+      .then(() => undefined),
+  unregister: (token: string) =>
+    api
+      .post('/push-devices/unregister/', { token }, { skipWorkspace: true })
+      .then(() => undefined),
+};
+
+export const notificationPreferences = {
+  get: () =>
+    api
+      .get<NotificationPreferences>('/notification-preferences/', { skipWorkspace: true })
+      .then((r) => r.data),
+  update: (input: Partial<NotificationPreferences>) =>
+    api
+      .patch<NotificationPreferences>('/notification-preferences/', input, { skipWorkspace: true })
+      .then((r) => r.data),
 };
 
 // --- carteras (wallets) -------------------------------------------------
@@ -112,6 +170,17 @@ export const wallets = {
   /** Fija `sort_order` según el orden de `ids`. */
   reorder: (ids: string[]) =>
     api.post<{ reordered: number }>('/wallets/reorder/', { ids }).then((r) => r.data),
+  /** Solo tiene sentido en una cartera de ahorro con meta -- 404 si no. */
+  projection: (id: string) =>
+    api.get<GoalProjection>(`/wallets/${id}/projection/`).then((r) => r.data),
+  /** Solo tiene sentido en una tarjeta de crédito con fecha de corte -- 404 si no. */
+  statement: (id: string, asOf?: string) =>
+    api
+      .get<CreditCardStatement>(`/wallets/${id}/statement/`, { params: asOf ? { as_of: asOf } : undefined })
+      .then((r) => r.data),
+  /** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
+  statements: () =>
+    api.get<CreditCardStatementSummary[]>('/wallets/statements/').then((r) => r.data),
 };
 
 // --- categorías / presupuestos ------------------------------------------
@@ -152,6 +221,14 @@ export const recurringExpenses = {
     api.patch<RecurringExpense>(`/recurring-expenses/${id}/`, input).then((r) => r.data),
   remove: (id: string) =>
     api.delete(`/recurring-expenses/${id}/`).then(() => undefined),
+  /** Candidatas detectadas en el historial ("esto parece recurrente"). */
+  suggestions: () =>
+    api.get<RecurringSuggestion[]>('/recurring-expenses/suggestions/').then((r) => r.data),
+  /** "No, gracias" a una sugerencia -- no se le vuelve a mostrar. */
+  dismissSuggestion: (category: string, wallet: string, amount: Money) =>
+    api
+      .post('/recurring-expenses/dismiss-suggestion/', { category, wallet, amount })
+      .then(() => undefined),
 };
 
 // --- compras a plazo (cuotas) ----------------------------------------
@@ -235,6 +312,11 @@ export const transactions = {
         data: r.data,
         contentType: (r.headers['content-type'] as string | undefined) ?? 'image/jpeg',
       })),
+
+  /** Reemplaza la transacción por N partes (cada una con su categoría y
+   * monto propios) que tienen que sumar exactamente el monto original. */
+  split: (id: string, parts: TransactionSplitPart[]) =>
+    api.post<Transaction[]>(`/transactions/${id}/split/`, { parts }).then((r) => r.data),
 };
 
 // --- snapshots mensuales (solo lectura) -------------------------------
@@ -266,6 +348,12 @@ export const reports = {
 
   cashflow: (months = 6) =>
     api.get<CashflowPoint[]>('/reports/cashflow/', { params: { months } }).then((r) => r.data),
+
+  /** Gasto por categoría mes a mes + cuáles crecieron más. */
+  categoryTrends: (months = 6) =>
+    api
+      .get<CategoryTrendsResponse>('/reports/category-trends/', { params: { months } })
+      .then((r) => r.data),
 
   /** Recurrentes + cuotas próximas, sin materializarlas. Fechas ISO. */
   scheduled: (params?: { since?: string; until?: string }) =>

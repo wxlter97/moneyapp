@@ -8,7 +8,9 @@ import { create } from 'zustand';
 
 import * as authApi from '@/api/auth';
 import { loadTokens, registerAuthFailureHandler } from '@/api/client';
+import { pushDevices } from '@/api/resources';
 import type { User } from '@/api/types';
+import { getCachedPushDevice, clearCachedPushDevice } from '@/lib/notifications';
 import { useWorkspaceStore } from './workspace';
 
 type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
@@ -54,6 +56,15 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   signOut: async () => {
+    // Antes de limpiar los tokens: el endpoint de baja pide el mismo auth
+    // que el resto del API. Best-effort -- si falla, el token simplemente
+    // sigue registrado contra un usuario que ya cerró sesión en este
+    // dispositivo (inofensivo: sólo implica un push de más algún día).
+    const device = getCachedPushDevice();
+    if (device) {
+      await pushDevices.unregister(device.token).catch(() => {});
+      clearCachedPushDevice();
+    }
     await authApi.logout();
     useWorkspaceStore.getState().reset();
     set({ status: 'anonymous', user: null });

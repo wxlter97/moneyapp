@@ -45,10 +45,40 @@ const TOOLS: Tool[] = [
     onPress: () => router.push('/imports'),
   },
   {
+    icon: 'bolt',
+    label: 'Atajos',
+    hint: 'Agregar gastos desde Apple Shortcuts',
+    onPress: () => router.push('/shortcuts'),
+  },
+  {
+    icon: 'bell',
+    label: 'Notificaciones',
+    hint: 'Recordatorios de recurrentes, cuotas y presupuesto',
+    onPress: () => router.push('/notifications'),
+  },
+  {
+    icon: 'lock',
+    label: 'Seguridad',
+    hint: 'Bloqueo con Face ID o PIN',
+    onPress: () => router.push('/security'),
+  },
+  {
     icon: 'trending',
     label: 'Patrimonio',
     hint: 'Evolución mes a mes',
     onPress: () => router.push('/net-worth-history'),
+  },
+  {
+    icon: 'bars',
+    label: 'Tendencias',
+    hint: 'Ingresos, gastos y qué categorías crecieron',
+    onPress: () => router.push('/trends'),
+  },
+  {
+    icon: 'swap',
+    label: 'Monedas',
+    hint: 'Moneda base y tasas de cambio',
+    onPress: () => router.push('/currencies'),
   },
   {
     icon: 'repeat',
@@ -61,6 +91,12 @@ const TOOLS: Tool[] = [
     label: 'Compras a plazo',
     hint: 'Pagos en cuotas',
     onPress: () => router.push('/installments'),
+  },
+  {
+    icon: 'card',
+    label: 'Estado de cuenta',
+    hint: 'Cuánto debes en tus tarjetas',
+    onPress: () => router.push('/statements'),
   },
   {
     icon: 'download',

@@ -107,6 +107,21 @@ expanden en el flujo (empujan el contenido); las pantallas modales de verdad
 (`transaction/new`, `transaction/[id]`) sí son rutas `presentation: 'modal'` de
 Expo Router.
 
+### Notificaciones push
+
+`lib/notifications.ts` pide permiso y registra el token de Expo Push contra
+`/api/v1/push-devices/` al iniciar sesión (`(app)/_layout.tsx`); Herramientas →
+Notificaciones maneja las preferencias y el estado del permiso.
+
+**No van a llegar avisos probando con Expo Go**: desde el SDK 53, las push
+notifications remotas se sacaron de Expo Go (iOS y Android) — hace falta un
+[development build](https://docs.expo.dev/develop/development-builds/introduction/).
+Tampoco andan en web (`Platform.OS === 'web'` corta antes de intentar nada).
+Y para que `getExpoPushTokenAsync` funcione hace falta un proyecto EAS: corré
+`eas init` una vez y confirmá que quede `extra.eas.projectId` en `app.json`
+— sin eso, el registro falla en silencio (queda logueado un warning) y
+`registerForPushNotificationsAsync()` devuelve `null`.
+
 Pruebas: `npm test` (Jest, 17 tests sobre `lib/` y el cliente de API).
 `npm run typecheck` para `tsc --noEmit`.
 

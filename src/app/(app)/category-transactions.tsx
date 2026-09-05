@@ -13,6 +13,7 @@ import { SummaryTriple } from '@/components/SummaryTriple';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { formatDayHeader, formatYearMonth, monthRange } from '@/lib/date';
 import { groupByDay, summarizeByType } from '@/lib/transactions';
+import { useWorkspaceStore } from '@/store/workspace';
 
 type Scope = 'month' | 'all';
 
@@ -42,10 +43,18 @@ export default function CategoryTransactionsScreen() {
   const { map: wallets } = useWalletMap();
   const cat = categories.get(category);
 
+  const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
+  const currency = activeWorkspace?.base_currency ?? 'USD';
+
   const items = query.data ?? [];
-  const totals = useMemo(() => summarizeByType(items), [items]);
+  // El total de arriba se suma sin convertir (no hay tasas acá) -- se
+  // limita a la moneda base para no mezclar montos de otras carteras; cada
+  // fila de la lista de abajo sí muestra su moneda real, sea cual sea.
+  const totals = useMemo(
+    () => summarizeByType(items.filter((t) => t.currency === currency)),
+    [items, currency],
+  );
   const days = useMemo(() => groupByDay(items), [items]);
-  const currency = items[0]?.currency ?? 'USD';
 
   const refresh = usePullRefresh(query.isFetching && !query.isLoading, () => query.refetch());
 

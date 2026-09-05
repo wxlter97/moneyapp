@@ -121,7 +121,11 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     (isTransfer ? !!toWalletId && toWalletId !== walletId : !!categoryId) &&
     !busy;
 
-  const currency = walletsQ.data?.[0]?.currency ?? 'USD';
+  // La de la cartera elegida, no la primera de la lista -- el backend igual
+  // ignora cualquier moneda del cliente y usa siempre la de `wallet`
+  // (ver Transaction.save()), pero mostrar la ajena confundía mientras se
+  // tipeaba el monto.
+  const currency = walletsQ.data?.find((w) => w.id === walletId)?.currency ?? 'USD';
   const showBudgetSwitch = type === 'expense' || (isTransfer && !!categoryId);
 
   function onChangeType(next: TransactionType) {
@@ -351,6 +355,28 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           disabled={!canSubmit}
           onPress={onSubmit}
         />
+
+        {editing && !isTransfer && !confirmingDelete ? (
+          existing.data?.split_group ? (
+            <Text className="text-text-muted text-center text-xs">
+              Es parte de una transacción dividida.
+            </Text>
+          ) : (
+            <Pressable
+              onPress={() => {
+                haptics.tap();
+                router.push(`/split-transaction?id=${transactionId}`);
+              }}
+              disabled={busy}
+              className="items-center py-2 active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                Dividir en varias categorías
+              </Text>
+            </Pressable>
+          )
+        ) : null}
 
         {editing && !confirmingDelete ? (
           <Pressable

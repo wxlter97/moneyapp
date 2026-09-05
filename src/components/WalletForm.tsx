@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import {
   useArchiveWallet,
   useCreateWallet,
   useDeleteWallet,
+  useGoalProjection,
   useUnarchiveWallet,
   useUpdateWallet,
   useWallet,
@@ -25,7 +27,9 @@ import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { muteColor } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
-import { toNumber } from '@/lib/money';
+import { CURRENCIES } from '@/lib/currency';
+import { formatYearMonth } from '@/lib/date';
+import { formatMoney, toNumber } from '@/lib/money';
 import { WALLET_COLORS } from '@/lib/wallets';
 
 interface WalletFormProps {
@@ -58,6 +62,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const unarchive = useUnarchiveWallet();
 
   const [name, setName] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [purpose, setPurpose] = useState<WalletPurpose>('spending');
   const [kind, setKind] = useState<WalletKind>('bank');
   const [color, setColor] = useState('');
@@ -87,6 +92,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
     if (!editing || prefilled || !existing.data) return;
     const w = existing.data;
     setName(w.name);
+    setCurrency(w.currency);
     setPurpose(w.purpose);
     setKind(w.kind);
     setColor(w.color ?? '');
@@ -170,6 +176,9 @@ export function WalletForm({ walletId }: WalletFormProps) {
         : null;
     const payload: WalletInput = {
       name: name.trim(),
+      // Sólo al crear: cambiarla después dejaría el saldo ya acumulado (y
+      // las transacciones ya registradas) en la moneda vieja, sin convertir.
+      ...(!editing && { currency }),
       purpose,
       kind,
       color: color || '',
@@ -239,6 +248,19 @@ export function WalletForm({ walletId }: WalletFormProps) {
           placeholder="Cuenta corriente, Fondo de emergencias…"
           error={fields.name}
         />
+
+        {!editing ? (
+          <Select
+            label="Moneda"
+            value={currency}
+            onChange={setCurrency}
+            options={CURRENCIES.map((c) => ({ value: c.code, label: `${c.code} — ${c.label}` }))}
+          />
+        ) : (
+          <Text className="text-text-muted text-xs">
+            Moneda: {currency} (no se puede cambiar después de crear la cartera)
+          </Text>
+        )}
 
         {!editing ? (
           <View className="gap-1.5">
@@ -322,6 +344,11 @@ export function WalletForm({ walletId }: WalletFormProps) {
               value={monthly}
               onChangeText={setMonthly}
             />
+            {/* Proyección contra el historial REAL guardado -- no contra lo que
+                se esté tipeando ahora mismo sin guardar todavía. */}
+            {editing && existing.data?.purpose === 'savings' && existing.data?.goal_amount ? (
+              <GoalProjectionCard walletId={walletId!} currency={existing.data.currency} />
+            ) : null}
           </>
         ) : null}
 
@@ -387,6 +414,21 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 />
               </View>
             </View>
+            {editing && existing.data?.kind === 'credit' && existing.data?.billing_cycle_day ? (
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  router.push(`/statement/${walletId}`);
+                }}
+                className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5 active:opacity-70"
+                accessibilityRole="button"
+              >
+                <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                  Ver estado de cuenta
+                </Text>
+                <Icon name="chevron-right" size={16} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
           </>
         ) : null}
 
@@ -479,5 +521,53 @@ export function WalletForm({ walletId }: WalletFormProps) {
         ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+/** "A este ritmo la alcanzás en N meses" -- ver `services.goal_projection`
+ * en el backend. Silenciosa mientras carga o si falla: no es crítico para
+ * poder seguir editando la cartera. */
+function GoalProjectionCard({ walletId, currency }: { walletId: string; currency: string }) {
+  const q = useGoalProjection(walletId, true);
+  const data = q.data;
+  if (q.isLoading || q.isError || !data) return null;
+
+  if (data.months_to_goal === 0) {
+    return (
+      <View className="bg-surface-2 rounded-2xl px-4 py-3">
+        <Text className="text-income text-sm" style={{ fontFamily: fonts.semibold }}>
+          🎉 ¡Ya alcanzaste tu meta!
+        </Text>
+      </View>
+    );
+  }
+
+  if (data.months_to_goal == null) {
+    return (
+      <View className="bg-surface-2 rounded-2xl px-4 py-3">
+        <Text className="text-text-muted text-sm">
+          Todavía no hay ritmo de ahorro suficiente para proyectar cuándo la alcanzás.
+        </Text>
+      </View>
+    );
+  }
+
+  const [py, pm] = (data.projected_date ?? '').split('-').map(Number);
+
+  return (
+    <View className={`gap-1 rounded-2xl px-4 py-3 ${data.on_track ? 'bg-surface-2' : 'bg-warning/10'}`}>
+      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+        A este ritmo la alcanzás en {data.months_to_goal}{' '}
+        {data.months_to_goal === 1 ? 'mes' : 'meses'}
+      </Text>
+      <Text className="text-text-muted text-xs">
+        ~{formatMoney(data.monthly_rate, currency)}/mes · faltan{' '}
+        {formatMoney(data.remaining, currency)}
+        {py ? ` · ${formatYearMonth({ year: py, month: pm })}` : ''}
+      </Text>
+      {data.on_track === false ? (
+        <Text className="text-warning text-xs">Vas más lento que tu fecha objetivo.</Text>
+      ) : null}
+    </View>
   );
 }
