@@ -22,6 +22,7 @@ import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { Select } from '@/components/ui/Select';
+import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
@@ -44,6 +45,7 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
   const update = useUpdateRecurringExpense();
   const remove = useDeleteRecurringExpense();
 
+  const [name, setName] = useState('');
   const [amount, setAmount] = useState('0.00');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [walletId, setWalletId] = useState<string | null>(null);
@@ -58,6 +60,7 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
   useEffect(() => {
     if (!editing || prefilled || !existing.data) return;
     const r = existing.data;
+    setName(r.name ?? '');
     setAmount(toNumber(r.amount).toFixed(2));
     setCategoryId(r.category);
     setWalletId(r.wallet);
@@ -90,6 +93,7 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
     setFormError(null);
     setFields({});
     const payload: RecurringExpenseInput = {
+      name: name.trim(),
       category: categoryId,
       wallet: walletId,
       amount: amountNum.toFixed(2),
@@ -126,6 +130,14 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
       className="flex-1"
     >
       <ScrollView contentContainerClassName="gap-4 py-3" keyboardShouldPersistTaps="handled">
+        <TextField
+          label="Nombre (opcional)"
+          placeholder="Netflix, iCloud, gimnasio…"
+          value={name}
+          onChangeText={setName}
+          error={fields.name}
+        />
+
         <AmountInput label="Monto" value={amount} onChangeText={setAmount} error={fields.amount} />
 
         <Select

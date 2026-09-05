@@ -176,10 +176,23 @@ export function useNotificationPreferences() {
 
 export function useUpdateNotificationPreferences() {
   const qc = useQueryClient();
+  const key = qk.notificationPreferences();
   return useMutation({
     mutationFn: (input: Partial<NotificationPreferences>) =>
       res.notificationPreferences.update(input),
-    onSuccess: (data) => qc.setQueryData(qk.notificationPreferences(), data),
+    // UI optimista: los switches de esta pantalla deben sentirse instantáneos
+    // (antes tardaban lo que tardara el POST). Si el guardado falla, se
+    // revierte al valor previo.
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<NotificationPreferences>(key);
+      if (previous) qc.setQueryData(key, { ...previous, ...input });
+      return { previous };
+    },
+    onError: (_err, _input, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+    },
+    onSuccess: (data) => qc.setQueryData(key, data),
   });
 }
 

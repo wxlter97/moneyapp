@@ -99,7 +99,7 @@ export default function RecurringScreen() {
                       style={{ fontFamily: fonts.semibold }}
                       numberOfLines={1}
                     >
-                      {cat?.name ?? 'Categoría'}
+                      {r.name || cat?.name || 'Categoría'}
                       {r.is_active ? '' : ' · pausado'}
                     </Text>
                     <Text className="text-text-muted text-xs" numberOfLines={1}>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { dismissModal } from '@/components/ui/ModalHeader';
@@ -144,6 +144,15 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     setToWalletId(walletId);
   }
 
+  // Reinterpreta TODOS los dígitos tecleados como centavos (mismo esquema
+  // "cajero" que `NumPad`/`AmountInput`), así da igual si el monto se teclea
+  // con el teclado físico/del sistema o tocando el NumPad de abajo.
+  function onAmountKeyPress(text: string) {
+    const digits = text.replace(/\D/g, '').slice(0, 11);
+    const cents = digits ? parseInt(digits, 10) : 0;
+    setAmount((cents / 100).toFixed(2));
+  }
+
   async function onSubmit() {
     if (!walletId) return;
     setFormError(null);
@@ -219,12 +228,21 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
         />
 
         <View className="items-center py-2">
-          <Text
+          <TextInput
+            value={formatMoney(amountNum || 0, currency)}
+            onChangeText={onAmountKeyPress}
+            keyboardType="decimal-pad"
+            selectTextOnFocus
+            accessibilityLabel="Monto"
             className="text-[40px] leading-[44px]"
-            style={{ color: amountColor, fontFamily: fonts.extrabold, letterSpacing: -0.8 }}
-          >
-            {formatMoney(amountNum || 0, currency)}
-          </Text>
+            style={{
+              color: amountColor,
+              fontFamily: fonts.extrabold,
+              letterSpacing: -0.8,
+              textAlign: 'center',
+              minWidth: 120,
+            }}
+          />
           {fields.amount ? (
             <Text className="text-expense mt-1 text-xs">{fields.amount}</Text>
           ) : null}
@@ -415,7 +433,9 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
         ) : null}
       </ScrollView>
 
-      <NumPad value={amount} onChange={setAmount} />
+      {/* En web hay teclado físico de sobra (y el NumPad se sentía forzado en
+      desktop); en nativo lo dejamos para entrada rápida con el pulgar. */}
+      {Platform.OS !== 'web' ? <NumPad value={amount} onChange={setAmount} /> : null}
     </View>
   );
 }

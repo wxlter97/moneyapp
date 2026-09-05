@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/api/queries';
@@ -32,6 +32,10 @@ export default function NotificationsScreen() {
   const [permission, setPermission] = useState<PermissionState>('checking');
   const [enabling, setEnabling] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // iOS/Android no dejan volver a pedir el permiso una vez que el usuario ya
+  // dijo que no: `requestPermissionsAsync` simplemente no hace nada. Sin
+  // esto, tocar "Activar avisos" en ese caso parecía no hacer nada.
+  const [needsSystemSettings, setNeedsSystemSettings] = useState(false);
 
   useEffect(() => {
     checkPermission();
@@ -44,11 +48,20 @@ export default function NotificationsScreen() {
 
   async function onEnable() {
     setEnabling(true);
+    setNeedsSystemSettings(false);
     try {
       const device = await registerForPushNotificationsAsync();
       if (device) {
         await pushDevices.register(device.token, device.platform);
         haptics.success();
+      } else {
+        // Si seguimos sin permiso después de pedirlo, es porque el sistema
+        // ya no vuelve a preguntar (el usuario dijo que no antes): hay que
+        // ir a Ajustes a mano.
+        const settings = await Notifications.getPermissionsAsync().catch(() => null);
+        if (settings && !settings.granted && !settings.canAskAgain) {
+          setNeedsSystemSettings(true);
+        }
       }
     } finally {
       setEnabling(false);
@@ -105,8 +118,18 @@ export default function NotificationsScreen() {
               </View>
             </View>
             {permission === 'denied' ? (
-              <View className="mt-3">
-                <Button label="Activar avisos" loading={enabling} onPress={onEnable} />
+              <View className="mt-3 gap-2">
+                <Button
+                  label="Activar avisos"
+                  loading={enabling}
+                  onPress={needsSystemSettings ? () => Linking.openSettings() : onEnable}
+                />
+                {needsSystemSettings ? (
+                  <Text className="text-text-muted text-center text-xs">
+                    Ya lo habías rechazado antes: el sistema no vuelve a preguntar. Activalo
+                    desde Ajustes → Notificaciones.
+                  </Text>
+                ) : null}
               </View>
             ) : null}
           </Card>
