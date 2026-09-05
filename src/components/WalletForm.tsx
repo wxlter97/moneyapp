@@ -127,14 +127,33 @@ export function WalletForm({ walletId }: WalletFormProps) {
 
   const isDebt = purpose === 'debt';
   const isSavings = purpose === 'savings';
-  const isSpending = purpose === 'spending';
-  const cardEligible = isSpending || isDebt;
+  // Campos de tarjeta: sólo tienen sentido según el SUBTIPO (`kind`), no el
+  // `purpose` -- una cartera de efectivo o "personalizada" no tiene número
+  // ni fechas de corte, sea de gasto o de deuda; y el corte/pago de tarjeta
+  // sólo aplica a `kind=credit` (es lo único que soporta el estado de
+  // cuenta en el backend).
+  const cardNumberEligible = kind === 'bank' || kind === 'credit';
+  const cardStatementEligible = kind === 'credit';
 
   function parseDay(value: string): number | null {
     const n = parseInt(value, 10);
     return Number.isFinite(n) && n >= 1 && n <= 31 ? n : null;
   }
   const amountNum = toNumber(amount);
+  // Deuda: `amount` es lo PENDIENTE (fuente de verdad, como en el resto de
+  // la app); lo "aportado" se deriva de `total - pendiente` para mostrar, y
+  // es editable en el otro sentido (ver `onChangeAportado`) -- cálculo
+  // bidireccional sin duplicar estado.
+  const aportadoValue =
+    isDebt && toNumber(debtTotal) > 0
+      ? Math.max(0, toNumber(debtTotal) - amountNum).toFixed(2)
+      : '0.00';
+
+  function onChangeAportado(text: string) {
+    const total = toNumber(debtTotal);
+    setAmount(Math.max(0, total - toNumber(text)).toFixed(2));
+  }
+
   const busy =
     create.isPending ||
     update.isPending ||
@@ -196,9 +215,9 @@ export function WalletForm({ walletId }: WalletFormProps) {
         isSavings && toNumber(monthly) > 0 ? toNumber(monthly).toFixed(2) : null,
       interest_rate: isDebt && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
       due_date: isDebt && dueDate ? dueDate : null,
-      card_last4: cardEligible && cardLast4.trim() ? cardLast4.trim() : null,
-      billing_cycle_day: cardEligible ? parseDay(billingDay) : null,
-      payment_due_day: cardEligible ? parseDay(paymentDueDay) : null,
+      card_last4: cardNumberEligible && cardLast4.trim() ? cardLast4.trim() : null,
+      billing_cycle_day: cardStatementEligible ? parseDay(billingDay) : null,
+      payment_due_day: cardStatementEligible ? parseDay(paymentDueDay) : null,
       counterparty: isDebt ? counterparty.trim() : '',
     };
 
@@ -311,17 +330,40 @@ export function WalletForm({ walletId }: WalletFormProps) {
         ) : null}
 
         {isDebt ? (
-          <Segmented
-            value={debtOwedToUs ? 'favor' : 'contra'}
-            onChange={(v) => setDebtOwedToUs(v === 'favor')}
-            options={[
-              { value: 'contra', label: 'Debo' },
-              { value: 'favor', label: 'Me deben' },
-            ]}
-          />
-        ) : null}
-
-        <AmountInput label={amountLabel} value={amount} onChangeText={setAmount} />
+          <>
+            <Segmented
+              value={debtOwedToUs ? 'favor' : 'contra'}
+              onChange={(v) => setDebtOwedToUs(v === 'favor')}
+              options={[
+                { value: 'contra', label: 'Debo' },
+                { value: 'favor', label: 'Me deben' },
+              ]}
+            />
+            <AmountInput
+              label="Monto total de la deuda"
+              value={debtTotal}
+              onChangeText={setDebtTotal}
+            />
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <AmountInput
+                  label={debtOwedToUs ? 'Falta que te paguen' : 'Te falta pagar'}
+                  value={amount}
+                  onChangeText={setAmount}
+                />
+              </View>
+              <View className="flex-1">
+                <AmountInput
+                  label={debtOwedToUs ? 'Ya te pagaron' : 'Ya pagaste'}
+                  value={aportadoValue}
+                  onChangeText={onChangeAportado}
+                />
+              </View>
+            </View>
+          </>
+        ) : (
+          <AmountInput label={amountLabel} value={amount} onChangeText={setAmount} />
+        )}
 
         {parentOptions.length > 0 ? (
           <Select
@@ -354,19 +396,8 @@ export function WalletForm({ walletId }: WalletFormProps) {
 
         {isDebt ? (
           <>
-            <AmountInput
-              label="Monto total de la deuda (opcional)"
-              value={debtTotal}
-              onChangeText={setDebtTotal}
-            />
-            {toNumber(debtTotal) > amountNum && !debtOwedToUs ? (
-              <Text className="text-text-muted -mt-2 text-xs">
-                Aportado / pagado hasta ahora:{' '}
-                {(toNumber(debtTotal) - amountNum).toFixed(2)}
-              </Text>
-            ) : null}
             <TextField
-              label="Tasa de interés % (opcional)"
+              label="Tasa de interés % anual (opcional)"
               value={interestRate}
               onChangeText={(t) => setInterestRate(t.replace(/[^0-9.]/g, ''))}
               keyboardType="decimal-pad"
@@ -382,18 +413,26 @@ export function WalletForm({ walletId }: WalletFormProps) {
               value={counterparty}
               onChangeText={setCounterparty}
             />
+            {/* Proyección contra el historial REAL guardado -- no contra lo
+                que se esté tipeando ahora mismo sin guardar todavía. */}
+            {editing && existing.data?.purpose === 'debt' && existing.data?.goal_amount ? (
+              <GoalProjectionCard walletId={walletId!} currency={existing.data.currency} debt />
+            ) : null}
           </>
         ) : null}
 
-        {cardEligible ? (
+        {cardNumberEligible ? (
+          <TextField
+            label="Últimos 4 dígitos (tarjeta, opcional)"
+            value={cardLast4}
+            onChangeText={(t) => setCardLast4(t.replace(/\D/g, '').slice(0, 4))}
+            keyboardType="number-pad"
+            placeholder="4242"
+          />
+        ) : null}
+
+        {cardStatementEligible ? (
           <>
-            <TextField
-              label="Últimos 4 dígitos (tarjeta, opcional)"
-              value={cardLast4}
-              onChangeText={(t) => setCardLast4(t.replace(/\D/g, '').slice(0, 4))}
-              keyboardType="number-pad"
-              placeholder="4242"
-            />
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <TextField
@@ -414,7 +453,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 />
               </View>
             </View>
-            {editing && existing.data?.kind === 'credit' && existing.data?.billing_cycle_day ? (
+            {editing && existing.data?.billing_cycle_day ? (
               <Pressable
                 onPress={() => {
                   haptics.tap();
@@ -524,10 +563,19 @@ export function WalletForm({ walletId }: WalletFormProps) {
   );
 }
 
-/** "A este ritmo la alcanzás en N meses" -- ver `services.goal_projection`
- * en el backend. Silenciosa mientras carga o si falla: no es crítico para
- * poder seguir editando la cartera. */
-function GoalProjectionCard({ walletId, currency }: { walletId: string; currency: string }) {
+/** "A este ritmo la alcanzás / la saldás en N meses" -- ver
+ * `services.goal_projection` en el backend (para deudas, ya incorpora el
+ * interés vía amortización). Silenciosa mientras carga o si falla: no es
+ * crítico para poder seguir editando la cartera. */
+function GoalProjectionCard({
+  walletId,
+  currency,
+  debt = false,
+}: {
+  walletId: string;
+  currency: string;
+  debt?: boolean;
+}) {
   const q = useGoalProjection(walletId, true);
   const data = q.data;
   if (q.isLoading || q.isError || !data) return null;
@@ -536,7 +584,7 @@ function GoalProjectionCard({ walletId, currency }: { walletId: string; currency
     return (
       <View className="bg-surface-2 rounded-2xl px-4 py-3">
         <Text className="text-income text-sm" style={{ fontFamily: fonts.semibold }}>
-          🎉 ¡Ya alcanzaste tu meta!
+          {debt ? '🎉 ¡Ya la saldaste!' : '🎉 ¡Ya alcanzaste tu meta!'}
         </Text>
       </View>
     );
@@ -546,7 +594,9 @@ function GoalProjectionCard({ walletId, currency }: { walletId: string; currency
     return (
       <View className="bg-surface-2 rounded-2xl px-4 py-3">
         <Text className="text-text-muted text-sm">
-          Todavía no hay ritmo de ahorro suficiente para proyectar cuándo la alcanzás.
+          {debt
+            ? 'Todavía no hay ritmo de pago suficiente para proyectar cuándo la saldás (o el pago no alcanza a cubrir el interés).'
+            : 'Todavía no hay ritmo de ahorro suficiente para proyectar cuándo la alcanzás.'}
         </Text>
       </View>
     );
@@ -557,11 +607,11 @@ function GoalProjectionCard({ walletId, currency }: { walletId: string; currency
   return (
     <View className={`gap-1 rounded-2xl px-4 py-3 ${data.on_track ? 'bg-surface-2' : 'bg-warning/10'}`}>
       <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-        A este ritmo la alcanzás en {data.months_to_goal}{' '}
+        A este ritmo la {debt ? 'saldás' : 'alcanzás'} en {data.months_to_goal}{' '}
         {data.months_to_goal === 1 ? 'mes' : 'meses'}
       </Text>
       <Text className="text-text-muted text-xs">
-        ~{formatMoney(data.monthly_rate, currency)}/mes · faltan{' '}
+        ~{formatMoney(data.monthly_rate, currency)}/mes · {debt ? 'debes' : 'faltan'}{' '}
         {formatMoney(data.remaining, currency)}
         {py ? ` · ${formatYearMonth({ year: py, month: pm })}` : ''}
       </Text>
