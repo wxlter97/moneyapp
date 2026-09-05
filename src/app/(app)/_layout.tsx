@@ -193,6 +193,10 @@ export default function AppLayout() {
         name="net-worth-history"
         options={{ presentation: 'modal', headerShown: false }}
       />
+      <Stack.Screen
+        name="category-transactions"
+        options={{ presentation: 'modal', headerShown: false }}
+      />
     </Stack>
   );
 }

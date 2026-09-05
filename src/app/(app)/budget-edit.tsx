@@ -13,12 +13,11 @@ import {
 import { errorMessage } from '@/api/errors';
 import type { Category } from '@/api/types';
 import { Button } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
+import { CategoryAvatar } from '@/components/ui/CategoryAvatar';
 import { dismissModal, ModalHeader } from '@/components/ui/ModalHeader';
 import { Money } from '@/components/ui/Money';
 import { Screen } from '@/components/ui/Screen';
 import { LoadingState } from '@/components/ui/states';
-import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { currentYearMonth, formatYearMonth, type YearMonth } from '@/lib/date';
 import { toNumber } from '@/lib/money';
@@ -158,7 +157,7 @@ export default function BudgetEditScreen() {
             {formError ? (
               <Text className="text-expense px-1 pb-2 text-sm">{formError}</Text>
             ) : null}
-            <View className="py-2">
+            <View className="pb-4 pt-2">
               <Button
                 label="Guardar"
                 loading={busy}
@@ -184,22 +183,9 @@ function GroupRow({
   spent: number;
   onChange: (text: string) => void;
 }) {
-  const colors = useColors();
   return (
     <View className="flex-row items-center gap-3 border-b border-border/25 py-2.5">
-      <View className="h-9 w-9 items-center justify-center rounded-full bg-surface-2">
-        {group.icon ? (
-          <Text className="text-sm">{group.icon}</Text>
-        ) : (
-          <Icon name="tag" size={14} color={colors.textMuted} />
-        )}
-        {group.color ? (
-          <View
-            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface"
-            style={{ backgroundColor: group.color }}
-          />
-        ) : null}
-      </View>
+      <CategoryAvatar icon={group.icon} color={group.color} size={36} />
       <View className="flex-1">
         <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>
           {group.name}

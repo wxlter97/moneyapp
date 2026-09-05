@@ -61,13 +61,13 @@ export default function OverviewScreen() {
             }}
             accessibilityRole="button"
             accessibilityLabel="Ver historial de patrimonio neto"
-            className="self-start active:opacity-70"
+            className="w-full items-center active:opacity-70"
           >
             <Money
               value={netWorth.data?.net}
               currency={currency}
               hero
-              className="text-[52px] leading-[56px]"
+              className="text-center text-[52px] leading-[56px]"
             />
           </Pressable>
         }
@@ -194,7 +194,7 @@ function ResumenTab({ currency }: { currency: string }) {
           budget.data!.rows.slice(0, 5).map((row, i) => (
             <View key={row.category}>
               {i > 0 ? <View className="h-px bg-border/30" /> : null}
-              <BudgetProgressRow row={row} currency={currency} />
+              <BudgetProgressRow row={row} currency={currency} month={currentYearMonth()} />
             </View>
           ))
         )}

@@ -14,7 +14,7 @@ import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Ring } from '@/components/ui/Ring';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { useColors } from '@/theme';
-import { currentYearMonth } from '@/lib/date';
+import { currentYearMonth, type YearMonth } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 
 type Tab = 'restante' | 'informacion';
@@ -111,7 +111,13 @@ export default function BudgetScreen() {
               </Ring>
             </View>
             {budget.data.groups.map((g, i) => (
-              <GroupCard key={g.group ?? g.group_name} group={g} currency={currency} index={i} />
+              <GroupCard
+                key={g.group ?? g.group_name}
+                group={g}
+                currency={currency}
+                month={month}
+                index={i}
+              />
             ))}
           </>
         ) : (
@@ -134,6 +140,7 @@ export default function BudgetScreen() {
                 key={g.group ?? g.group_name}
                 group={g}
                 currency={currency}
+                month={month}
                 showProvision
                 index={i}
               />
@@ -148,11 +155,13 @@ export default function BudgetScreen() {
 function GroupCard({
   group,
   currency,
+  month,
   showProvision = false,
   index = 0,
 }: {
   group: BudgetGroup;
   currency: string;
+  month: YearMonth;
   showProvision?: boolean;
   index?: number;
 }) {
@@ -174,7 +183,7 @@ function GroupCard({
       {group.rows.map((row, i) => (
         <View key={row.category}>
           {i > 0 ? <View className="h-px bg-border/30" /> : null}
-          <BudgetProgressRow row={row} currency={currency} showProvision={showProvision} />
+          <BudgetProgressRow row={row} currency={currency} showProvision={showProvision} month={month} />
         </View>
       ))}
     </Card>

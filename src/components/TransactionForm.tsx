@@ -89,17 +89,6 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     setPrefilled(true);
   }, [editing, prefilled, existing.data, categoriesQ.data]);
 
-  const categoryOptions = useMemo(
-    () =>
-      (categoriesQ.data ?? [])
-        .filter((c) => (isTransfer ? true : c.type === type))
-        .map((c) => ({
-          value: c.id,
-          label: c.parent ? `  ${c.name}` : c.name,
-        })),
-    [categoriesQ.data, type, isTransfer],
-  );
-
   const walletOptions = useMemo(
     () =>
       (walletsQ.data ?? []).map((a) => ({
@@ -223,35 +212,21 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
         {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
 
         <View className="gap-1">
-          {isTransfer ? (
-            <PickerRow
-              label="Categoría (opcional)"
-              options={[{ value: '', label: 'Sin categoría' }, ...categoryOptions]}
-              value={categoryId}
-              onChange={(v) => {
-                setCategoryId(v || null);
-                setOpenRow(null);
-              }}
-              open={openRow === 'category'}
-              onToggle={() => toggleRow('category')}
-              placeholder={categoriesQ.isLoading ? 'Cargando…' : 'Elegir'}
-              error={fields.category}
-            />
-          ) : (
-            <CategoryPickerField
-              categories={categoriesQ.data ?? []}
-              type={type}
-              value={categoryId}
-              open={openRow === 'category'}
-              onToggle={() => toggleRow('category')}
-              onChange={(v) => {
-                setCategoryId(v || null);
-                setOpenRow(null);
-              }}
-              loading={categoriesQ.isLoading}
-              error={fields.category}
-            />
-          )}
+          <CategoryPickerField
+            categories={categoriesQ.data ?? []}
+            type={isTransfer ? 'all' : type}
+            label={isTransfer ? 'Categoría (opcional)' : 'Categoría'}
+            allowClear={isTransfer}
+            value={categoryId}
+            open={openRow === 'category'}
+            onToggle={() => toggleRow('category')}
+            onChange={(v) => {
+              setCategoryId(v || null);
+              setOpenRow(null);
+            }}
+            loading={categoriesQ.isLoading}
+            error={fields.category}
+          />
 
           <PickerRow
             label={isTransfer ? 'Desde' : 'Cartera'}
