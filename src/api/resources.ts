@@ -94,10 +94,13 @@ export const workspaces = {
       .patch<Workspace>(`/workspaces/${id}/`, { base_currency }, { skipWorkspace: true })
       .then((r) => r.data),
   /** Respaldo completo en JSON (carteras, categorías, etiquetas, presupuestos,
-   * recurrentes, compras a plazo y transacciones). Solo owner. */
+   * recurrentes, compras a plazo y transacciones). Solo owner.
+   * Timeout más largo que el default (20s): con miles de movimientos, tanto
+   * generar como restaurar el respaldo puede tardar más que una request
+   * interactiva normal, sin que eso signifique que se colgó. */
   backup: (id: string) =>
     api
-      .get<WorkspaceBackup>(`/workspaces/${id}/backup/`, { skipWorkspace: true })
+      .get<WorkspaceBackup>(`/workspaces/${id}/backup/`, { skipWorkspace: true, timeout: 120_000 })
       .then((r) => r.data),
   /** Reemplaza TODO el contenido del workspace por el de `backup`. Irreversible; solo owner. */
   restore: (id: string, backup: WorkspaceBackup) =>
@@ -105,7 +108,7 @@ export const workspaces = {
       .post<{ restored: Record<string, number> }>(
         `/workspaces/${id}/restore/`,
         { ...backup, confirm: true },
-        { skipWorkspace: true },
+        { skipWorkspace: true, timeout: 120_000 },
       )
       .then((r) => r.data),
 };
