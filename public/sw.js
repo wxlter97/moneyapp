@@ -5,8 +5,15 @@
  *    (permite abrir la app sin conexión; los datos los maneja la app).
  *  - estáticos con hash (/_expo/, /assets/, fuentes, imágenes): cache-first.
  *  - API y todo lo demás: se deja pasar a la red (no se cachea: es sensible).
+ *
+ * IMPORTANTE: `CACHE` debe cambiar en cada release (iguala la versión de
+ * `package.json`/`app.json`). Si no cambia, el navegador no reinstala este
+ * worker (el archivo queda byte-a-byte igual) y sigue sirviendo el
+ * `index.html` viejo cacheado -- que apunta a JS/CSS con hash de un build
+ * anterior, ya no disponibles tras el siguiente deploy. Eso deja la app en
+ * pantalla en blanco al reabrirla (p. ej. justo después de cerrar sesión).
  */
-const CACHE = 'budget-v1';
+const CACHE = 'budget-v1.6.0';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.png'];
 
 self.addEventListener('install', (event) => {
@@ -43,8 +50,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put('/index.html', copy));
+          // Nunca cachear una respuesta de error como si fuera el shell
+          // válido (p. ej. un 502 del proxy durante el deploy) -- eso
+          // dejaría el fallback offline sirviendo un error para siempre.
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put('/index.html', copy));
+          }
           return res;
         })
         .catch(() => caches.match('/index.html').then((r) => r || caches.match('/'))),
@@ -57,11 +69,18 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then(
         (cached) =>
           cached ||
-          fetch(request).then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy));
-            return res;
-          }),
+          fetch(request)
+            .then((res) => {
+              if (res.ok) {
+                const copy = res.clone();
+                caches.open(CACHE).then((c) => c.put(request, copy));
+              }
+              return res;
+            })
+            // Un hash que ya no existe (build viejo cacheado) o un corte de
+            // red no debe tirar toda la carga: mejor un 404 explícito que
+            // una promesa rechazada sin manejar en el fetch handler.
+            .catch(() => new Response(null, { status: 404, statusText: 'Not Found' })),
       ),
     );
   }
