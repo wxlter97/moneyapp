@@ -127,26 +127,20 @@ function TotalDueCard({
   currency: string;
   children: React.ReactNode;
 }) {
-  const upToDate = totalDue <= 0.005 && totalDue >= -0.005;
-  const inFavor = totalDue < -0.005;
+  // Un "saldo a favor" (pagaste de más) es un caso raro y, si aparece,
+  // igual no hay nada que pagar -- se trata como "al día" en vez de un
+  // estado especial más para explicar.
+  const upToDate = totalDue <= 0.005;
 
   return (
     <Card className="items-center">
-      <Text className="text-text-muted text-sm">
-        {inFavor ? 'Tienes un saldo a favor de' : 'Debes'}
-      </Text>
+      <Text className="text-text-muted text-sm">{upToDate ? 'Total a pagar' : 'Debes'}</Text>
       {upToDate ? (
         <Text className="text-income mt-1 text-3xl" style={{ fontFamily: fonts.extrabold }}>
           Estás al día 🎉
         </Text>
       ) : (
-        <Money
-          value={Math.abs(totalDue)}
-          currency={currency}
-          hero
-          tone={inFavor ? 'income' : 'expense'}
-          className="text-4xl"
-        />
+        <Money value={totalDue} currency={currency} hero tone="expense" className="text-4xl" />
       )}
       {children}
     </Card>

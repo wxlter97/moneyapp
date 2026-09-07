@@ -49,6 +49,21 @@ export async function loginWithGoogle(idToken: string): Promise<{ user: User; cr
   return { user: data.user, created: data.created };
 }
 
+/**
+ * POST /auth/google/link/ — vincula la cuenta de Google (mismo correo que la
+ * sesión activa) a la cuenta actual, para poder entrar con "Continuar con
+ * Google" de ahí en más. A diferencia de `loginWithGoogle`, requiere estar
+ * ya autenticado y nunca crea una cuenta nueva.
+ */
+export async function linkGoogleAccount(idToken: string): Promise<User> {
+  const { data } = await api.post<User>(
+    '/auth/google/link/',
+    { id_token: idToken },
+    { skipWorkspace: true },
+  );
+  return data;
+}
+
 /** GET /auth/me/ — usuario autenticado. */
 export async function me(): Promise<User> {
   const { data } = await api.get<User>('/auth/me/', { skipWorkspace: true });

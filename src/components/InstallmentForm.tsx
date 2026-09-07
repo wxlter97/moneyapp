@@ -119,7 +119,7 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
       total_amount: (toNumber(total) || toNumber(installment) * toInt(count)).toFixed(2),
       installment_amount: toNumber(installment).toFixed(2),
       installments_total: toInt(count),
-      installments_paid: isCreditCard ? 0 : Math.min(toInt(paid), toInt(count)),
+      installments_paid: Math.min(toInt(paid), toInt(count)),
       start_date: startDate,
     };
     try {
@@ -171,19 +171,15 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
               error={fields.installments_total}
             />
           </View>
-          {!isCreditCard ? (
-            <View className="flex-1">
-              <TextField
-                label="Ya pagadas"
-                value={paid}
-                onChangeText={(t) => setPaid(t.replace(/\D/g, '').slice(0, 3))}
-                keyboardType="number-pad"
-                error={fields.installments_paid}
-              />
-            </View>
-          ) : (
-            <View className="flex-1" />
-          )}
+          <View className="flex-1">
+            <TextField
+              label="Ya pagadas"
+              value={paid}
+              onChangeText={(t) => setPaid(t.replace(/\D/g, '').slice(0, 3))}
+              keyboardType="number-pad"
+              error={fields.installments_paid}
+            />
+          </View>
         </View>
 
         <AmountInput
@@ -234,7 +230,9 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
             <Text className="text-text-muted text-xs">
               Compra con tarjeta: el total se carga a la tarjeta hoy (baja tu
               crédito disponible) y cada cuota es una transferencia desde esta
-              cartera para pagarla.
+              cartera para pagarla. Si ya pagaste algunas antes de registrar
+              la compra, esas transferencias se crean de una vez con la fecha
+              que les tocaba.
             </Text>
           </View>
         ) : null}

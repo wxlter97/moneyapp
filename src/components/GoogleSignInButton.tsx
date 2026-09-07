@@ -15,13 +15,22 @@ WebBrowser.maybeCompleteAuthSession();
 const { iosClientId, androidClientId, webClientId } = config.google;
 const GOOGLE_CONFIGURED = Boolean(iosClientId || androidClientId || webClientId);
 
+interface GoogleSignInButtonProps {
+  /** 'login' (default): crea cuenta o entra a una ya vinculada, desde
+   * Ingresar/Crear cuenta. 'link': vincula Google a la cuenta YA
+   * autenticada, desde Herramientas → Cuenta -- nunca crea una cuenta. */
+  mode?: 'login' | 'link';
+  onLinked?: () => void;
+}
+
 /**
  * "Continuar con Google" (Capa 4). Sin client IDs configurados (variables
  * `EXPO_PUBLIC_GOOGLE_*_CLIENT_ID`) el botón ni se muestra -- no tiene
  * sentido ofrecer un login que no puede completar el flujo OAuth real.
  */
-export function GoogleSignInButton() {
+export function GoogleSignInButton({ mode = 'login', onLinked }: GoogleSignInButtonProps) {
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
+  const linkGoogleAccount = useAuthStore((s) => s.linkGoogleAccount);
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     iosClientId,
     androidClientId,
@@ -38,9 +47,20 @@ export function GoogleSignInButton() {
     let cancelled = false;
     setSubmitting(true);
     setError(null);
-    signInWithGoogle(idToken)
+    const action = mode === 'link' ? linkGoogleAccount(idToken) : signInWithGoogle(idToken);
+    action
+      .then(() => {
+        if (!cancelled && mode === 'link') onLinked?.();
+      })
       .catch((err) => {
-        if (!cancelled) setError(errorMessage(err, 'No se pudo continuar con Google.'));
+        if (!cancelled) {
+          setError(
+            errorMessage(
+              err,
+              mode === 'link' ? 'No se pudo vincular con Google.' : 'No se pudo continuar con Google.',
+            ),
+          );
+        }
       })
       .finally(() => {
         if (!cancelled) setSubmitting(false);
@@ -56,7 +76,7 @@ export function GoogleSignInButton() {
   return (
     <View className="gap-2">
       <Button
-        label="Continuar con Google"
+        label={mode === 'link' ? 'Vincular cuenta de Google' : 'Continuar con Google'}
         variant="ghost"
         loading={submitting}
         disabled={!request}

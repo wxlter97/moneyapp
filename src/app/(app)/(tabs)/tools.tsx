@@ -6,136 +6,15 @@ import { useColorScheme } from 'nativewind';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { FadeInView } from '@/components/ui/FadeInView';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
 import { haptics } from '@/lib/haptics';
+import { TOOL_GROUPS } from '@/lib/toolGroups';
 import { useColors } from '@/theme';
 import { ACCENTS } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 import { useThemeStore, type ThemePref } from '@/store/theme';
 import { useAccentStore } from '@/store/accent';
-
-interface Tool {
-  icon: IconName;
-  label: string;
-  hint: string;
-  onPress?: () => void;
-  /** Acción destructiva: es el único ícono que se pinta con color (rojo). */
-  destructive?: boolean;
-  soon?: boolean;
-}
-
-const TOOLS: Tool[] = [
-  {
-    icon: 'tag',
-    label: 'Categorías',
-    hint: 'Grupos y subcategorías',
-    onPress: () => router.push('/categories'),
-  },
-  {
-    icon: 'hash',
-    label: 'Etiquetas',
-    hint: 'Agrupa gasto transversal a la categoría',
-    onPress: () => router.push('/tags'),
-  },
-  {
-    icon: 'users',
-    label: 'Miembros',
-    hint: 'Quién ve y edita este presupuesto',
-    onPress: () => router.push('/members'),
-  },
-  {
-    icon: 'mail',
-    label: 'Invitaciones',
-    hint: 'Presupuestos a los que te invitaron',
-    onPress: () => router.push('/invitations'),
-  },
-  {
-    icon: 'inbox',
-    label: 'Importaciones',
-    hint: 'Correos bancarios por revisar',
-    onPress: () => router.push('/imports'),
-  },
-  {
-    icon: 'bolt',
-    label: 'Atajos',
-    hint: 'Agregar gastos desde Apple Shortcuts',
-    onPress: () => router.push('/shortcuts'),
-  },
-  {
-    icon: 'bell',
-    label: 'Notificaciones',
-    hint: 'Recordatorios de recurrentes, cuotas y presupuesto',
-    onPress: () => router.push('/notifications'),
-  },
-  {
-    icon: 'lock',
-    label: 'Seguridad',
-    hint: 'Bloqueo con Face ID o PIN',
-    onPress: () => router.push('/security'),
-  },
-  {
-    icon: 'trending',
-    label: 'Patrimonio',
-    hint: 'Evolución mes a mes',
-    onPress: () => router.push('/net-worth-history'),
-  },
-  {
-    icon: 'bars',
-    label: 'Tendencias',
-    hint: 'Ingresos, gastos y qué categorías crecieron',
-    onPress: () => router.push('/trends'),
-  },
-  {
-    icon: 'swap',
-    label: 'Monedas',
-    hint: 'Moneda base y tasas de cambio',
-    onPress: () => router.push('/currencies'),
-  },
-  {
-    icon: 'repeat',
-    label: 'Recurrentes',
-    hint: 'Gastos e ingresos fijos',
-    onPress: () => router.push('/recurring'),
-  },
-  {
-    icon: 'receipt',
-    label: 'Compras a plazo',
-    hint: 'Pagos en cuotas',
-    onPress: () => router.push('/installments'),
-  },
-  {
-    icon: 'card',
-    label: 'Estado de cuenta',
-    hint: 'Cuánto debes en tus tarjetas',
-    onPress: () => router.push('/statements'),
-  },
-  {
-    icon: 'download',
-    label: 'Exportar datos',
-    hint: 'Descarga en CSV',
-    onPress: () => router.push('/export'),
-  },
-  {
-    icon: 'archive',
-    label: 'Respaldo',
-    hint: 'Descargar o restaurar todo el presupuesto',
-    onPress: () => router.push('/backup'),
-  },
-  {
-    icon: 'reset',
-    label: 'Restablecer',
-    hint: 'Borrar datos del presupuesto',
-    onPress: () => router.push('/reset'),
-    destructive: true,
-  },
-  {
-    icon: 'info',
-    label: 'Acerca de',
-    hint: 'Qué es esta app y quién la hace',
-    onPress: () => router.push('/about'),
-  },
-];
 
 const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
   { value: 'light', label: 'Claro' },
@@ -143,6 +22,11 @@ const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'Sistema' },
 ];
 
+/**
+ * Herramientas: antes 18+ botones sueltos en un grid, costaba encontrar
+ * algo. Ahora son carpetas (`TOOL_GROUPS`) que llevan a `/tools/[group]`,
+ * donde vive el mismo grid de tiles pero acotado a esa carpeta.
+ */
 export default function ToolsScreen() {
   const colors = useColors();
   const version = Constants.expoConfig?.version ?? '—';
@@ -160,34 +44,26 @@ export default function ToolsScreen() {
 
         <Card title="Gestión">
           <View className="-my-1 flex-row flex-wrap">
-            {TOOLS.map((tool, i) => (
-              <View key={tool.label} className="w-1/2 p-1">
+            {TOOL_GROUPS.map((group, i) => (
+              <View key={group.id} className="w-1/2 p-1">
                 <FadeInView index={i}>
                   <Pressable
                     onPress={() => {
-                      if (!tool.onPress) return;
                       haptics.tap();
-                      tool.onPress();
+                      router.push(`/tools/${group.id}`);
                     }}
-                    disabled={!tool.onPress}
                     accessibilityRole="button"
-                    className={`rounded-3xl bg-surface-2 p-3 ${
-                      tool.onPress ? 'active:opacity-60' : 'opacity-50'
-                    }`}
+                    className="rounded-3xl bg-surface-2 p-3 active:opacity-60"
                   >
-                    <Icon
-                      name={tool.icon}
-                      size={20}
-                      color={tool.destructive ? colors.expense : colors.text}
-                    />
+                    <Icon name={group.icon} size={20} color={colors.text} />
                     <Text
                       className="text-text mt-2.5 text-sm"
                       style={{ fontFamily: fonts.semibold }}
                     >
-                      {tool.label}
+                      {group.label}
                     </Text>
                     <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
-                      {tool.soon ? 'Pronto' : tool.hint}
+                      {group.hint}
                     </Text>
                   </Pressable>
                 </FadeInView>

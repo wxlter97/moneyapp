@@ -9,7 +9,7 @@ import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
-const CONTACT_EMAIL = 'wxlter.97@gmail.com';
+const CONTACT_EMAIL = 'me@wxlter.dev';
 
 /**
  * Herramientas → Acerca de: qué es la app, quién la hace y en qué versión
@@ -54,7 +54,7 @@ export default function AboutScreen() {
           <Text className="text-text-muted text-sm leading-5">
             Un proyecto personal, hecho y mantenido por{' '}
             <Text className="text-text" style={{ fontFamily: fonts.semibold }}>
-              wxlter97
+              wxlter.dev
             </Text>
             .
           </Text>

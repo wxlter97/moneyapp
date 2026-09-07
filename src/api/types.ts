@@ -37,6 +37,8 @@ export interface User {
   last_name: string;
   /** La llena "Continuar con Google"; vacía para cuentas usuario/contraseña. */
   profile_photo_url: string;
+  /** true = puede entrar con "Continuar con Google" (se creó así, o lo vinculó después). */
+  google_linked: boolean;
   date_joined: ISODateTime;
 }
 
