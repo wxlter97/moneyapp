@@ -130,27 +130,18 @@ export default function WalletsScreen() {
             ) : (
               <View className="gap-3">
                 {nodes.map((node) => (
-                  <View key={node.wallet.id} className="flex-row items-center gap-2">
-                    <Pressable
-                      onPress={() => router.push(`/wallet-transactions?wallet=${node.wallet.id}`)}
-                      className="flex-1 active:opacity-70"
-                      accessibilityRole="button"
-                    >
-                      <WalletRow
-                        wallet={node.wallet}
-                        hasChildren={node.hasChildren}
-                        depth={node.depth}
-                      />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => router.push(`/wallet/${node.wallet.id}`)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Editar ${node.wallet.name}`}
-                      className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
-                    >
-                      <Icon name="pencil" size={13} color={colors.textMuted} />
-                    </Pressable>
-                  </View>
+                  <Pressable
+                    key={node.wallet.id}
+                    onPress={() => router.push(`/wallet-transactions?wallet=${node.wallet.id}`)}
+                    className="active:opacity-70"
+                    accessibilityRole="button"
+                  >
+                    <WalletRow
+                      wallet={node.wallet}
+                      hasChildren={node.hasChildren}
+                      depth={node.depth}
+                    />
+                  </Pressable>
                 ))}
               </View>
             )}
