@@ -288,6 +288,14 @@ export default function AppLayout() {
           name="about"
           options={{ presentation: 'modal', headerShown: false }}
         />
+        <Stack.Screen
+          name="tools/[group]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="account"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
     </AppLockGate>
   );

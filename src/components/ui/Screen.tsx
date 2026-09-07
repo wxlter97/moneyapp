@@ -45,6 +45,13 @@ const DISMISS_THRESHOLD = 110;
  */
 export function Screen({ children, edges = ['top'], noPadding = false }: ScreenProps) {
   const translateY = useSharedValue(0);
+  // El inset de `SafeAreaView` para 'bottom' es justo el borde del área que
+  // iOS reserva para sus propios gestos (home indicator / swipe-up) -- ni un
+  // pixel más. Un botón de acción pegado a ese límite queda tan cerca del
+  // borde físico que un toque cerca de su base puede colar como gesto del
+  // sistema en vez de llegar al botón. Este margen extra separa el
+  // contenido de esa zona en vez de tocarla justo.
+  const extraBottomPadding = edges.includes('bottom') ? 16 : 0;
 
   const pan = useMemo(
     () =>
@@ -78,6 +85,7 @@ export function Screen({ children, edges = ['top'], noPadding = false }: ScreenP
         <Animated.View style={[{ flex: 1 }, style]}>
           <View
             className={`w-full flex-1 self-center max-w-[560px] ${noPadding ? '' : 'px-4'}`}
+            style={extraBottomPadding ? { paddingBottom: extraBottomPadding } : undefined}
           >
             {children}
           </View>

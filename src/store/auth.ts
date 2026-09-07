@@ -25,6 +25,8 @@ interface AuthState {
   signUp: (input: authApi.RegisterInput) => Promise<void>;
   /** "Continuar con Google". Devuelve `created` para saludar distinto la primera vez. */
   signInWithGoogle: (idToken: string) => Promise<{ created: boolean }>;
+  /** Vincula Google a la cuenta ya autenticada (Herramientas → Cuenta). */
+  linkGoogleAccount: (idToken: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -61,6 +63,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
     const { user, created } = await authApi.loginWithGoogle(idToken);
     set({ status: 'authenticated', user });
     return { created };
+  },
+
+  linkGoogleAccount: async (idToken) => {
+    const user = await authApi.linkGoogleAccount(idToken);
+    set({ user });
   },
 
   signOut: async () => {
