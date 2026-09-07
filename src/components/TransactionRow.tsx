@@ -138,7 +138,11 @@ export function TransactionRow({
             currency={txn.currency}
             parens
             tone={isTransfer ? 'muted' : isIncome ? 'income' : 'expense'}
-            className="text-base font-semibold"
+            className="font-semibold"
+            style={{ fontSize: 20, lineHeight: 24 }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
           />
           {txn.type === 'expense' && !txn.counts_toward_budget ? (
             <View className="rounded-full bg-surface-2 px-2 py-0.5">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, router } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -173,21 +173,21 @@ function ResumenTab({ currency }: { currency: string }) {
         {spendingWallets.length === 0 ? (
           <EmptyState title="Sin carteras de gasto" />
         ) : (
-          spendingWallets.map((w, i) => (
-            <View key={w.id}>
-              {i > 0 ? <View className="h-px bg-border/30" /> : null}
+          <View className="gap-3">
+            {spendingWallets.map((w) => (
               <Pressable
+                key={w.id}
                 onPress={() => {
                   haptics.tap();
                   router.push(`/wallet-transactions?wallet=${w.id}`);
                 }}
-                className="active:opacity-60"
+                className="active:opacity-70"
                 accessibilityRole="button"
               >
                 <WalletRow wallet={w} />
               </Pressable>
-            </View>
-          ))
+            ))}
+          </View>
         )}
       </Card>
 
@@ -289,7 +289,24 @@ function ListaTab({
 }) {
   const colors = useColors();
   const range = useMemo(() => monthRange(month), [month]);
-  const txQuery = useTransactions({ date_after: range.from, date_before: range.to });
+
+  const [search, setSearch] = useState('');
+  // Con texto de búsqueda el buscador deja de limitarse al mes visible y
+  // pasa a buscar en TODAS las transacciones (pedido explícito: "El
+  // buscador debería ser de todas las transacciones, no solo las del
+  // mes"). Se debounce para no disparar un fetch por cada tecla.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+  const searching = debouncedSearch.length > 0;
+
+  const txQuery = useTransactions(
+    searching
+      ? { search: debouncedSearch }
+      : { date_after: range.from, date_before: range.to },
+  );
   const walletsQuery = useWallets();
   const tagsQuery = useTags();
   const { map: categories } = useCategoryMap();
@@ -297,7 +314,6 @@ function ListaTab({
   const deleteTxn = useDeleteTransaction();
   const showSnackbar = useSnackbarStore((s) => s.show);
 
-  const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [walletFilter, setWalletFilter] = useState<string | null>(null);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
@@ -431,6 +447,12 @@ function ListaTab({
           ) : null}
         </Pressable>
       </View>
+
+      {searching ? (
+        <Text className="text-text-muted -mt-1 text-xs">
+          Buscando en todos tus movimientos, no solo en el mes visible.
+        </Text>
+      ) : null}
 
       <Segmented
         value={typeFilter}

@@ -36,14 +36,17 @@ import { useSnackbarStore } from '@/store/snackbar';
 
 interface TransactionFormProps {
   transactionId?: string;
+  /** Precarga los datos de esta transacción sin editarla: se guarda como una nueva. */
+  duplicateFromId?: string;
 }
 
 type OpenRow = 'category' | 'from' | 'to' | null;
 
-export function TransactionForm({ transactionId }: TransactionFormProps) {
+export function TransactionForm({ transactionId, duplicateFromId }: TransactionFormProps) {
   const colors = useColors();
   const editing = !!transactionId;
-  const existing = useTransaction(transactionId);
+  const sourceId = transactionId ?? duplicateFromId;
+  const existing = useTransaction(sourceId);
 
   const { data: assignableWallets, query: walletsQ } = useAssignableWallets();
   const categoriesQ = useCategories();
@@ -77,13 +80,13 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   }, [assignableWallets]);
 
   useEffect(() => {
-    if (editing || walletDefaulted || !defaultWalletId) return;
+    if (editing || duplicateFromId || walletDefaulted || !defaultWalletId) return;
     setWalletId(defaultWalletId);
     setWalletDefaulted(true);
-  }, [editing, walletDefaulted, defaultWalletId]);
+  }, [editing, duplicateFromId, walletDefaulted, defaultWalletId]);
 
   useEffect(() => {
-    if (!editing || prefilled || !existing.data || !categoriesQ.data) return;
+    if ((!editing && !duplicateFromId) || prefilled || !existing.data || !categoriesQ.data) return;
     const t = existing.data;
     setType(t.type);
     setAmount(String(Number(t.amount).toFixed(2)));
@@ -207,7 +210,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
     }
   }
 
-  if (editing && existing.isLoading) return <LoadingState />;
+  if ((editing || duplicateFromId) && existing.isLoading) return <LoadingState />;
 
   const amountColor =
     type === 'income' ? colors.income : type === 'expense' ? colors.expense : colors.text;
@@ -346,7 +349,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
 
         <ReceiptField
           transactionId={transactionId}
-          hasReceipt={existing.data?.has_receipt ?? false}
+          hasReceipt={editing && (existing.data?.has_receipt ?? false)}
           pendingFile={pendingReceipt}
           onPendingFileChange={setPendingReceipt}
         />
@@ -378,6 +381,23 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
           disabled={!canSubmit}
           onPress={onSubmit}
         />
+
+        {editing && !confirmingDelete ? (
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              router.push(`/transaction/new?duplicateFrom=${transactionId}`);
+            }}
+            disabled={busy}
+            className="flex-row items-center justify-center gap-1.5 py-2 active:opacity-60"
+            accessibilityRole="button"
+          >
+            <Icon name="copy" size={14} color={colors.primary} />
+            <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+              Duplicar transacción
+            </Text>
+          </Pressable>
+        ) : null}
 
         {editing && !isTransfer && !confirmingDelete ? (
           existing.data?.split_group ? (
