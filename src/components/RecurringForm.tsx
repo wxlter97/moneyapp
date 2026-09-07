@@ -7,9 +7,8 @@ import {
   useDeleteRecurringExpense,
   useRecurringExpense,
   useUpdateRecurringExpense,
-  useWallets,
 } from '@/api/queries';
-import { walletLabel } from '@/api/queries/lookups';
+import { useAssignableWallets, walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import {
   RECURRENCE_FREQUENCIES,
@@ -40,7 +39,7 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
   const editing = !!recurringId;
   const existing = useRecurringExpense(recurringId);
   const categoriesQ = useCategories();
-  const walletsQ = useWallets();
+  const { data: assignableWallets, query: walletsQ } = useAssignableWallets();
   const create = useCreateRecurringExpense();
   const update = useUpdateRecurringExpense();
   const remove = useDeleteRecurringExpense();
@@ -80,8 +79,8 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
   );
 
   const walletOptions = useMemo(
-    () => (walletsQ.data ?? []).map((w) => ({ value: w.id, label: walletLabel(w) })),
-    [walletsQ.data],
+    () => assignableWallets.map((w) => ({ value: w.id, label: walletLabel(w) })),
+    [assignableWallets],
   );
 
   const amountNum = toNumber(amount);

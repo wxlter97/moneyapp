@@ -237,6 +237,13 @@ export const wallets = {
   /** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
   statements: () =>
     api.get<CreditCardStatementSummary[]>('/wallets/statements/').then((r) => r.data),
+  /** Convierte esta cartera en un grupo: crea una cuenta nueva (hija) con
+   * `name` y le pasa todo lo propio (saldo, movimientos, recurrentes,
+   * compras a plazo) -- la cartera original queda en 0, agrupando. */
+  split: (id: string, name: string) =>
+    api
+      .post<{ parent: Wallet; child: Wallet }>(`/wallets/${id}/split/`, { name })
+      .then((r) => r.data),
 };
 
 // --- categorías / presupuestos ------------------------------------------
