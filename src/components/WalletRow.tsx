@@ -54,7 +54,7 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
         <View className="flex-1 pr-3">
           <Text
             className="text-text"
-            style={{ fontFamily: fonts.semibold, fontSize: 24, lineHeight: 28 }}
+            style={{ fontFamily: fonts.semibold, fontSize: 16, lineHeight: 20 }}
             numberOfLines={1}
           >
             {wallet.name}
