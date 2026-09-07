@@ -5,6 +5,7 @@ import { Money } from '@/components/ui/Money';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { toNumber } from '@/lib/money';
 import { walletColor } from '@/lib/wallets';
+import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
 interface WalletRowProps {
@@ -16,6 +17,7 @@ interface WalletRowProps {
 }
 
 export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowProps) {
+  const colors = useColors();
   const balance = toNumber(hasChildren ? wallet.aggregated_balance : wallet.current_balance);
   const goal = toNumber(wallet.goal_amount);
   // En una deuda, `current_balance` es lo que queda pendiente (con signo
@@ -33,14 +35,28 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
     wallet.available_credit != null;
 
   return (
-    <View className="py-3" style={{ paddingLeft: depth * 16 }}>
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 8,
+        marginLeft: depth * 16,
+      }}
+    >
       <View className="flex-row items-center justify-between">
         <View
           className="mr-3 h-8 w-1.5 rounded-full"
           style={{ backgroundColor: walletColor(wallet) }}
         />
         <View className="flex-1 pr-3">
-          <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>
+          <Text
+            className="text-text"
+            style={{ fontFamily: fonts.semibold, fontSize: 24, lineHeight: 28 }}
+            numberOfLines={1}
+          >
             {wallet.name}
             {wallet.card_last4 ? (
               <Text className="text-text-muted"> ···· {wallet.card_last4}</Text>
@@ -57,7 +73,9 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
           value={balance}
           currency={wallet.currency}
           tone={balance < 0 ? 'expense' : 'default'}
-          className="text-base font-semibold"
+          className="font-semibold"
+          style={{ fontSize: 24, lineHeight: 28 }}
+          numberOfLines={1}
         />
       </View>
 

@@ -128,34 +128,31 @@ export default function WalletsScreen() {
                 }
               />
             ) : (
-              <Card title="Todas las carteras">
-                {nodes.map((node, i) => (
-                  <View key={node.wallet.id}>
-                    {i > 0 ? <View className="h-px bg-border/30" /> : null}
-                    <View className="flex-row items-center">
-                      <Pressable
-                        onPress={() => router.push(`/wallet-transactions?wallet=${node.wallet.id}`)}
-                        className="flex-1 active:opacity-60"
-                        accessibilityRole="button"
-                      >
-                        <WalletRow
-                          wallet={node.wallet}
-                          hasChildren={node.hasChildren}
-                          depth={node.depth}
-                        />
-                      </Pressable>
-                      <Pressable
-                        onPress={() => router.push(`/wallet/${node.wallet.id}`)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Editar ${node.wallet.name}`}
-                        className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
-                      >
-                        <Icon name="pencil" size={13} color={colors.textMuted} />
-                      </Pressable>
-                    </View>
+              <View className="gap-3">
+                {nodes.map((node) => (
+                  <View key={node.wallet.id} className="flex-row items-center gap-2">
+                    <Pressable
+                      onPress={() => router.push(`/wallet-transactions?wallet=${node.wallet.id}`)}
+                      className="flex-1 active:opacity-70"
+                      accessibilityRole="button"
+                    >
+                      <WalletRow
+                        wallet={node.wallet}
+                        hasChildren={node.hasChildren}
+                        depth={node.depth}
+                      />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => router.push(`/wallet/${node.wallet.id}`)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Editar ${node.wallet.name}`}
+                      className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
+                    >
+                      <Icon name="pencil" size={13} color={colors.textMuted} />
+                    </Pressable>
                   </View>
                 ))}
-              </Card>
+              </View>
             )}
           </>
         )}

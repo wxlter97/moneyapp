@@ -173,21 +173,21 @@ function ResumenTab({ currency }: { currency: string }) {
         {spendingWallets.length === 0 ? (
           <EmptyState title="Sin carteras de gasto" />
         ) : (
-          spendingWallets.map((w, i) => (
-            <View key={w.id}>
-              {i > 0 ? <View className="h-px bg-border/30" /> : null}
+          <View className="gap-3">
+            {spendingWallets.map((w) => (
               <Pressable
+                key={w.id}
                 onPress={() => {
                   haptics.tap();
                   router.push(`/wallet-transactions?wallet=${w.id}`);
                 }}
-                className="active:opacity-60"
+                className="active:opacity-70"
                 accessibilityRole="button"
               >
                 <WalletRow wallet={w} />
               </Pressable>
-            </View>
-          ))
+            ))}
+          </View>
         )}
       </Card>
 
