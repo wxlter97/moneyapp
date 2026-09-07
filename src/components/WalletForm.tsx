@@ -7,6 +7,7 @@ import {
   useCreateWallet,
   useDeleteWallet,
   useGoalProjection,
+  useSplitWallet,
   useUnarchiveWallet,
   useUpdateWallet,
   useWallet,
@@ -60,6 +61,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const remove = useDeleteWallet();
   const archive = useArchiveWallet();
   const unarchive = useUnarchiveWallet();
+  const split = useSplitWallet();
 
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('USD');
@@ -87,6 +89,9 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [fields, setFields] = useState<Record<string, string>>({});
   const [prefilled, setPrefilled] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [splittingOpen, setSplittingOpen] = useState(false);
+  const [splitName, setSplitName] = useState('');
+  const [splitError, setSplitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!editing || prefilled || !existing.data) return;
@@ -140,7 +145,8 @@ export function WalletForm({ walletId }: WalletFormProps) {
     update.isPending ||
     remove.isPending ||
     archive.isPending ||
-    unarchive.isPending;
+    unarchive.isPending ||
+    split.isPending;
   const canSubmit = name.trim().length > 0 && !busy;
 
   function onChangePurpose(next: WalletPurpose) {
@@ -222,6 +228,22 @@ export function WalletForm({ walletId }: WalletFormProps) {
       setFormError(
         errorMessage(err, 'No se pudo eliminar (¿tiene sub-carteras o movimientos?).'),
       );
+    }
+  }
+
+  async function onSplit() {
+    if (!walletId || !splitName.trim()) return;
+    setSplitError(null);
+    try {
+      await split.mutateAsync({ id: walletId, name: splitName.trim() });
+      haptics.success();
+      // El saldo/movimientos ya se fueron a la cuenta nueva -- lo que se
+      // veía en este formulario (monto, meta, etc.) quedó viejo, así que
+      // en vez de seguir mostrándolo se cierra: quien lo abra de nuevo va
+      // a ver la cartera ya convertida en grupo, en 0.
+      dismissModal();
+    } catch (err) {
+      setSplitError(errorMessage(err, 'No se pudo dividir la cartera.'));
     }
   }
 
@@ -471,7 +493,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
           onPress={onSubmit}
         />
 
-        {editing && !confirmingDelete ? (
+        {editing && !confirmingDelete && !splittingOpen ? (
           <View className="items-center gap-3 py-2">
             <Pressable
               onPress={() => {
@@ -489,6 +511,20 @@ export function WalletForm({ walletId }: WalletFormProps) {
             <Pressable
               onPress={() => {
                 haptics.tap();
+                setSplitError(null);
+                setSplittingOpen(true);
+              }}
+              disabled={busy}
+              className="active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                Dividir cartera…
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                haptics.tap();
                 setConfirmingDelete(true);
               }}
               disabled={busy}
@@ -499,6 +535,45 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 Eliminar cartera
               </Text>
             </Pressable>
+          </View>
+        ) : null}
+
+        {editing && splittingOpen ? (
+          <View className="gap-3 rounded-2xl bg-surface-2 p-3">
+            <Text className="text-text text-sm">
+              Crea una cuenta nueva con el saldo y los movimientos de "{name}", y deja a "{name}"
+              en 0 -- pasa a ser solo un grupo que suma sus cuentas. Útil para agruparla con otras
+              carteras después.
+            </Text>
+            <TextField
+              label="Nombre de la cuenta nueva"
+              value={splitName}
+              onChangeText={setSplitName}
+              placeholder="Ej. Cuenta de banco"
+              autoFocus
+            />
+            {splitError ? <Text className="text-expense text-sm">{splitError}</Text> : null}
+            <View className="flex-row gap-2">
+              <View className="flex-1">
+                <Button
+                  label="Cancelar"
+                  variant="ghost"
+                  onPress={() => {
+                    setSplittingOpen(false);
+                    setSplitName('');
+                    setSplitError(null);
+                  }}
+                />
+              </View>
+              <View className="flex-1">
+                <Button
+                  label="Dividir"
+                  loading={split.isPending}
+                  disabled={!splitName.trim()}
+                  onPress={onSplit}
+                />
+              </View>
+            </View>
           </View>
         ) : null}
 

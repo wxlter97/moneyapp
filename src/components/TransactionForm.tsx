@@ -5,7 +5,6 @@ import { router } from 'expo-router';
 import { dismissModal } from '@/components/ui/ModalHeader';
 
 import {
-  useWallets,
   useCategories,
   useCreateTransaction,
   useDeleteTransaction,
@@ -13,7 +12,7 @@ import {
   useUpdateTransaction,
   useUploadReceipt,
 } from '@/api/queries';
-import { walletLabel } from '@/api/queries/lookups';
+import { useAssignableWallets, walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import type { TransactionInput, TransactionType } from '@/api/types';
 import { CategoryPickerField } from '@/components/CategoryGrid';
@@ -46,7 +45,7 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const editing = !!transactionId;
   const existing = useTransaction(transactionId);
 
-  const walletsQ = useWallets();
+  const { data: assignableWallets, query: walletsQ } = useAssignableWallets();
   const categoriesQ = useCategories();
   const create = useCreateTransaction();
   const update = useUpdateTransaction();
@@ -74,9 +73,8 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
   const isTransfer = type === 'transfer';
 
   const defaultWalletId = useMemo(() => {
-    const list = walletsQ.data ?? [];
-    return list.find((a) => a.is_default)?.id ?? list[0]?.id ?? null;
-  }, [walletsQ.data]);
+    return assignableWallets.find((a) => a.is_default)?.id ?? assignableWallets[0]?.id ?? null;
+  }, [assignableWallets]);
 
   useEffect(() => {
     if (editing || walletDefaulted || !defaultWalletId) return;
@@ -101,12 +99,12 @@ export function TransactionForm({ transactionId }: TransactionFormProps) {
 
   const walletOptions = useMemo(
     () =>
-      (walletsQ.data ?? []).map((a) => ({
+      assignableWallets.map((a) => ({
         value: a.id,
         label: walletLabel(a),
         hint: a.is_default ? 'por defecto' : a.visibility === 'private' ? 'privada' : undefined,
       })),
-    [walletsQ.data],
+    [assignableWallets],
   );
 
   const toWalletOptions = useMemo(

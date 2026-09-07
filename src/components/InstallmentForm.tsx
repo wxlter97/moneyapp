@@ -7,9 +7,8 @@ import {
   useDeleteInstallment,
   useInstallment,
   useUpdateInstallment,
-  useWallets,
 } from '@/api/queries';
-import { walletLabel } from '@/api/queries/lookups';
+import { useAssignableWallets, walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import type { InstallmentPurchaseInput } from '@/api/types';
 import { dismissModal } from '@/components/ui/ModalHeader';
@@ -33,7 +32,7 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
   const editing = !!installmentId;
   const existing = useInstallment(installmentId);
   const categoriesQ = useCategories();
-  const walletsQ = useWallets();
+  const { data: assignableWallets, query: walletsQ } = useAssignableWallets();
   const create = useCreateInstallment();
   const update = useUpdateInstallment();
   const remove = useDeleteInstallment();
@@ -85,8 +84,8 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
     [categoriesQ.data],
   );
   const walletOptions = useMemo(
-    () => (walletsQ.data ?? []).map((w) => ({ value: w.id, label: walletLabel(w) })),
-    [walletsQ.data],
+    () => assignableWallets.map((w) => ({ value: w.id, label: walletLabel(w) })),
+    [assignableWallets],
   );
 
   const isCreditCard = useMemo(

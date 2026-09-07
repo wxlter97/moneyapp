@@ -322,6 +322,14 @@ export function useUnarchiveWallet() {
   });
 }
 
+export function useSplitWallet() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => res.wallets.split(id, name),
+    onSuccess: invalidate,
+  });
+}
+
 export function useReorderWallets() {
   const invalidate = useInvalidateWorkspace();
   return useMutation({
