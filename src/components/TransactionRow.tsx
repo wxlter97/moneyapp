@@ -27,6 +27,13 @@ interface TransactionRowProps {
   onPress?: () => void;
   /** Si se pasa, la fila se puede arrastrar hacia la izquierda para borrar. */
   onSwipeDelete?: () => void;
+  /** Cartera "desde la que se mira" esta fila (p. ej. el historial de una
+   * cartera puntual). Solo cambia algo en una transferencia: si esta cartera
+   * es la que recibe, el importe se muestra en positivo (entra plata) en vez
+   * de en negativo como si la estuviera mandando. Sin esto, se asume que
+   * toda transferencia sale (comportamiento de siempre, para listas que no
+   * están ancladas a una cartera puntual). */
+  perspectiveWalletId?: string;
 }
 
 const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
@@ -49,6 +56,7 @@ export function TransactionRow({
   toWallet,
   onPress,
   onSwipeDelete,
+  perspectiveWalletId,
 }: TransactionRowProps) {
   const colors = useColors();
   const press = useSharedValue(1);
@@ -59,8 +67,11 @@ export function TransactionRow({
   const badge = SOURCE_LABEL[txn.source];
 
   const amount = toNumber(txn.amount);
-  // Firma desde la perspectiva del saldo: ingreso suma, gasto y transferencia restan.
-  const signed = isIncome ? amount : -amount;
+  // Firma desde la perspectiva del saldo: ingreso suma, gasto resta. Una
+  // transferencia resta (sale) salvo que se esté mirando desde la cartera
+  // que la recibe, en cuyo caso suma.
+  const isIncomingTransfer = isTransfer && perspectiveWalletId === txn.to_wallet;
+  const signed = isIncome || isIncomingTransfer ? amount : -amount;
 
   const title = isTransfer
     ? 'Transferencia'

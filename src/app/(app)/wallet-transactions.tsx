@@ -76,6 +76,7 @@ export default function WalletTransactionsScreen() {
                       category={item.category ? categories.get(item.category) : undefined}
                       wallet={wallets.get(item.wallet)}
                       toWallet={item.to_wallet ? wallets.get(item.to_wallet) : undefined}
+                      perspectiveWalletId={walletId}
                       onPress={() => router.push(`/transaction/${item.id}`)}
                     />
                   </View>
