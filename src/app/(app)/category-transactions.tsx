@@ -46,20 +46,20 @@ export default function CategoryTransactionsScreen() {
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
 
-  const items = query.data ?? [];
+  // Esta pantalla existe para explicar un número de Presupuesto -- se
+  // excluyen las transacciones marcadas "S/PRES." (no cuentan para el
+  // presupuesto) de raíz, lista y total incluidos. Si no, se siguen viendo
+  // acá gastos que Presupuesto ya ignora, y el total tampoco coincide con
+  // el que se ve ahí (ver `budget_vs_actual` en el backend).
+  const items = useMemo(
+    () => (query.data ?? []).filter((t) => t.counts_toward_budget),
+    [query.data],
+  );
   // El total de arriba se suma sin convertir (no hay tasas acá) -- se
   // limita a la moneda base para no mezclar montos de otras carteras; cada
   // fila de la lista de abajo sí muestra su moneda real, sea cual sea.
-  // También se excluyen las marcadas "S/PRES." (no cuentan para el
-  // presupuesto) -- si no, este total no coincide con el que ya se ve en
-  // Presupuesto (que sí las excluye, ver `budget_vs_actual` en el backend).
-  // Igual se listan abajo (con su etiqueta) para que quede claro por qué no
-  // suman.
   const totals = useMemo(
-    () =>
-      summarizeByType(
-        items.filter((t) => t.currency === currency && t.counts_toward_budget),
-      ),
+    () => summarizeByType(items.filter((t) => t.currency === currency)),
     [items, currency],
   );
   const days = useMemo(() => groupByDay(items), [items]);

@@ -176,21 +176,15 @@ function GroupCard({
   const budgeted = toNumber(group.budgeted);
   const remaining = toNumber(group.remaining);
   return (
-    <Card
-      title={group.group_name}
-      animated
-      index={index}
-      action={
-        <Text className="text-xs font-semibold">
-          <Money value={spent} currency={currency} tone="muted" />
-          <Text className="text-text-muted"> / </Text>
-          <Money value={budgeted} currency={currency} tone="muted" />
-          <Text className="text-text-muted"> (</Text>
-          <Money value={remaining} currency={currency} signed />
-          <Text className="text-text-muted">)</Text>
-        </Text>
-      }
-    >
+    <Card title={group.group_name} animated index={index}>
+      <Text className="text-text-muted mb-3 text-xs">
+        <Money value={spent} currency={currency} tone="muted" />
+        <Text> / </Text>
+        <Money value={budgeted} currency={currency} tone="muted" />
+        <Text> (</Text>
+        <Money value={remaining} currency={currency} signed className="text-xs" />
+        <Text>)</Text>
+      </Text>
       {group.rows.map((row, i) => (
         <View key={row.category}>
           {i > 0 ? <View className="h-px bg-border/30" /> : null}
