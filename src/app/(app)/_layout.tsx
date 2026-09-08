@@ -273,6 +273,10 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="loyalty"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="tags"
           options={{ presentation: 'modal', headerShown: false }}
         />

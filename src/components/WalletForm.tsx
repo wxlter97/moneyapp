@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import {
   useArchiveWallet,
   useBankEmailSchemas,
+  useCardProducts,
   useCreateWallet,
   useDeleteWallet,
   useGoalProjection,
@@ -88,6 +89,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [dueDate, setDueDate] = useState('');
   const [cardLast4, setCardLast4] = useState('');
   const [bankSchemaId, setBankSchemaId] = useState<string | null>(null);
+  const [cardProductId, setCardProductId] = useState<string | null>(null);
   const [billingDay, setBillingDay] = useState('');
   const [paymentDueDay, setPaymentDueDay] = useState('');
   const [counterparty, setCounterparty] = useState('');
@@ -124,6 +126,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setDueDate(w.due_date ?? '');
     setCardLast4(w.card_last4 ?? '');
     setBankSchemaId(w.bank_schema);
+    setCardProductId(w.card_product);
     setBillingDay(w.billing_cycle_day ? String(w.billing_cycle_day) : '');
     setPaymentDueDay(w.payment_due_day ? String(w.payment_due_day) : '');
     setCounterparty(w.counterparty ?? '');
@@ -142,6 +145,19 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const bankOptions = useMemo(
     () => (bankSchemasQ.data ?? []).map((b) => ({ value: b.id, label: b.bank_name })),
     [bankSchemasQ.data],
+  );
+
+  // Producto de tarjeta (catálogo de lealtad): de acá salen los programas de
+  // puntos/cashback/descuento que aplican a esta cartera. Sólo tiene sentido
+  // en tarjetas de crédito (lo valida el backend).
+  const cardProductsQ = useCardProducts();
+  const cardProductOptions = useMemo(
+    () =>
+      (cardProductsQ.data ?? []).map((p) => ({
+        value: p.id,
+        label: `${p.bank_name} — ${p.name}`,
+      })),
+    [cardProductsQ.data],
   );
 
   const isDebt = purpose === 'debt';
@@ -243,6 +259,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
       due_date: isDebt && dueDate ? dueDate : null,
       card_last4: cardNumberEligible && cardLast4.trim() ? cardLast4.trim() : null,
       bank_schema: cardNumberEligible ? bankSchemaId || null : null,
+      card_product: kind === 'credit' ? cardProductId || null : null,
       billing_cycle_day: cardStatementEligible ? parseDay(billingDay) : null,
       payment_due_day: cardStatementEligible ? parseDay(paymentDueDay) : null,
       counterparty: isDebt ? counterparty.trim() : '',
@@ -370,6 +387,32 @@ export function WalletForm({ walletId }: WalletFormProps) {
             value={creditLimit}
             onChangeText={setCreditLimit}
           />
+        ) : null}
+
+        {kind === 'credit' && cardProductOptions.length > 0 ? (
+          <Select
+            label="Producto de tarjeta (opcional)"
+            value={cardProductId}
+            onChange={setCardProductId}
+            options={[{ value: '', label: 'Sin especificar' }, ...cardProductOptions]}
+            placeholder="Sin especificar"
+          />
+        ) : null}
+
+        {kind === 'credit' && editing && existing.data?.card_product ? (
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              router.push('/loyalty');
+            }}
+            className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5 active:opacity-70"
+            accessibilityRole="button"
+          >
+            <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+              Ver recompensas
+            </Text>
+            <Icon name="chevron-right" size={16} color={colors.textMuted} />
+          </Pressable>
         ) : null}
 
         {isDebt ? (

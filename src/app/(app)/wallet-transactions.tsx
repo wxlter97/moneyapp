@@ -50,6 +50,19 @@ export default function WalletTransactionsScreen() {
                 <Icon name="receipt" size={14} color={colors.textMuted} />
               </Pressable>
             ) : null}
+            {walletQ.data?.card_product ? (
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  router.push('/loyalty');
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Ver recompensas"
+                className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
+              >
+                <Icon name="gift" size={14} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={() => {
                 haptics.tap();

@@ -12,6 +12,9 @@ export const qk = {
   /** No van por workspace: la invitación es a alguien que ni es miembro todavía. */
   myInvitations: () => ['invitations', 'mine'] as const,
   bankEmailSchemas: () => ['bank-email-schemas'] as const,
+  loyaltyBanks: () => ['loyalty-banks'] as const,
+  loyaltyCategoryTypes: () => ['loyalty-category-types'] as const,
+  cardProducts: () => ['card-products'] as const,
 
   ws: (ws: string | null) => ({
     all: ['ws', ws] as const,
@@ -62,5 +65,8 @@ export const qk = {
       ['ws', ws, 'reports', 'category-trends', months] as const,
     reportScheduled: (range?: { since?: string; until?: string }) =>
       ['ws', ws, 'reports', 'scheduled', range ?? {}] as const,
+
+    loyaltySummary: (range?: { date_after?: string; date_before?: string }) =>
+      ['ws', ws, 'loyalty-summary', range ?? {}] as const,
   }),
 };

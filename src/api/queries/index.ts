@@ -291,6 +291,44 @@ export function useBankEmailSchemas() {
   });
 }
 
+// --- catálogo de lealtad (global; solo lectura acá, se edita en el admin) --
+export function useLoyaltyBanks() {
+  return useQuery({
+    queryKey: qk.loyaltyBanks(),
+    queryFn: () => res.loyaltyBanks.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useLoyaltyCategoryTypes() {
+  return useQuery({
+    queryKey: qk.loyaltyCategoryTypes(),
+    queryFn: () => res.loyaltyCategoryTypes.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Productos de tarjeta (con sus programas y tasas ya anidados) -- para
+ * armar el selector Banco -> Producto al editar una tarjeta. */
+export function useCardProducts() {
+  return useQuery({
+    queryKey: qk.cardProducts(),
+    queryFn: () => res.cardProducts.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Saldo de puntos por cartera + cashback ganado / descuento ahorrado en el
+ * período (ambas fechas opcionales). */
+export function useLoyaltySummary(range?: { date_after?: string; date_before?: string }) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).loyaltySummary(range),
+    queryFn: () => res.loyaltyEarnings.summary(range),
+    enabled: !!ws,
+  });
+}
+
 export function useWallets(params?: res.WalletListParams) {
   const ws = useActiveWs();
   return useQuery({
