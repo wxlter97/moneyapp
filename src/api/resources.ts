@@ -323,9 +323,6 @@ export const installments = {
     api.patch<InstallmentPurchase>(`/installment-purchases/${id}/`, input).then((r) => r.data),
   remove: (id: string) =>
     api.delete(`/installment-purchases/${id}/`).then(() => undefined),
-  /** Registra la siguiente cuota (crea la transacción). */
-  pay: (id: string) =>
-    api.post<InstallmentPurchase>(`/installment-purchases/${id}/pay/`).then((r) => r.data),
 };
 
 // --- transacciones -----------------------------------------------------

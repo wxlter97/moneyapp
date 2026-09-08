@@ -15,12 +15,13 @@ import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
+import { Money } from '@/components/ui/Money';
 import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { fonts } from '@/theme/typography';
-import { todayISO } from '@/lib/date';
+import { formatShortDate, todayISO } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 
 function toInt(value: string): number {
@@ -39,14 +40,10 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
 
   const [description, setDescription] = useState('');
   const [total, setTotal] = useState('0.00');
-  const [installment, setInstallment] = useState('0.00');
   const [count, setCount] = useState('12');
-  const [paid, setPaid] = useState('0');
   const [startDate, setStartDate] = useState(todayISO());
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [walletId, setWalletId] = useState<string | null>(null);
-  const [paymentWalletId, setPaymentWalletId] = useState<string | null>(null);
-  const [touchedInstallment, setTouchedInstallment] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [prefilled, setPrefilled] = useState(false);
@@ -57,24 +54,12 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
     const p = existing.data;
     setDescription(p.description);
     setTotal(toNumber(p.total_amount).toFixed(2));
-    setInstallment(toNumber(p.installment_amount).toFixed(2));
     setCount(String(p.installments_total));
-    setPaid(String(p.installments_paid));
     setStartDate(p.start_date);
     setCategoryId(p.category);
     setWalletId(p.wallet);
-    setPaymentWalletId(p.payment_wallet);
-    setTouchedInstallment(true);
     setPrefilled(true);
   }, [editing, prefilled, existing.data]);
-
-  // Sugiere el monto de cuota = total / nº de cuotas mientras no lo toquen.
-  useEffect(() => {
-    if (touchedInstallment) return;
-    const c = toInt(count);
-    const t = toNumber(total);
-    if (c > 0 && t > 0) setInstallment((t / c).toFixed(2));
-  }, [count, total, touchedInstallment]);
 
   const categoryOptions = useMemo(
     () =>
@@ -83,28 +68,24 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
         .map((c) => ({ value: c.id, label: c.parent ? `  ${c.name}` : c.name })),
     [categoriesQ.data],
   );
-  const walletOptions = useMemo(
-    () => assignableWallets.map((w) => ({ value: w.id, label: walletLabel(w) })),
+  // Solo tarjetas de crédito con fecha de corte configurada: es lo único
+  // que permite calcular las cuotas contra sus cortes de facturación.
+  const eligibleCards = useMemo(
+    () => assignableWallets.filter((w) => w.kind === 'credit' && !!w.billing_cycle_day),
     [assignableWallets],
   );
-
-  const isCreditCard = useMemo(
-    () => (walletsQ.data ?? []).find((w) => w.id === walletId)?.kind === 'credit',
-    [walletsQ.data, walletId],
-  );
-  const paymentWalletOptions = useMemo(
-    () => walletOptions.filter((o) => o.value !== walletId),
-    [walletOptions, walletId],
+  const walletOptions = useMemo(
+    () => eligibleCards.map((w) => ({ value: w.id, label: walletLabel(w) })),
+    [eligibleCards],
   );
 
   const busy = create.isPending || update.isPending || remove.isPending;
   const canSubmit =
     description.trim().length > 0 &&
-    toNumber(installment) > 0 &&
+    toNumber(total) > 0 &&
     toInt(count) > 0 &&
     !!categoryId &&
     !!walletId &&
-    (!isCreditCard || !!paymentWalletId) &&
     !busy;
 
   async function onSubmit() {
@@ -113,13 +94,10 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
     setFields({});
     const payload: InstallmentPurchaseInput = {
       wallet: walletId,
-      payment_wallet: isCreditCard ? paymentWalletId : null,
       category: categoryId,
       description: description.trim(),
-      total_amount: (toNumber(total) || toNumber(installment) * toInt(count)).toFixed(2),
-      installment_amount: toNumber(installment).toFixed(2),
+      total_amount: toNumber(total).toFixed(2),
       installments_total: toInt(count),
-      installments_paid: Math.min(toInt(paid), toInt(count)),
       start_date: startDate,
     };
     try {
@@ -145,12 +123,41 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
 
   if (editing && existing.isLoading) return <LoadingState />;
 
+  const currency = eligibleCards.find((w) => w.id === walletId)?.currency ?? 'USD';
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1"
     >
       <ScrollView contentContainerClassName="gap-4 py-3" keyboardShouldPersistTaps="handled">
+        {editing && existing.data ? (
+          <View className="gap-1 rounded-2xl bg-surface-2 px-4 py-3">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-text-muted text-xs uppercase tracking-wide">
+                {existing.data.is_completed ? 'Pagada por completo' : 'Cuota actual'}
+              </Text>
+              <Text className="text-text-muted text-xs">
+                {existing.data.installments_paid}/{existing.data.installments_total} cuotas
+              </Text>
+            </View>
+            {!existing.data.is_completed ? (
+              <View className="flex-row items-baseline justify-between">
+                <Money
+                  value={existing.data.current_installment_amount}
+                  currency={currency}
+                  className="text-lg font-semibold"
+                />
+                {existing.data.next_due_date ? (
+                  <Text className="text-text-muted text-xs">
+                    corte del {formatShortDate(existing.data.next_due_date)}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         <TextField
           label="Descripción"
           value={description}
@@ -161,39 +168,16 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
 
         <AmountInput label="Precio total" value={total} onChangeText={setTotal} error={fields.total_amount} />
 
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <TextField
-              label="Nº de cuotas"
-              value={count}
-              onChangeText={(t) => setCount(t.replace(/\D/g, '').slice(0, 3))}
-              keyboardType="number-pad"
-              error={fields.installments_total}
-            />
-          </View>
-          <View className="flex-1">
-            <TextField
-              label="Ya pagadas"
-              value={paid}
-              onChangeText={(t) => setPaid(t.replace(/\D/g, '').slice(0, 3))}
-              keyboardType="number-pad"
-              error={fields.installments_paid}
-            />
-          </View>
-        </View>
-
-        <AmountInput
-          label="Monto por cuota"
-          value={installment}
-          onChangeText={(t) => {
-            setTouchedInstallment(true);
-            setInstallment(t);
-          }}
-          error={fields.installment_amount}
+        <TextField
+          label="Nº de cuotas"
+          value={count}
+          onChangeText={(t) => setCount(t.replace(/\D/g, '').slice(0, 3))}
+          keyboardType="number-pad"
+          error={fields.installments_total}
         />
 
         <DateField
-          label="Fecha de la 1.ª cuota"
+          label="Fecha de la compra"
           value={startDate}
           onChange={setStartDate}
           error={fields.start_date}
@@ -208,34 +192,34 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
           error={fields.category}
         />
 
-        <Select
-          label={isCreditCard ? 'Tarjeta' : 'Cartera'}
-          value={walletId}
-          onChange={setWalletId}
-          options={walletOptions}
-          placeholder={walletsQ.isLoading ? 'Cargando…' : 'Elegir cartera'}
-          error={fields.wallet}
-        />
-
-        {isCreditCard ? (
-          <View className="gap-2">
-            <Select
-              label="Pagar las cuotas desde"
-              value={paymentWalletId}
-              onChange={setPaymentWalletId}
-              options={paymentWalletOptions}
-              placeholder="Elegir cartera"
-              error={fields.payment_wallet}
-            />
+        <View className="gap-2">
+          <Select
+            label="Tarjeta"
+            value={walletId}
+            onChange={setWalletId}
+            options={walletOptions}
+            placeholder={
+              walletsQ.isLoading
+                ? 'Cargando…'
+                : walletOptions.length === 0
+                  ? 'Sin tarjetas elegibles'
+                  : 'Elegir tarjeta'
+            }
+            error={fields.wallet}
+          />
+          {!walletsQ.isLoading && walletOptions.length === 0 ? (
             <Text className="text-text-muted text-xs">
-              Compra con tarjeta: el total se carga a la tarjeta hoy (baja tu
-              crédito disponible) y cada cuota es una transferencia desde esta
-              cartera para pagarla. Si ya pagaste algunas antes de registrar
-              la compra, esas transferencias se crean de una vez con la fecha
-              que les tocaba.
+              Solo se puede registrar en una tarjeta de crédito con fecha de corte
+              configurada. Configurala editando la tarjeta.
             </Text>
-          </View>
-        ) : null}
+          ) : (
+            <Text className="text-text-muted text-xs">
+              Se registra un solo gasto por el total contra esta tarjeta, hoy. Las
+              cuotas de acá abajo son solo para calcular el estado de cuenta, según
+              los cortes de esta tarjeta -- no generan movimientos propios.
+            </Text>
+          )}
+        </View>
 
         {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
 

@@ -20,7 +20,6 @@ import { fonts } from '@/theme/typography';
  *
  *   pago de contado = saldo usado (límite − disponible)
  *                   − capital a plazo que aún no vence
- *                   + cuotas de tienda vencidas sin registrar
  *
  * Ver `services.credit_card_statement` en el backend.
  */
@@ -40,7 +39,6 @@ export default function StatementDetailScreen() {
   const currency = wallet?.currency ?? 'USD';
 
   const notDue = data ? toNumber(data.installments_not_due) : 0;
-  const overdue = data ? toNumber(data.installments_overdue_unbilled) : 0;
 
   return (
     <Screen edges={['top', 'bottom']}>
@@ -90,14 +88,6 @@ export default function StatementDetailScreen() {
                   value={-notDue}
                   currency={currency}
                   tone="income"
-                />
-              ) : null}
-              {overdue > 0.005 ? (
-                <BreakdownRow
-                  label="Cuotas vencidas sin registrar"
-                  value={overdue}
-                  currency={currency}
-                  tone="expense"
                 />
               ) : null}
               <View className="border-border/40 mt-1 flex-row items-center justify-between border-t pt-2.5">

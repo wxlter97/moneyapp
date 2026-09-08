@@ -172,6 +172,8 @@ function GroupCard({
   showProvision?: boolean;
   index?: number;
 }) {
+  const spent = toNumber(group.spent);
+  const budgeted = toNumber(group.budgeted);
   const remaining = toNumber(group.remaining);
   return (
     <Card
@@ -179,12 +181,14 @@ function GroupCard({
       animated
       index={index}
       action={
-        <Money
-          value={remaining}
-          currency={currency}
-          signed
-          className="text-xs font-semibold"
-        />
+        <Text className="text-xs font-semibold">
+          <Money value={spent} currency={currency} tone="muted" />
+          <Text className="text-text-muted"> / </Text>
+          <Money value={budgeted} currency={currency} tone="muted" />
+          <Text className="text-text-muted"> (</Text>
+          <Money value={remaining} currency={currency} signed />
+          <Text className="text-text-muted">)</Text>
+        </Text>
       }
     >
       {group.rows.map((row, i) => (

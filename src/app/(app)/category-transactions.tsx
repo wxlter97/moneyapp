@@ -50,8 +50,16 @@ export default function CategoryTransactionsScreen() {
   // El total de arriba se suma sin convertir (no hay tasas acá) -- se
   // limita a la moneda base para no mezclar montos de otras carteras; cada
   // fila de la lista de abajo sí muestra su moneda real, sea cual sea.
+  // También se excluyen las marcadas "S/PRES." (no cuentan para el
+  // presupuesto) -- si no, este total no coincide con el que ya se ve en
+  // Presupuesto (que sí las excluye, ver `budget_vs_actual` en el backend).
+  // Igual se listan abajo (con su etiqueta) para que quede claro por qué no
+  // suman.
   const totals = useMemo(
-    () => summarizeByType(items.filter((t) => t.currency === currency)),
+    () =>
+      summarizeByType(
+        items.filter((t) => t.currency === currency && t.counts_toward_budget),
+      ),
     [items, currency],
   );
   const days = useMemo(() => groupByDay(items), [items]);
