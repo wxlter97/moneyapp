@@ -749,14 +749,6 @@ export function useDeleteInstallment() {
   });
 }
 
-export function usePayInstallment() {
-  const invalidate = useInvalidateWorkspace();
-  return useMutation({
-    mutationFn: (id: string) => res.installments.pay(id),
-    onSuccess: invalidate,
-  });
-}
-
 // --- snapshots ----------------------------------------------------
 export function useMonthlySnapshots() {
   const ws = useActiveWs();

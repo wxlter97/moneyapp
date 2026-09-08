@@ -449,34 +449,35 @@ export interface RecurringExpenseInput {
 // ---------------------------------------------------------------------------
 export interface InstallmentPurchase {
   id: UUID;
+  /** Tarjeta donde se generó la compra -- nunca se guarda "desde dónde se
+   * paga"; la única Transaction que genera esta compra es siempre un gasto
+   * contra esta misma cartera. */
   wallet: UUID;
-  /** Tarjeta de crédito: cartera desde la que se pagan las cuotas. */
-  payment_wallet: UUID | null;
   category: UUID;
   description: string;
   total_amount: Money;
-  installment_amount: Money;
   installments_total: number;
-  installments_paid: number;
   start_date: ISODate;
+  /** Todos los campos de acá abajo son de solo lectura: se calculan sobre
+   * los cortes de facturación de `wallet`, no hay ningún contador que
+   * avanzar a mano (ver InstallmentsScreen). */
+  installments_paid: number;
   is_completed: boolean;
-  /** true si `payment_wallet` está definido (compra con tarjeta). */
-  is_credit_card: boolean;
-  /** installment_amount × (total − pagadas). */
+  /** Monto de la cuota que falta pagar (ceiling; la última es el resto). */
+  current_installment_amount: Money;
+  /** Suma de las cuotas pendientes. */
   remaining_amount: Money;
+  next_due_date: ISODate | null;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 }
 
 export interface InstallmentPurchaseInput {
   wallet: UUID;
-  payment_wallet?: UUID | null;
   category: UUID;
   description: string;
   total_amount: Money;
-  installment_amount: Money;
   installments_total: number;
-  installments_paid?: number;
   start_date: ISODate;
 }
 
@@ -645,7 +646,7 @@ export interface GoalProjection {
   on_track: boolean | null;
 }
 
-/** Compra a plazo con cuotas vencidas que todavía no se registraron. */
+/** Compra a plazo con cuotas que todavía no vencen. */
 export interface StatementInstallmentLine {
   id: UUID;
   description: string;
@@ -665,11 +666,9 @@ export interface CreditCardStatement {
   available: Money | null;
   /** Saldo usado = límite - disponible = -(saldo de la tarjeta a la fecha). */
   used: Money;
-  /** Capital de compras a plazo financiadas cuyas cuotas aún no vencen (se resta). */
+  /** Capital de compras a plazo cuyas cuotas aún no vencen (se resta). */
   installments_not_due: Money;
-  /** Cuotas de planes de tienda ya vencidas y sin registrar (se suma). */
-  installments_overdue_unbilled: Money;
-  /** Pago de contado = used - installments_not_due + installments_overdue_unbilled. */
+  /** Pago de contado = used - installments_not_due. */
   total_due: Money;
   installment_lines: StatementInstallmentLine[];
 }

@@ -36,17 +36,32 @@ export default function WalletTransactionsScreen() {
       <ModalHeader
         title={walletQ.data?.name ?? 'Cartera'}
         right={
-          <Pressable
-            onPress={() => {
-              haptics.tap();
-              router.push(`/wallet/${walletId}`);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Editar cartera"
-            className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
-          >
-            <Icon name="pencil" size={14} color={colors.textMuted} />
-          </Pressable>
+          <View className="flex-row items-center gap-2">
+            {walletQ.data?.billing_cycle_day ? (
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  router.push(`/statement/${walletId}`);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Ver estado de cuenta"
+                className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
+              >
+                <Icon name="receipt" size={14} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => {
+                haptics.tap();
+                router.push(`/wallet/${walletId}`);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Editar cartera"
+              className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
+            >
+              <Icon name="pencil" size={14} color={colors.textMuted} />
+            </Pressable>
+          </View>
         }
       />
       <ScrollView contentContainerClassName="gap-3 py-2" refreshControl={refresh}>
