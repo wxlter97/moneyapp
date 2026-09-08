@@ -16,9 +16,13 @@ import { toNumber } from '@/lib/money';
 import { fonts } from '@/theme/typography';
 
 /**
- * Estado de cuenta de una tarjeta a una fecha elegible: cuánto hay que
- * transferir para estar al día (Fase 3 del roadmap). Ver
- * `services.credit_card_statement` en el backend para la fórmula exacta.
+ * Pago de contado de una tarjeta a la fecha elegida:
+ *
+ *   pago de contado = saldo usado (límite − disponible)
+ *                   − capital a plazo que aún no vence
+ *                   + cuotas de tienda vencidas sin registrar
+ *
+ * Ver `services.credit_card_statement` en el backend.
  */
 export default function StatementDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,9 +39,12 @@ export default function StatementDetailScreen() {
   const data = stmtQ.data;
   const currency = wallet?.currency ?? 'USD';
 
+  const notDue = data ? toNumber(data.installments_not_due) : 0;
+  const overdue = data ? toNumber(data.installments_overdue_unbilled) : 0;
+
   return (
     <Screen edges={['top', 'bottom']}>
-      <ModalHeader title={wallet?.name ?? 'Estado de cuenta'} />
+      <ModalHeader title={wallet?.name ?? 'Pago de contado'} />
       <ScrollView contentContainerClassName="gap-4 py-2" refreshControl={refresh}>
         <DateField label="Consultar al" value={asOf} onChange={setAsOf} />
 
@@ -47,47 +54,55 @@ export default function StatementDetailScreen() {
           <ErrorState error={stmtQ.error} onRetry={stmtQ.refetch} />
         ) : !data ? null : (
           <>
-            <TotalDueCard totalDue={toNumber(data.total_due)} currency={currency}>
+            <Card className="items-center">
+              <Text className="text-text-muted text-sm">Pago de contado</Text>
+              <Money
+                value={data.total_due}
+                currency={currency}
+                hero
+                tone={toNumber(data.total_due) > 0.005 ? 'expense' : 'income'}
+                className="text-4xl"
+              />
               <Text className="text-text-muted mt-1 text-center text-xs">
                 Corte del {formatLongDate(data.cutoff_date)}
                 {data.payment_due_date ? ` · vence el ${formatShortDate(data.payment_due_date)}` : ''}
               </Text>
-            </TotalDueCard>
+            </Card>
 
             <Card title="Cómo se calcula">
-              {toNumber(data.opening_balance) < -0.005 ? (
-                <BreakdownRow
-                  label="Ya debías al empezar a usar la app"
-                  value={-toNumber(data.opening_balance)}
-                  currency={currency}
-                  tone="expense"
-                  first
-                />
+              {data.available != null ? (
+                <>
+                  <BreakdownRow label="Límite" value={data.credit_limit ?? 0} currency={currency} first />
+                  <BreakdownRow label="Disponible" value={data.available} currency={currency} />
+                </>
               ) : null}
               <BreakdownRow
-                label="Gastos hasta el corte"
-                value={data.spent}
+                label="Saldo usado"
+                value={data.used}
                 currency={currency}
                 tone="expense"
-                first={toNumber(data.opening_balance) >= -0.005}
+                strong
+                first={data.available == null}
               />
-              <BreakdownRow
-                label="Abonos hasta el corte"
-                value={-toNumber(data.paid)}
-                currency={currency}
-                tone="income"
-              />
-              {toNumber(data.financed_not_due) > 0.005 ? (
+              {notDue > 0.005 ? (
                 <BreakdownRow
-                  label="Compras a plazo: capital que aún no vence"
-                  value={-toNumber(data.financed_not_due)}
+                  label="Compras a plazo que aún no vencen"
+                  value={-notDue}
                   currency={currency}
                   tone="income"
                 />
               ) : null}
+              {overdue > 0.005 ? (
+                <BreakdownRow
+                  label="Cuotas vencidas sin registrar"
+                  value={overdue}
+                  currency={currency}
+                  tone="expense"
+                />
+              ) : null}
               <View className="border-border/40 mt-1 flex-row items-center justify-between border-t pt-2.5">
                 <Text className="text-text text-sm" style={{ fontFamily: fonts.bold }}>
-                  Total a pagar
+                  Pago de contado
                 </Text>
                 <Money
                   value={data.total_due}
@@ -99,62 +114,16 @@ export default function StatementDetailScreen() {
             </Card>
 
             {data.installment_lines.length > 0 ? (
-              <Card title="Compras a plazo">
+              <Card title="Cuotas pendientes">
                 {data.installment_lines.map((line, i) => (
                   <InstallmentLineRow key={line.id} line={line} currency={currency} first={i === 0} />
                 ))}
               </Card>
             ) : null}
-
-            <Card title="Próximo corte">
-              <Text className="text-text-muted text-sm">
-                Llevas{' '}
-                <Money value={data.current_period_spent} currency={currency} className="text-sm font-semibold" />{' '}
-                acumulado desde el {formatShortDate(data.cutoff_date)}
-                {toNumber(data.current_period_paid) > 0.005 ? (
-                  <>
-                    {' '}
-                    (ya abonaste{' '}
-                    <Money value={data.current_period_paid} currency={currency} className="text-sm font-semibold" />{' '}
-                    por adelantado)
-                  </>
-                ) : null}
-                , se cobrará en el corte del {formatShortDate(data.next_cutoff_date)}.
-              </Text>
-            </Card>
           </>
         )}
       </ScrollView>
     </Screen>
-  );
-}
-
-function TotalDueCard({
-  totalDue,
-  currency,
-  children,
-}: {
-  totalDue: number;
-  currency: string;
-  children: React.ReactNode;
-}) {
-  // Un "saldo a favor" (pagaste de más) es un caso raro y, si aparece,
-  // igual no hay nada que pagar -- se trata como "al día" en vez de un
-  // estado especial más para explicar.
-  const upToDate = totalDue <= 0.005;
-
-  return (
-    <Card className="items-center">
-      <Text className="text-text-muted text-sm">{upToDate ? 'Total a pagar' : 'Debes'}</Text>
-      {upToDate ? (
-        <Text className="text-income mt-1 text-3xl" style={{ fontFamily: fonts.extrabold }}>
-          Estás al día 🎉
-        </Text>
-      ) : (
-        <Money value={totalDue} currency={currency} hero tone="expense" className="text-4xl" />
-      )}
-      {children}
-    </Card>
   );
 }
 
@@ -164,17 +133,32 @@ function BreakdownRow({
   currency,
   tone = 'default',
   first = false,
+  strong = false,
 }: {
   label: string;
   value: string | number;
   currency: string;
   tone?: 'default' | 'income' | 'expense';
   first?: boolean;
+  strong?: boolean;
 }) {
   return (
-    <View className={`flex-row items-center justify-between py-2 ${first ? '' : ''}`}>
-      <Text className="text-text-muted text-sm">{label}</Text>
-      <Money value={value} currency={currency} tone={tone} signed className="text-sm font-semibold" />
+    <View
+      className={`flex-row items-center justify-between py-2 ${first ? '' : 'border-t border-border/20'}`}
+    >
+      <Text
+        className="text-text-muted text-sm"
+        style={strong ? { fontFamily: fonts.semibold } : undefined}
+      >
+        {label}
+      </Text>
+      <Money
+        value={value}
+        currency={currency}
+        tone={tone}
+        signed={tone !== 'default'}
+        className={`text-sm ${strong ? 'font-semibold' : ''}`}
+      />
     </View>
   );
 }
@@ -197,10 +181,11 @@ function InstallmentLineRow({
           {line.description}
         </Text>
         <Text className="text-text-muted text-xs">
-          {line.installments_due}/{line.installments_total} cuotas facturadas
+          {line.installments_pending} cuota{line.installments_pending === 1 ? '' : 's'} vencida
+          {line.installments_pending === 1 ? '' : 's'} sin registrar · de {line.installments_total}
         </Text>
       </View>
-      <Money value={line.amount_due} currency={currency} className="text-sm font-semibold" />
+      <Money value={line.amount_pending} currency={currency} className="text-sm font-semibold" />
     </View>
   );
 }
