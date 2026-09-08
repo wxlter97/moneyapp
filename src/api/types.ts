@@ -645,33 +645,32 @@ export interface GoalProjection {
   on_track: boolean | null;
 }
 
-/** Compra a plazo que aporta a la deuda de la tarjeta en un estado de cuenta. */
+/** Compra a plazo con cuotas vencidas que todavía no se registraron. */
 export interface StatementInstallmentLine {
   id: UUID;
   description: string;
-  installments_due: number;
+  installments_pending: number;
   installments_total: number;
-  amount_due: Money;
+  amount_pending: Money;
 }
 
-/** Estado de cuenta de una tarjeta de crédito -- ver `wallets/{id}/statement/`. */
+/** Pago de contado de una tarjeta de crédito -- ver `wallets/{id}/statement/`. */
 export interface CreditCardStatement {
   cutoff_date: ISODate;
   next_cutoff_date: ISODate;
   payment_due_date: ISODate | null;
-  /** Deuda de la tarjeta el día que se empezó a llevarla en la app (negativo = ya se debía). */
-  opening_balance: Money;
-  /** Gastos normales hasta el corte (sin cuotas ni cargo inicial de compras a plazo). */
-  spent: Money;
-  /** Abonos normales hasta el corte (sin la mecánica de cuotas). */
-  paid: Money;
-  /** Cuotas de compras a plazo ya vencidas al corte (según el calendario). */
-  installments_due: Money;
-  /** Saldo al corte: `spent - paid + installments_due - opening_balance`. */
+  /** Límite de la tarjeta (null si no está configurado). */
+  credit_limit: Money | null;
+  /** Disponible = límite + saldo (null sin límite). */
+  available: Money | null;
+  /** Saldo usado = límite - disponible = -(saldo de la tarjeta a la fecha). */
+  used: Money;
+  /** Capital de compras a plazo financiadas cuyas cuotas aún no vencen (se resta). */
+  installments_not_due: Money;
+  /** Cuotas de planes de tienda ya vencidas y sin registrar (se suma). */
+  installments_overdue_unbilled: Money;
+  /** Pago de contado = used - installments_not_due + installments_overdue_unbilled. */
   total_due: Money;
-  /** Actividad del período abierto (desde el corte hasta la fecha consultada), aún no vencida. */
-  current_period_spent: Money;
-  current_period_paid: Money;
   installment_lines: StatementInstallmentLine[];
 }
 

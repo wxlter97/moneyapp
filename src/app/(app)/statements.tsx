@@ -98,9 +98,9 @@ function StatementRow({
         ) : (
           <Money value={due} currency={s.currency} tone="expense" className="text-sm font-semibold" />
         )}
-        {toNumber(s.current_period_spent) > 0.005 ? (
+        {s.available != null ? (
           <Text className="text-text-muted text-[11px]">
-            +<Money value={s.current_period_spent} currency={s.currency} tone="muted" /> este período
+            <Money value={s.available} currency={s.currency} tone="muted" /> disponible
           </Text>
         ) : null}
       </View>
