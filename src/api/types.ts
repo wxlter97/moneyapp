@@ -199,6 +199,11 @@ export interface Wallet {
   /** Banco emisor (opcional), para detectar sola esta cartera al llegar un correo bancario. */
   bank_schema: UUID | null;
   bank_name: string | null;
+  /** Producto de tarjeta (catálogo de lealtad, opcional) -- sólo tarjetas de
+   * crédito. De acá salen los programas de puntos/cashback/descuento. */
+  card_product: UUID | null;
+  card_product_name: string | null;
+  card_bank_name: string | null;
   visibility: Visibility;
   owner: number | null;
   is_active: boolean;
@@ -231,6 +236,7 @@ export interface WalletInput {
   due_date?: ISODate | null;
   counterparty?: string;
   bank_schema?: UUID | null;
+  card_product?: UUID | null;
   visibility?: Visibility;
   is_active?: boolean;
   is_archived?: boolean;
@@ -257,6 +263,9 @@ export interface Category {
   /** Cantidad de transacciones vivas con esta categoría; la usa el picker
    * de categoría de transacciones para mostrar primero las más usadas. */
   usage_count: number;
+  /** Rubro estándar del catálogo de lealtad (opcional) -- ver `LoyaltyCategoryType`.
+   * Mapea esta categoría propia a un rubro global para heredar sus tasas. */
+  category_type: UUID | null;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 }
@@ -269,6 +278,7 @@ export interface CategoryInput {
   color?: string;
   parent?: UUID | null;
   sort_order?: number;
+  category_type?: UUID | null;
 }
 
 export type TransactionSource =
@@ -300,6 +310,10 @@ export interface Transaction {
   split_group: UUID | null;
   /** Etiquetas libres asignadas -- ver `tag_names` en TransactionInput para escribirlas. */
   tags: Tag[];
+  /** Puntos/cashback/descuento que generó esta transacción (solo lectura) --
+   * ver `apps.loyalty` en el backend. Vacío si la cartera no tiene producto
+   * de tarjeta asignado o la categoría no mapea a un rubro. */
+  loyalty_earnings: LoyaltyEarningSummary[];
   created_by: number | null;
   created_at: ISODateTime;
   updated_at: ISODateTime;
@@ -331,6 +345,12 @@ export interface TransactionInput {
    * que ya existen (sin distinguir mayúsculas) y se crean las que no.
    * Omitir deja las etiquetas actuales sin cambios al editar. */
   tag_names?: string[];
+  /** Descuento sugerido aplicado a mano (botón "aplicar descuento" del
+   * formulario): van los dos juntos, o ninguno. `pre_discount_amount` es el
+   * monto ANTES del descuento; `amount` de arriba ya va con el descuento
+   * puesto. Ver `LoyaltyProgram` (kind=discount). */
+  discount_program?: UUID | null;
+  pre_discount_amount?: Money | null;
 }
 
 /** Etiqueta libre, transversal a la categoría (p. ej. "viaje-cancún"). */
@@ -479,6 +499,112 @@ export interface InstallmentPurchaseInput {
   total_amount: Money;
   installments_total: number;
   start_date: ISODate;
+}
+
+// ---------------------------------------------------------------------------
+// Programas de lealtad (puntos, cashback, descuento)
+// ---------------------------------------------------------------------------
+/** Catálogo global (no por workspace): lo lee cualquier usuario, sólo staff
+ * lo edita (Django admin). El cliente sólo lo consume para armar el
+ * selector Banco -> Producto de una tarjeta. */
+export interface Bank {
+  id: UUID;
+  name: string;
+}
+
+/**
+ * Rubro estándar del catálogo ("Supermercado", "Gasolina"...) -- OJO, no
+ * confundir con `CategoryType` (income/expense) de arriba. Cada `Category`
+ * del workspace se mapea a uno de éstos (`Category.category_type`) para
+ * heredar las tasas que le correspondan.
+ */
+export interface LoyaltyCategoryType {
+  id: UUID;
+  slug: string;
+  name: string;
+  icon: string;
+}
+
+export type LoyaltyKind = 'points' | 'cashback' | 'discount';
+
+export const LOYALTY_KIND_LABEL: Record<LoyaltyKind, string> = {
+  points: 'Puntos',
+  cashback: 'Cashback',
+  discount: 'Descuento',
+};
+
+/** Tasa especial de un programa para un rubro puntual (reemplaza la
+ * `default_rate` del programa para ese rubro). */
+export interface LoyaltyCategoryRate {
+  id: UUID;
+  program: UUID;
+  category_type: UUID;
+  rate: string;
+}
+
+/**
+ * Un mecanismo de recompensa de un `CardProduct`. Un mismo producto puede
+ * tener varios a la vez (p. ej. puntos + descuento). `default_rate` es
+ * puntos por unidad de moneda (kind=points) o una fracción del monto
+ * (kind=cashback/discount, 0.01 = 1%).
+ */
+export interface LoyaltyProgram {
+  id: UUID;
+  card_product: UUID;
+  kind: LoyaltyKind;
+  name: string;
+  default_rate: string;
+  /** Sólo puntos: valor de canje estimado por punto -- referencia, no afecta cálculos reales. */
+  point_value: string | null;
+  is_active: boolean;
+  category_rates: LoyaltyCategoryRate[];
+}
+
+/** Producto de tarjeta de un banco (p. ej. "Banco X — Visa Signature"). */
+export interface CardProduct {
+  id: UUID;
+  bank: UUID;
+  bank_name: string;
+  name: string;
+  network: 'visa' | 'mastercard' | 'amex' | 'other';
+  programs: LoyaltyProgram[];
+}
+
+/** Lo que generó una transacción según un programa -- ver `Transaction.loyalty_earnings`. */
+export interface LoyaltyEarningSummary {
+  kind: LoyaltyKind;
+  program: UUID;
+  program_name: string;
+  points: string | null;
+  amount: string | null;
+  /** Sólo descuento: el monto antes de aplicarlo. */
+  original_amount: string | null;
+  /** Sólo descuento: `original_amount - amount` de la transacción. */
+  saved_amount: string | null;
+}
+
+/** Fila de `loyalty-earnings/summary/`: saldo de puntos por cartera + programa. */
+export interface LoyaltyPointsBalance {
+  wallet: UUID;
+  wallet_name: string;
+  program: UUID;
+  program_name: string;
+  points: string;
+  estimated_value: string | null;
+}
+
+/** Fila de `loyalty-earnings/summary/`: cashback ganado / descuento ahorrado
+ * por cartera, en el período consultado. */
+export interface LoyaltyPeriodTotal {
+  wallet: UUID;
+  wallet_name: string;
+  cashback_earned: string;
+  discount_saved: string;
+}
+
+export interface LoyaltySummary {
+  points_balances: LoyaltyPointsBalance[];
+  period_totals: LoyaltyPeriodTotal[];
 }
 
 export interface MonthlySnapshot {

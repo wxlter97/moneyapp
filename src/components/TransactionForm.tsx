@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { dismissModal } from '@/components/ui/ModalHeader';
 
 import {
+  useCardProducts,
   useCategories,
   useCreateTransaction,
   useDeleteTransaction,
@@ -50,6 +51,7 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
 
   const { data: assignableWallets, query: walletsQ } = useAssignableWallets();
   const categoriesQ = useCategories();
+  const cardProductsQ = useCardProducts();
   const create = useCreateTransaction();
   const update = useUpdateTransaction();
   const remove = useDeleteTransaction();
@@ -72,6 +74,12 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [openRow, setOpenRow] = useState<OpenRow>(null);
   const [pendingReceipt, setPendingReceipt] = useState<PickedFile | null>(null);
+  // Descuento sugerido: sólo al crear (ver docstring más abajo), aplicado a
+  // mano con el botón "Aplicar descuento" -- nunca automático.
+  const [discountProgramId, setDiscountProgramId] = useState<string | null>(null);
+  const [appliedDiscount, setAppliedDiscount] = useState<{ programId: string; original: number } | null>(
+    null,
+  );
 
   const isTransfer = type === 'transfer';
 
@@ -132,10 +140,73 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
   const currency = walletsQ.data?.find((w) => w.id === walletId)?.currency ?? 'USD';
   const showBudgetSwitch = type === 'expense' || (isTransfer && !!categoryId);
 
+  // Descuento sugerido de la tarjeta elegida (si tiene un producto de
+  // lealtad con un programa de descuento activo) para la categoría elegida.
+  // Sólo al CREAR: al editar, el monto ya está neto de cualquier descuento
+  // aplicado -- volver a sugerir acá lo descontaría dos veces (ver
+  // `TransactionSerializer` en el backend). Al editar se muestra en cambio
+  // lo que ya generó la transacción (más abajo, `loyalty_earnings`).
+  const selectedWallet = assignableWallets.find((w) => w.id === walletId);
+  const selectedCategory = categoriesQ.data?.find((c) => c.id === categoryId);
+  const discountPrograms = useMemo(() => {
+    if (!selectedWallet?.card_product) return [];
+    const product = cardProductsQ.data?.find((p) => p.id === selectedWallet.card_product);
+    return (product?.programs ?? []).filter((p) => p.kind === 'discount' && p.is_active);
+  }, [cardProductsQ.data, selectedWallet?.card_product]);
+
+  useEffect(() => {
+    if (discountPrograms.length === 0) {
+      if (discountProgramId) setDiscountProgramId(null);
+    } else if (!discountPrograms.some((p) => p.id === discountProgramId)) {
+      setDiscountProgramId(discountPrograms[0].id);
+    }
+  }, [discountPrograms, discountProgramId]);
+
+  useEffect(() => {
+    if (appliedDiscount && !discountPrograms.some((p) => p.id === appliedDiscount.programId)) {
+      setAppliedDiscount(null);
+    }
+  }, [discountPrograms, appliedDiscount]);
+
+  const activeDiscountProgram = discountPrograms.find((p) => p.id === discountProgramId) ?? null;
+  const discountRate = activeDiscountProgram
+    ? toNumber(
+        (selectedCategory?.category_type &&
+          activeDiscountProgram.category_rates.find(
+            (r) => r.category_type === selectedCategory.category_type,
+          )?.rate) ||
+          activeDiscountProgram.default_rate,
+      )
+    : 0;
+  const suggestedAmount = amountNum * (1 - discountRate);
+  const showDiscountHint =
+    !editing &&
+    !isTransfer &&
+    type === 'expense' &&
+    !appliedDiscount &&
+    !!activeDiscountProgram &&
+    amountValid &&
+    discountRate > 0;
+
+  function applyDiscount() {
+    if (!activeDiscountProgram) return;
+    haptics.tap();
+    setAppliedDiscount({ programId: activeDiscountProgram.id, original: amountNum });
+    setAmount(suggestedAmount.toFixed(2));
+  }
+
+  function removeDiscount() {
+    if (!appliedDiscount) return;
+    haptics.tap();
+    setAmount(appliedDiscount.original.toFixed(2));
+    setAppliedDiscount(null);
+  }
+
   function onChangeType(next: TransactionType) {
     setType(next);
     setCategoryId(null);
     setOpenRow(null);
+    setAppliedDiscount(null);
     if (next !== 'transfer') setToWalletId(null);
   }
 
@@ -177,6 +248,10 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
     } else {
       payload.category = categoryId;
       if (type === 'expense') payload.counts_toward_budget = inBudget;
+      if (appliedDiscount) {
+        payload.discount_program = appliedDiscount.programId;
+        payload.pre_discount_amount = appliedDiscount.original.toFixed(2);
+      }
     }
 
     try {
@@ -318,6 +393,73 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
             </>
           ) : null}
         </View>
+
+        {showDiscountHint ? (
+          <View className="gap-2 rounded-xl bg-income/10 px-3 py-2.5">
+            <Text className="text-text text-sm">
+              Tenés {(discountRate * 100).toFixed(0)}% de descuento acá
+              {activeDiscountProgram?.name ? ` (${activeDiscountProgram.name})` : ''} — con
+              descuento: {formatMoney(suggestedAmount, currency)}
+            </Text>
+            {discountPrograms.length > 1 ? (
+              <View className="flex-row flex-wrap gap-2">
+                {discountPrograms.map((p) => (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => {
+                      haptics.selection();
+                      setDiscountProgramId(p.id);
+                    }}
+                    className={`rounded-full border px-3 py-1 ${
+                      p.id === discountProgramId ? 'border-primary bg-primary/10' : 'border-border'
+                    }`}
+                  >
+                    <Text className="text-text text-xs">{p.name || 'Descuento'}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            <Pressable
+              onPress={applyDiscount}
+              className="self-start rounded-full bg-income px-3 py-1.5 active:opacity-70"
+              accessibilityRole="button"
+            >
+              <Text className="text-xs text-white" style={{ fontFamily: fonts.semibold }}>
+                Aplicar descuento
+              </Text>
+            </Pressable>
+          </View>
+        ) : appliedDiscount ? (
+          <View className="flex-row items-center justify-between rounded-xl bg-income/10 px-3 py-2.5">
+            <Text className="text-text flex-1 pr-2 text-sm">
+              Descuento aplicado: ahorrás{' '}
+              {formatMoney(appliedDiscount.original - amountNum, currency)}
+            </Text>
+            <Pressable onPress={removeDiscount} accessibilityRole="button">
+              <Text className="text-primary text-xs" style={{ fontFamily: fonts.semibold }}>
+                Quitar
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {editing && (existing.data?.loyalty_earnings?.length ?? 0) > 0 ? (
+          <View className="gap-1 rounded-xl bg-surface-2 px-3 py-2.5">
+            <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+              Recompensas de este movimiento
+            </Text>
+            {existing.data!.loyalty_earnings.map((e, i) => (
+              <Text key={i} className="text-text-muted text-xs">
+                {e.kind === 'points'
+                  ? `+${toNumber(e.points)} puntos`
+                  : e.kind === 'cashback'
+                    ? `+${formatMoney(e.amount ?? '0', currency)} cashback`
+                    : `Ahorraste ${formatMoney(e.saved_amount ?? '0', currency)} de descuento`}
+                {e.program_name ? ` · ${e.program_name}` : ''}
+              </Text>
+            ))}
+          </View>
+        ) : null}
 
         {!isTransfer ? (
           <Pressable

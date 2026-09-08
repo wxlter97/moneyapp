@@ -6,8 +6,10 @@
  */
 import { api } from './client';
 import type {
+  Bank,
   BankEmailSchema,
   BudgetReport,
+  CardProduct,
   CashflowPoint,
   Category,
   CategoryBudget,
@@ -25,6 +27,8 @@ import type {
   InstallmentPurchase,
   InstallmentPurchaseInput,
   Invitation,
+  LoyaltyCategoryType,
+  LoyaltySummary,
   Membership,
   Money,
   MonthlySnapshot,
@@ -166,6 +170,27 @@ export const invitations = {
 // --- catálogo de bancos soportados por el importador (global, no por workspace) --
 export const bankEmailSchemas = {
   list: () => fetchAll<BankEmailSchema>('/bank-email-schemas/', {}),
+};
+
+// --- catálogo de lealtad (global, no por workspace; solo lectura acá) -----
+export const loyaltyBanks = {
+  list: () => fetchAll<Bank>('/banks/', {}),
+};
+
+export const loyaltyCategoryTypes = {
+  list: () => fetchAll<LoyaltyCategoryType>('/category-types/', {}),
+};
+
+export const cardProducts = {
+  list: () => fetchAll<CardProduct>('/card-products/', {}),
+};
+
+// --- lo generado por transacciones según los programas de lealtad ---------
+export const loyaltyEarnings = {
+  /** Saldo de puntos por cartera + cashback ganado / descuento ahorrado en
+   * el período (ambas fechas opcionales, formato ISO). */
+  summary: (params?: { date_after?: string; date_before?: string }) =>
+    api.get<LoyaltySummary>('/loyalty-earnings/summary/', { params }).then((r) => r.data),
 };
 
 // --- tokens personales (Atajos de Apple Shortcuts) ----------------------

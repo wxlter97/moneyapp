@@ -5,6 +5,7 @@ import {
   useCategories,
   useCreateCategory,
   useDeleteCategory,
+  useLoyaltyCategoryTypes,
   useUpdateCategory,
 } from '@/api/queries';
 import { errorMessage, fieldErrors } from '@/api/errors';
@@ -66,6 +67,7 @@ export function CategoryForm({
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState<string | null>(null);
   const [parentId, setParentId] = useState<string | null>(initialParent ?? null);
+  const [categoryTypeId, setCategoryTypeId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [prefilled, setPrefilled] = useState(false);
@@ -85,8 +87,22 @@ export function CategoryForm({
     setIcon(existing.icon ?? '');
     setColor(existing.color || null);
     setParentId(existing.parent);
+    setCategoryTypeId(existing.category_type);
     setPrefilled(true);
   }, [editing, prefilled, existing]);
+
+  // Rubro estándar del catálogo de lealtad (opcional): mapea esta categoría a
+  // uno para heredar las tasas de puntos/cashback/descuento que le
+  // correspondan en las tarjetas con producto asignado (ver `WalletForm`).
+  const categoryTypesQ = useLoyaltyCategoryTypes();
+  const categoryTypeOptions = useMemo(
+    () =>
+      (categoryTypesQ.data ?? []).map((t) => ({
+        value: t.id,
+        label: t.icon ? `${t.icon} ${t.name}` : t.name,
+      })),
+    [categoryTypesQ.data],
+  );
 
   const parentOptions = useMemo(
     () =>
@@ -108,6 +124,7 @@ export function CategoryForm({
       icon: icon.trim(),
       color: color ?? '',
       parent: parentId || null,
+      category_type: categoryTypeId || null,
     };
     try {
       if (editing) await update.mutateAsync({ id: categoryId!, input: payload });
@@ -209,6 +226,16 @@ export function CategoryForm({
             onChange={setParentId}
             options={[{ value: '', label: 'Ninguna' }, ...parentOptions]}
             placeholder="Ninguna"
+          />
+        ) : null}
+
+        {categoryTypeOptions.length > 0 ? (
+          <Select
+            label="Rubro para tarjetas con recompensas (opcional)"
+            value={categoryTypeId}
+            onChange={setCategoryTypeId}
+            options={[{ value: '', label: 'Sin especificar' }, ...categoryTypeOptions]}
+            placeholder="Sin especificar"
           />
         ) : null}
 
