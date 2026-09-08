@@ -55,25 +55,36 @@ export default function StatementDetailScreen() {
             </TotalDueCard>
 
             <Card title="Cómo se calcula">
+              {toNumber(data.opening_balance) < -0.005 ? (
+                <BreakdownRow
+                  label="Ya debías al empezar a usar la app"
+                  value={-toNumber(data.opening_balance)}
+                  currency={currency}
+                  tone="expense"
+                  first
+                />
+              ) : null}
               <BreakdownRow
-                label="Gastos del período"
+                label="Gastos hasta el corte"
                 value={data.spent}
                 currency={currency}
                 tone="expense"
-                first
+                first={toNumber(data.opening_balance) >= -0.005}
               />
               <BreakdownRow
-                label="Cuotas de compras a plazo"
-                value={data.installments_due}
-                currency={currency}
-                tone="expense"
-              />
-              <BreakdownRow
-                label="Abonos hechos"
+                label="Abonos hasta el corte"
                 value={-toNumber(data.paid)}
                 currency={currency}
                 tone="income"
               />
+              {toNumber(data.financed_not_due) > 0.005 ? (
+                <BreakdownRow
+                  label="Compras a plazo: capital que aún no vence"
+                  value={-toNumber(data.financed_not_due)}
+                  currency={currency}
+                  tone="income"
+                />
+              ) : null}
               <View className="border-border/40 mt-1 flex-row items-center justify-between border-t pt-2.5">
                 <Text className="text-text text-sm" style={{ fontFamily: fonts.bold }}>
                   Total a pagar
@@ -88,7 +99,7 @@ export default function StatementDetailScreen() {
             </Card>
 
             {data.installment_lines.length > 0 ? (
-              <Card title="Compras a plazo que suman">
+              <Card title="Compras a plazo">
                 {data.installment_lines.map((line, i) => (
                   <InstallmentLineRow key={line.id} line={line} currency={currency} first={i === 0} />
                 ))}
@@ -186,7 +197,7 @@ function InstallmentLineRow({
           {line.description}
         </Text>
         <Text className="text-text-muted text-xs">
-          {line.installments_due}/{line.installments_total} cuotas vencidas
+          {line.installments_due}/{line.installments_total} cuotas facturadas
         </Text>
       </View>
       <Money value={line.amount_due} currency={currency} className="text-sm font-semibold" />
