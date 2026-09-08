@@ -659,10 +659,17 @@ export interface CreditCardStatement {
   cutoff_date: ISODate;
   next_cutoff_date: ISODate;
   payment_due_date: ISODate | null;
+  /** Deuda de la tarjeta el día que se empezó a llevarla en la app (negativo = ya se debía). */
+  opening_balance: Money;
+  /** Todo lo que subió la deuda hasta el corte (gastos + salidas). */
   spent: Money;
+  /** Todo lo que la bajó hasta el corte (abonos + ingresos/reversos). */
   paid: Money;
+  /** Cuotas de compras a plazo ya vencidas al corte (informativo; ya están dentro de `spent`). */
   installments_due: Money;
-  /** Acumulado desde que existe la tarjeta: lo sin pagar de un corte anterior sigue apareciendo. */
+  /** De compras financiadas con la tarjeta, el capital que aún no vence (se descuenta del total). */
+  financed_not_due: Money;
+  /** Saldo al corte, con la misma convención de signo que `current_balance`. */
   total_due: Money;
   /** Actividad del período abierto (desde el corte hasta la fecha consultada), aún no vencida. */
   current_period_spent: Money;
