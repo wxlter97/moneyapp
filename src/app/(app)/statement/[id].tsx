@@ -77,12 +77,12 @@ export default function StatementDetailScreen() {
                 currency={currency}
                 tone="income"
               />
-              {toNumber(data.financed_not_due) > 0.005 ? (
+              {toNumber(data.installments_due) > 0.005 ? (
                 <BreakdownRow
-                  label="Compras a plazo: capital que aún no vence"
-                  value={-toNumber(data.financed_not_due)}
+                  label="Cuotas de compras a plazo ya vencidas"
+                  value={data.installments_due}
                   currency={currency}
-                  tone="income"
+                  tone="expense"
                 />
               ) : null}
               <View className="border-border/40 mt-1 flex-row items-center justify-between border-t pt-2.5">
