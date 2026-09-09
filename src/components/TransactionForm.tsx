@@ -148,11 +148,39 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
   // lo que ya generó la transacción (más abajo, `loyalty_earnings`).
   const selectedWallet = assignableWallets.find((w) => w.id === walletId);
   const selectedCategory = categoriesQ.data?.find((c) => c.id === categoryId);
-  const discountPrograms = useMemo(() => {
-    if (!selectedWallet?.card_product) return [];
-    const product = cardProductsQ.data?.find((p) => p.id === selectedWallet.card_product);
-    return (product?.programs ?? []).filter((p) => p.kind === 'discount' && p.is_active);
-  }, [cardProductsQ.data, selectedWallet?.card_product]);
+  const cardProduct = cardProductsQ.data?.find((p) => p.id === selectedWallet?.card_product);
+
+  function rateFor(program: { default_rate: string; category_rates: { category_type: string; rate: string }[] }) {
+    const override = selectedCategory?.category_type
+      ? program.category_rates.find((r) => r.category_type === selectedCategory.category_type)
+      : undefined;
+    return toNumber(override?.rate ?? program.default_rate);
+  }
+
+  const discountPrograms = useMemo(
+    () => (cardProduct?.programs ?? []).filter((p) => p.kind === 'discount' && p.is_active),
+    [cardProduct],
+  );
+  // Puntos/cashback son automáticos (la señal del backend los genera solos)
+  // -- esto es sólo una vista previa, para saber ANTES de guardar qué vas a
+  // ganar. Sólo al crear, mismo criterio que el descuento (ver abajo).
+  const autoPrograms = useMemo(
+    () => (cardProduct?.programs ?? []).filter((p) => (p.kind === 'points' || p.kind === 'cashback') && p.is_active),
+    [cardProduct],
+  );
+  const benefitLines =
+    !editing && !isTransfer && type === 'expense' && amountValid
+      ? autoPrograms
+          .map((p) => {
+            const rate = rateFor(p);
+            if (!rate) return null;
+            const label = p.name ? ` (${p.name})` : '';
+            return p.kind === 'points'
+              ? `+${Math.round(amountNum * rate)} puntos${label}`
+              : `+${formatMoney(amountNum * rate, currency)} cashback${label}`;
+          })
+          .filter((x): x is string => x != null)
+      : [];
 
   useEffect(() => {
     if (discountPrograms.length === 0) {
@@ -169,15 +197,7 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
   }, [discountPrograms, appliedDiscount]);
 
   const activeDiscountProgram = discountPrograms.find((p) => p.id === discountProgramId) ?? null;
-  const discountRate = activeDiscountProgram
-    ? toNumber(
-        (selectedCategory?.category_type &&
-          activeDiscountProgram.category_rates.find(
-            (r) => r.category_type === selectedCategory.category_type,
-          )?.rate) ||
-          activeDiscountProgram.default_rate,
-      )
-    : 0;
+  const discountRate = activeDiscountProgram ? rateFor(activeDiscountProgram) : 0;
   const suggestedAmount = amountNum * (1 - discountRate);
   const showDiscountHint =
     !editing &&
@@ -393,6 +413,17 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
             </>
           ) : null}
         </View>
+
+        {benefitLines.length > 0 ? (
+          <View className="gap-0.5 rounded-xl bg-income/10 px-3 py-2.5">
+            <Text className="text-text-muted text-xs uppercase tracking-wide">Vas a ganar</Text>
+            {benefitLines.map((line) => (
+              <Text key={line} className="text-text text-sm">
+                {line}
+              </Text>
+            ))}
+          </View>
+        ) : null}
 
         {showDiscountHint ? (
           <View className="gap-2 rounded-xl bg-income/10 px-3 py-2.5">

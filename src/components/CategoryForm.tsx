@@ -229,15 +229,13 @@ export function CategoryForm({
           />
         ) : null}
 
-        {categoryTypeOptions.length > 0 ? (
-          <Select
-            label="Rubro para tarjetas con recompensas (opcional)"
-            value={categoryTypeId}
-            onChange={setCategoryTypeId}
-            options={[{ value: '', label: 'Sin especificar' }, ...categoryTypeOptions]}
-            placeholder="Sin especificar"
-          />
-        ) : null}
+        <Select
+          label="Rubro para tarjetas con recompensas (opcional)"
+          value={categoryTypeId}
+          onChange={setCategoryTypeId}
+          options={[{ value: '', label: 'Sin especificar' }, ...categoryTypeOptions]}
+          placeholder="Sin especificar"
+        />
 
         {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
 
