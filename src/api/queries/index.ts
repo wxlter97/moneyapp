@@ -636,6 +636,25 @@ export function useSplitTransaction() {
   });
 }
 
+/** Bytes del .xlsx de la plantilla (para descargarlo). No cachea: cada
+ * llamada trae las carteras/categorías tal como están ahora. */
+export function useImportTemplate() {
+  return useMutation({
+    mutationFn: () => res.transactions.importTemplate(),
+  });
+}
+
+/** Sube la plantilla llena y crea todo lo que se pueda -- ver
+ * `TransactionImportResult`. Invalida el workspace igual si hubo errores
+ * parciales: lo que sí se creó ya afecta saldos/reportes. */
+export function useImportTransactionsXlsx() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (file: File) => res.transactions.importXlsx(file),
+    onSuccess: invalidate,
+  });
+}
+
 // --- presupuestos --------------------------------------------------
 export function useCategoryBudgets(ym: YearMonth = currentYearMonth()) {
   const ws = useActiveWs();

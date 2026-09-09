@@ -47,6 +47,7 @@ const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
   recurring: 'recurrente',
   installment: 'cuota',
   quick_add: 'atajo',
+  excel_import: 'excel',
 };
 
 /**
