@@ -135,6 +135,13 @@ export interface NotificationPreferences {
   warn_budget: boolean;
   /** % del presupuesto de una categoría a partir del cual avisar (50-100). */
   budget_threshold_pct: number;
+  /** Cartera por debajo de su propio `Wallet.low_balance_threshold`. */
+  remind_low_balance: boolean;
+  /** Vencimiento del ESTADO DE CUENTA completo de una tarjeta (no cuota por
+   * cuota, eso ya es `remind_installments`). */
+  warn_statement_due: boolean;
+  /** Con cuántos días de anticipación avisar (1-14). */
+  statement_due_days_before: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +188,9 @@ export interface Wallet {
   /** Saldo propio + el de los descendientes. */
   aggregated_balance: Money;
   counts_toward_net_worth: boolean;
+  /** Avisa (push) si `current_balance` cae por debajo de esto, en la moneda
+   * de esta cartera. `null` = sin aviso. */
+  low_balance_threshold: Money | null;
   /** Límite de la tarjeta de crédito (solo `kind: 'credit'`). */
   credit_limit: Money | null;
   /** Crédito disponible = límite + saldo; null si no es tarjeta con límite. */
@@ -225,6 +235,7 @@ export interface WalletInput {
   currency?: string;
   opening_balance?: Money;
   counts_toward_net_worth?: boolean;
+  low_balance_threshold?: Money | null;
   credit_limit?: Money | null;
   goal_amount?: Money | null;
   goal_date?: ISODate | null;
