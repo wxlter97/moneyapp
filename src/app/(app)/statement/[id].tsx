@@ -171,8 +171,9 @@ function InstallmentLineRow({
           {line.description}
         </Text>
         <Text className="text-text-muted text-xs">
-          {line.installments_pending} cuota{line.installments_pending === 1 ? '' : 's'} vencida
-          {line.installments_pending === 1 ? '' : 's'} sin registrar · de {line.installments_total}
+          {line.installments_pending}/{line.installments_total} cuota
+          {line.installments_pending === 1 ? '' : 's'} pendiente
+          {line.installments_pending === 1 ? '' : 's'}
         </Text>
       </View>
       <Money value={line.amount_pending} currency={currency} className="text-sm font-semibold" />

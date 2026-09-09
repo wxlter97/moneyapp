@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -19,11 +19,21 @@ interface DragListProps<T> {
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+const SPRING = { damping: 22, stiffness: 220 };
 
 /**
  * Lista reordenable por arrastre (asa ⠿ a la derecha). Sin FlatList: son
  * Views absolutas, así que compone dentro de un ScrollView. Pensada para
  * listas cortas (carteras, categorías).
+ *
+ * El orden que se ve al soltar es local (`order`), no el de `data` -- si
+ * dependiera de que el padre reciba la respuesta del servidor y vuelva a
+ * pasar `data` ya reordenado, la fila saltaría un instante a su posición
+ * VIEJA (única que conoce en ese momento) antes de saltar a la nueva en
+ * cuanto llegara esa respuesta. Acá se reordena al soltar, sin esperar a
+ * nadie, y `onReorder` queda solo para persistirlo -- si esa persistencia
+ * falla, el padre puede invalidar su query y `data` volverá a traer el
+ * orden real, que el efecto de abajo adopta de vuelta.
  */
 export function DragList<T>({
   data,
@@ -32,24 +42,52 @@ export function DragList<T>({
   itemHeight,
   onReorder,
 }: DragListProps<T>) {
-  const n = data.length;
+  const [order, setOrder] = useState(() => data.map(keyExtractor));
+  const dragging = useRef(false);
+
+  // Resincroniza si `data` cambia por fuera (primera carga, pull-to-refresh,
+  // o un reorder que falló y el padre invalidó la query) -- pero nunca en
+  // medio de un arrastre, para no pisar la animación de asentamiento.
+  useEffect(() => {
+    if (dragging.current) return;
+    setOrder(data.map(keyExtractor));
+  }, [data, keyExtractor]);
+
+  const byKey = useMemo(() => {
+    const m = new Map<string, T>();
+    for (const item of data) m.set(keyExtractor(item), item);
+    return m;
+  }, [data, keyExtractor]);
+
+  const items = useMemo(
+    () => order.map((k) => byKey.get(k)).filter((item): item is T => item != null),
+    [order, byKey],
+  );
+  const n = items.length;
   const active = useSharedValue(-1);
   const offsetY = useSharedValue(0);
+
+  const setDragging = useCallback((value: boolean) => {
+    dragging.current = value;
+  }, []);
 
   const commit = useCallback(
     (from: number, to: number) => {
       if (from === to) return;
-      const keys = data.map(keyExtractor);
-      const [moved] = keys.splice(from, 1);
-      keys.splice(to, 0, moved);
-      onReorder(keys);
+      setOrder((prev) => {
+        const keys = [...prev];
+        const [moved] = keys.splice(from, 1);
+        keys.splice(to, 0, moved);
+        onReorder(keys);
+        return keys;
+      });
     },
-    [data, keyExtractor, onReorder],
+    [onReorder],
   );
 
   return (
     <View style={{ height: itemHeight * n }}>
-      {data.map((item, index) => (
+      {items.map((item, index) => (
         <Row
           key={keyExtractor(item)}
           index={index}
@@ -58,6 +96,7 @@ export function DragList<T>({
           active={active}
           offsetY={offsetY}
           commit={commit}
+          setDragging={setDragging}
         >
           {renderItem(item)}
         </Row>
@@ -73,10 +112,11 @@ interface RowProps {
   active: ReturnType<typeof useSharedValue<number>>;
   offsetY: ReturnType<typeof useSharedValue<number>>;
   commit: (from: number, to: number) => void;
+  setDragging: (value: boolean) => void;
   children: React.ReactNode;
 }
 
-function Row({ index, count, itemHeight, active, offsetY, commit, children }: RowProps) {
+function Row({ index, count, itemHeight, active, offsetY, commit, setDragging, children }: RowProps) {
   // Posición objetivo de la fila ACTIVA (la que se está arrastrando), a
   // partir de su propio índice de origen + el desplazamiento del gesto.
   const targetIndex = () => {
@@ -112,7 +152,7 @@ function Row({ index, count, itemHeight, active, offsetY, commit, children }: Ro
       else if (a > t && index < a && index >= t) pos = index + 1;
     }
     return {
-      transform: [{ translateY: withSpring(pos * itemHeight, { damping: 22, stiffness: 220 }) }],
+      transform: [{ translateY: withSpring(pos * itemHeight, SPRING) }],
       zIndex: 1,
       opacity: 1,
     };
@@ -122,18 +162,39 @@ function Row({ index, count, itemHeight, active, offsetY, commit, children }: Ro
     .minDistance(2)
     .onStart(() => {
       active.value = index;
+      runOnJS(setDragging)(true);
     })
     .onUpdate((e) => {
       offsetY.value = e.translationY;
     })
     .onEnd(() => {
-      runOnJS(commit)(index, targetIndex());
-      active.value = -1;
-      offsetY.value = 0;
+      const to = targetIndex();
+      runOnJS(commit)(index, to);
+      // Termina de asentarse en el casillero final (sigue "activa" mientras
+      // tanto: zIndex arriba, semi-transparente) y recién ahí se desactiva
+      // -- si se desactivara ya (como antes), esta fila usaría su `index`
+      // viejo (el nuevo recién le llega al padre por props) y se vería
+      // saltar de vuelta al lugar de origen antes de volver a moverse.
+      offsetY.value = withSpring((to - index) * itemHeight, SPRING, (finished) => {
+        if (finished) {
+          active.value = -1;
+          offsetY.value = 0;
+        }
+      });
     })
-    .onFinalize(() => {
-      active.value = -1;
-      offsetY.value = 0;
+    .onFinalize((_event, success) => {
+      runOnJS(setDragging)(false);
+      // `onEnd` (arriba) ya deja programado el spring de asentamiento + su
+      // propio reset de `active`/`offsetY` al terminar -- pisarlo acá
+      // cancelaría ese spring a mitad de camino y la fila volvería a
+      // saltar. Sólo hace falta soltar el estado a la fuerza cuando el
+      // gesto NO terminó por `onEnd` (se canceló, p. ej. porque el
+      // ScrollView se adueñó del toque): ahí no hay ningún spring en
+      // camino y, si no se resetea acá, la fila quedaría flotando.
+      if (!success) {
+        active.value = -1;
+        offsetY.value = 0;
+      }
     });
 
   return (

@@ -15,6 +15,7 @@ export type IconName =
   | 'repeat'
   | 'receipt'
   | 'download'
+  | 'upload'
   | 'reset'
   | 'swap'
   | 'trash'
@@ -119,6 +120,13 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
           <Line x1={12} y1={4} x2={12} y2={14} {...p} />
           <Path d="M8 11l4 4 4-4" {...p} />
           <Line x1={5} y1={19} x2={19} y2={19} {...p} />
+        </>
+      )}
+      {name === 'upload' && (
+        <>
+          <Line x1={12} y1={20} x2={12} y2={10} {...p} />
+          <Path d="M8 13l4-4 4 4" {...p} />
+          <Line x1={5} y1={5} x2={19} y2={5} {...p} />
         </>
       )}
       {name === 'reset' && (

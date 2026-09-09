@@ -141,6 +141,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
         onPress: () => router.push('/imports'),
       },
       {
+        icon: 'upload',
+        label: 'Importar Excel',
+        hint: 'Plantilla para carga masiva',
+        onPress: () => router.push('/import-excel'),
+      },
+      {
         icon: 'download',
         label: 'Exportar datos',
         hint: 'Descarga en CSV',

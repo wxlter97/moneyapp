@@ -37,8 +37,14 @@ export function NetWorthPager({
   const scroller = useRef<ScrollView>(null);
 
   const pages = useMemo<Page[]>(() => {
+    // `by_purpose` ya suma TODAS las carteras de cada tipo, sin mirar
+    // `counts_toward_net_worth` (ver docstring de `net_worth_breakdown` en
+    // el backend) -- sumar los 4 tipos da el bruto real, carteras excluidas
+    // del neto incluidas, a diferencia de `data.net` que sí las descarta.
+    const gross = WALLET_PURPOSES.reduce((sum, p) => sum + toNumber(data.by_purpose[p]), 0);
     const list: Page[] = [
       { key: 'net', title: 'Valor neto total', value: toNumber(data.net), signed: true },
+      { key: 'gross', title: 'Todas las carteras (bruto)', value: gross, signed: true },
     ];
     for (const p of WALLET_PURPOSES) {
       const v = toNumber(data.by_purpose[p]);

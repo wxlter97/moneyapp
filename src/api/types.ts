@@ -286,7 +286,8 @@ export type TransactionSource =
   | 'email_import'
   | 'recurring'
   | 'installment'
-  | 'quick_add';
+  | 'quick_add'
+  | 'excel_import';
 
 export interface Transaction {
   id: UUID;
@@ -324,6 +325,15 @@ export interface TransactionSplitPart {
   category: UUID;
   amount: Money;
   description?: string;
+}
+
+/** Resultado de `transactions.importXlsx` -- "todo lo que se pueda": las
+ * filas válidas de la plantilla ya quedaron creadas, `errors` trae las que
+ * no se pudieron (con el número de fila de la hoja, no un índice de 0). */
+export interface TransactionImportResult {
+  created: number;
+  errors: { row: number; message: string }[];
+  transactions: Transaction[];
 }
 
 /**

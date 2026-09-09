@@ -45,6 +45,7 @@ import type {
   Tag,
   TagSummary,
   Transaction,
+  TransactionImportResult,
   TransactionInput,
   TransactionSplitPart,
   Wallet,
@@ -422,6 +423,26 @@ export const transactions = {
    * monto propios) que tienen que sumar exactamente el monto original. */
   split: (id: string, parts: TransactionSplitPart[]) =>
     api.post<Transaction[]>(`/transactions/${id}/split/`, { parts }).then((r) => r.data),
+
+  /** Bytes del .xlsx de la plantilla (con las carteras/categorías reales del
+   * workspace ya cargadas como referencia), para descargarlo. */
+  importTemplate: () =>
+    api
+      .get<ArrayBuffer>('/transactions/import-template/', { responseType: 'arraybuffer' })
+      .then((r) => r.data),
+
+  /** Sube la plantilla ya llena: crea todo lo que se pueda y reporta el
+   * resto fila por fila (ver `TransactionImportResult`) -- una fila con
+   * error no frena a las demás. */
+  importXlsx: (file: File) => {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return api
+      .post<TransactionImportResult>('/transactions/import/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
 };
 
 // --- snapshots mensuales (solo lectura) -------------------------------

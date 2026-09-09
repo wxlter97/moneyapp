@@ -82,6 +82,41 @@ export function downloadJsonFile(filename: string, data: unknown): boolean {
   );
 }
 
+/** Igual que `downloadTextFile`, pero para contenido binario (p. ej. el
+ * .xlsx de la plantilla de importación) -- ese contenido no se puede pasar
+ * por un `Blob([content])` de texto sin corromperlo. Solo web. */
+export function downloadBinaryFile(filename: string, content: ArrayBuffer, mime: string): boolean {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return false;
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
+}
+
+/** Abre el selector de archivos del sistema (solo web) y devuelve el
+ * `File` elegido tal cual (sin parsearlo -- a diferencia de `pickJsonFile`),
+ * para subirlo después por `FormData`. `null` si se canceló o no es posible
+ * (nativo). */
+export function pickFile(accept: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      resolve(null);
+      return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.onchange = () => resolve(input.files?.[0] ?? null);
+    input.click();
+  });
+}
+
 /**
  * Abre el selector de archivos del sistema (solo web) y devuelve el JSON
  * parseado del archivo elegido, o `null` si se canceló, no es JSON válido,

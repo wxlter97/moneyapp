@@ -433,6 +433,10 @@ export function useReorderWallets() {
   return useMutation({
     mutationFn: (ids: string[]) => res.wallets.reorder(ids),
     onSuccess: invalidate,
+    // Si falla, refetch igual: es lo que hace que `DragList` (que ya
+    // reordenó de forma optimista/local al soltar) vuelva al orden real del
+    // servidor en vez de quedarse mostrando un orden que no se guardó.
+    onError: invalidate,
   });
 }
 
@@ -500,6 +504,9 @@ export function useReorderCategories() {
   return useMutation({
     mutationFn: (ids: string[]) => res.categories.reorder(ids),
     onSuccess: invalidate,
+    // Ver comentario en `useReorderWallets`: si falla, refetch igual para
+    // que `DragList` vuelva al orden real del servidor.
+    onError: invalidate,
   });
 }
 
@@ -632,6 +639,25 @@ export function useSplitTransaction() {
   return useMutation({
     mutationFn: ({ id, parts }: { id: string; parts: TransactionSplitPart[] }) =>
       res.transactions.split(id, parts),
+    onSuccess: invalidate,
+  });
+}
+
+/** Bytes del .xlsx de la plantilla (para descargarlo). No cachea: cada
+ * llamada trae las carteras/categorías tal como están ahora. */
+export function useImportTemplate() {
+  return useMutation({
+    mutationFn: () => res.transactions.importTemplate(),
+  });
+}
+
+/** Sube la plantilla llena y crea todo lo que se pueda -- ver
+ * `TransactionImportResult`. Invalida el workspace igual si hubo errores
+ * parciales: lo que sí se creó ya afecta saldos/reportes. */
+export function useImportTransactionsXlsx() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (file: File) => res.transactions.importXlsx(file),
     onSuccess: invalidate,
   });
 }
