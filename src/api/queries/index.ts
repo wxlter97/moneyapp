@@ -433,6 +433,10 @@ export function useReorderWallets() {
   return useMutation({
     mutationFn: (ids: string[]) => res.wallets.reorder(ids),
     onSuccess: invalidate,
+    // Si falla, refetch igual: es lo que hace que `DragList` (que ya
+    // reordenó de forma optimista/local al soltar) vuelva al orden real del
+    // servidor en vez de quedarse mostrando un orden que no se guardó.
+    onError: invalidate,
   });
 }
 
@@ -500,6 +504,9 @@ export function useReorderCategories() {
   return useMutation({
     mutationFn: (ids: string[]) => res.categories.reorder(ids),
     onSuccess: invalidate,
+    // Ver comentario en `useReorderWallets`: si falla, refetch igual para
+    // que `DragList` vuelva al orden real del servidor.
+    onError: invalidate,
   });
 }
 

@@ -15,6 +15,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { formatShortDate } from '@/lib/date';
+import { toNumber } from '@/lib/money';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -78,6 +79,7 @@ export default function InstallmentsScreen() {
             const progress = p.installments_total
               ? p.installments_paid / p.installments_total
               : 0;
+            const paidAmount = Math.max(0, toNumber(p.total_amount) - toNumber(p.remaining_amount));
             return (
               <Pressable
                 key={p.id}
@@ -130,10 +132,16 @@ export default function InstallmentsScreen() {
                         Pagada por completo
                       </Text>
                     ) : (
-                      <Text className="text-text-muted text-[11px]">
-                        Falta <Money value={p.remaining_amount} currency={currency} tone="muted" />
-                        {p.next_due_date ? ` · próximo corte ${formatShortDate(p.next_due_date)}` : ''}
-                      </Text>
+                      <>
+                        <Text className="text-text-muted text-[11px]">
+                          Pagado <Money value={paidAmount} currency={currency} tone="muted" /> de{' '}
+                          <Money value={p.total_amount} currency={currency} tone="muted" />
+                        </Text>
+                        <Text className="text-text-muted text-[11px]">
+                          Falta <Money value={p.remaining_amount} currency={currency} tone="muted" />
+                          {p.next_due_date ? ` · próximo corte ${formatShortDate(p.next_due_date)}` : ''}
+                        </Text>
+                      </>
                     )}
                   </View>
                 </Card>

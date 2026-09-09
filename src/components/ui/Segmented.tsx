@@ -72,7 +72,12 @@ export function Segmented<T extends string>({ value, onChange, options }: Segmen
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
           >
-            <Text className={active ? 'text-primary-fg font-semibold' : 'text-text-muted'}>
+            <Text
+              className={active ? 'text-primary-fg font-semibold' : 'text-text-muted'}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
               {opt.label}
             </Text>
           </Pressable>
