@@ -1,17 +1,18 @@
 import type { Transaction, TransactionType } from '@/api/types';
-import { groupByDay, summarizeByType } from '../transactions';
+import { balanceAfterEach, groupByDay, signedAmount, summarizeByType } from '../transactions';
 
 const txn = (
   id: string,
   type: TransactionType,
   amount: string,
   date = '2026-08-01',
+  toWallet: string | null = null,
 ): Transaction =>
   ({
     id,
     type,
     wallet: 'a',
-    to_wallet: null,
+    to_wallet: type === 'transfer' ? toWallet : null,
     category: type === 'transfer' ? null : 'c',
     amount,
     currency: 'USD',
@@ -61,5 +62,44 @@ describe('groupByDay', () => {
     expect(sections.map((s) => s.date)).toEqual(['2026-08-31', '2026-08-30']);
     expect(sections[0].data).toHaveLength(2);
     expect(sections[1].data).toHaveLength(1);
+  });
+});
+
+describe('signedAmount', () => {
+  it('ingreso suma, gasto resta', () => {
+    expect(signedAmount(txn('1', 'income', '50.00'))).toBe(50);
+    expect(signedAmount(txn('1', 'expense', '50.00'))).toBe(-50);
+  });
+
+  it('transferencia resta salvo que se mire desde la cartera destino', () => {
+    const t = txn('1', 'transfer', '50.00', '2026-08-01', 'b');
+    expect(signedAmount(t, 'a')).toBe(-50);
+    expect(signedAmount(t, 'b')).toBe(50);
+  });
+});
+
+describe('balanceAfterEach', () => {
+  it('camina hacia atrás desde el saldo actual (más reciente primero)', () => {
+    // Orden como lo entrega el API: más reciente primero.
+    const items = [
+      txn('3', 'expense', '20.00'),
+      txn('2', 'income', '100.00'),
+      txn('1', 'expense', '10.00'),
+    ];
+    // Saldo actual = -10 (t1) + 100 (t2) - 20 (t3) = 70.
+    const balances = balanceAfterEach(items, 70, 'a');
+    expect(balances.get('3')).toBe(70);
+    expect(balances.get('2')).toBe(90);
+    expect(balances.get('1')).toBe(-10);
+  });
+
+  it('respeta la perspectiva en una transferencia entrante', () => {
+    const items = [txn('1', 'transfer', '30.00', '2026-08-01', 'b')];
+    expect(balanceAfterEach(items, 30, 'b').get('1')).toBe(30);
+    expect(balanceAfterEach(items, -30, 'a').get('1')).toBe(-30);
+  });
+
+  it('lista vacía => mapa vacío', () => {
+    expect(balanceAfterEach([], 100, 'a').size).toBe(0);
   });
 });

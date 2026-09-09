@@ -491,10 +491,10 @@ export function WalletForm({ walletId }: WalletFormProps) {
             <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
               <View className="flex-1 pr-2">
                 <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                  Saldo en descubierto
+                  Saldo negativo
                 </Text>
                 <Text className="text-text-muted text-xs">
-                  Actívalo si ya arranca en negativo (p. ej. sobregiro).
+                  Actívalo si el saldo ya arranca en negativo (p. ej. un sobregiro).
                 </Text>
               </View>
               <Switch

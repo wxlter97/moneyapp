@@ -15,7 +15,8 @@ import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { walletLabel } from '@/api/queries/lookups';
 import { haptics } from '@/lib/haptics';
-import { toNumber } from '@/lib/money';
+import { formatMoney } from '@/lib/money';
+import { signedAmount } from '@/lib/transactions';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -34,6 +35,10 @@ interface TransactionRowProps {
    * toda transferencia sale (comportamiento de siempre, para listas que no
    * están ancladas a una cartera puntual). */
   perspectiveWalletId?: string;
+  /** Saldo de `perspectiveWalletId` justo después de esta transacción --
+   * sólo tiene sentido en el historial de una cartera puntual (ver
+   * `balanceAfterEach`), así que se omite en listas que mezclan carteras. */
+  balanceAfter?: number;
 }
 
 const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
@@ -57,6 +62,7 @@ export function TransactionRow({
   onPress,
   onSwipeDelete,
   perspectiveWalletId,
+  balanceAfter,
 }: TransactionRowProps) {
   const colors = useColors();
   const press = useSharedValue(1);
@@ -66,12 +72,7 @@ export function TransactionRow({
   const isIncome = txn.type === 'income';
   const badge = SOURCE_LABEL[txn.source];
 
-  const amount = toNumber(txn.amount);
-  // Firma desde la perspectiva del saldo: ingreso suma, gasto resta. Una
-  // transferencia resta (sale) salvo que se esté mirando desde la cartera
-  // que la recibe, en cuyo caso suma.
-  const isIncomingTransfer = isTransfer && perspectiveWalletId === txn.to_wallet;
-  const signed = isIncome || isIncomingTransfer ? amount : -amount;
+  const signed = signedAmount(txn, perspectiveWalletId);
 
   const title = isTransfer
     ? 'Transferencia'
@@ -144,6 +145,11 @@ export function TransactionRow({
             adjustsFontSizeToFit
             minimumFontScale={0.6}
           />
+          {balanceAfter != null ? (
+            <Text className="text-text-muted text-[11px]" numberOfLines={1}>
+              Saldo: {formatMoney(balanceAfter, txn.currency)}
+            </Text>
+          ) : null}
           {txn.type === 'expense' && !txn.counts_toward_budget ? (
             <View className="rounded-full bg-surface-2 px-2 py-0.5">
               <Text className="text-warning text-[10px] uppercase tracking-wide">s/pres.</Text>

@@ -45,3 +45,37 @@ export function groupByDay(transactions: Transaction[]): DaySection[] {
   }
   return sections;
 }
+
+/**
+ * Importe con el signo desde la perspectiva del saldo de `perspectiveWalletId`:
+ * ingreso suma, gasto resta. Una transferencia resta (sale) salvo que se esté
+ * mirando desde la cartera que la recibe, en cuyo caso suma.
+ */
+export function signedAmount(txn: Transaction, perspectiveWalletId?: string): number {
+  const amount = toNumber(txn.amount);
+  const isIncomingTransfer = txn.type === 'transfer' && perspectiveWalletId === txn.to_wallet;
+  return txn.type === 'income' || isIncomingTransfer ? amount : -amount;
+}
+
+/**
+ * Saldo de `perspectiveWalletId` inmediatamente después de cada movimiento
+ * de su historial, para mostrarlo en la lista. `transactions` tiene que
+ * venir completo (sin paginar) y en el orden que ya entrega el API (más
+ * reciente primero) -- si falta algún movimiento entre medio, el resto de la
+ * columna queda mal. Se camina hacia atrás desde `currentBalance` (el saldo
+ * de HOY) restando el efecto de cada fila, así cada una queda con el saldo
+ * de justo después de aplicarse.
+ */
+export function balanceAfterEach(
+  transactions: Transaction[],
+  currentBalance: number,
+  perspectiveWalletId: string,
+): Map<string, number> {
+  const result = new Map<string, number>();
+  let running = currentBalance;
+  for (const t of transactions) {
+    result.set(t.id, running);
+    running -= signedAmount(t, perspectiveWalletId);
+  }
+  return result;
+}
