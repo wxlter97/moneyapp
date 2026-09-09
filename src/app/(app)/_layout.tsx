@@ -253,6 +253,10 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="two-factor"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="currencies"
           options={{ presentation: 'modal', headerShown: false }}
         />

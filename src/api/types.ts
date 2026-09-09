@@ -57,6 +57,40 @@ export interface GoogleLoginResponse extends TokenPairResponse {
   created: boolean;
 }
 
+/** Respuesta de POST /auth/token/ cuando el usuario tiene 2FA activo: en vez
+ * de tokens, un challenge de vida corta para el segundo paso
+ * (`twoFactor.verify`). */
+export interface TwoFactorRequiredResponse {
+  two_factor_required: true;
+  mfa_token: string;
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+}
+
+/** POST /auth/2fa/setup/ -- secreto pendiente de confirmar (todavía no sirve
+ * para el login hasta `twoFactor.enable`). */
+export interface TwoFactorSetupResponse {
+  secret: string;
+  otpauth_url: string;
+}
+
+/** POST /auth/2fa/backup-codes/ -- los códigos vienen en claro UNA sola vez;
+ * hay que mostrarlos para que el usuario los guarde. */
+export interface TwoFactorBackupCodesResponse {
+  backup_codes: string[];
+}
+
+/** POST /auth/2fa/enable/ -- igual que arriba, más la confirmación explícita. */
+export interface TwoFactorEnableResponse extends TwoFactorBackupCodesResponse {
+  enabled: true;
+}
+
+export interface TwoFactorVerifyResponse extends TokenPairResponse {
+  user: User;
+}
+
 // ---------------------------------------------------------------------------
 // Workspaces
 // ---------------------------------------------------------------------------

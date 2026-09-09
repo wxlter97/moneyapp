@@ -18,10 +18,19 @@ type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 interface AuthState {
   user: User | null;
   status: AuthStatus;
+  /** Si no es null, `signIn` ya validó usuario/contraseña pero falta el
+   * código de 2FA (`verifyTwoFactor`) para terminar de entrar -- todavía
+   * NO hay tokens guardados. La pantalla de login lo usa para mostrar el
+   * segundo paso en vez del formulario. */
+  pendingMfaToken: string | null;
 
   /** Rehidrata sesión al arrancar la app. Idempotente. */
   bootstrap: () => Promise<void>;
   signIn: (creds: authApi.LoginCredentials) => Promise<void>;
+  /** Segundo paso cuando `signIn` dejó `pendingMfaToken` fijado. */
+  verifyTwoFactor: (code: string) => Promise<void>;
+  /** Vuelve al formulario de usuario/contraseña sin haber completado el 2FA. */
+  cancelTwoFactor: () => void;
   signUp: (input: authApi.RegisterInput) => Promise<void>;
   /** "Continuar con Google". Devuelve `created` para saludar distinto la primera vez. */
   signInWithGoogle: (idToken: string) => Promise<{ created: boolean }>;
@@ -33,6 +42,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   status: 'loading',
+  pendingMfaToken: null,
 
   bootstrap: async () => {
     const tokens = await loadTokens();
@@ -50,9 +60,22 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   signIn: async (creds) => {
-    const user = await authApi.login(creds);
-    set({ status: 'authenticated', user });
+    const result = await authApi.login(creds);
+    if (result.twoFactorRequired) {
+      set({ pendingMfaToken: result.mfaToken });
+      return;
+    }
+    set({ status: 'authenticated', user: result.user, pendingMfaToken: null });
   },
+
+  verifyTwoFactor: async (code) => {
+    const mfaToken = useAuthStore.getState().pendingMfaToken;
+    if (!mfaToken) throw new Error('No hay un login de 2FA pendiente.');
+    const user = await authApi.twoFactor.verify(mfaToken, code);
+    set({ status: 'authenticated', user, pendingMfaToken: null });
+  },
+
+  cancelTwoFactor: () => set({ pendingMfaToken: null }),
 
   signUp: async (input) => {
     const user = await authApi.register(input);
@@ -82,12 +105,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
     }
     await authApi.logout();
     useWorkspaceStore.getState().reset();
-    set({ status: 'anonymous', user: null });
+    set({ status: 'anonymous', user: null, pendingMfaToken: null });
   },
 }));
 
 // Si el refresh falla en cualquier request, caemos a anónimo.
 registerAuthFailureHandler(() => {
   useWorkspaceStore.getState().reset();
-  useAuthStore.setState({ status: 'anonymous', user: null });
+  useAuthStore.setState({ status: 'anonymous', user: null, pendingMfaToken: null });
 });

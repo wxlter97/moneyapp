@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -162,6 +163,27 @@ export default function SecurityScreen() {
           bloqueo tiene la opción de cerrar sesión para poder entrar de nuevo con tu
           contraseña.
         </Text>
+
+        <Card>
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              router.push('/two-factor');
+            }}
+            className="flex-row items-center justify-between active:opacity-70"
+            accessibilityRole="button"
+          >
+            <View className="flex-1 pr-3">
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                Verificación en dos pasos
+              </Text>
+              <Text className="text-text-muted text-xs">
+                Pide un código además de la contraseña al iniciar sesión.
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={16} color={colors.textMuted} />
+          </Pressable>
+        </Card>
       </ScrollView>
     </Screen>
   );
