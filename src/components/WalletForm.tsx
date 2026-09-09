@@ -9,6 +9,7 @@ import {
   useCreateWallet,
   useDeleteWallet,
   useGoalProjection,
+  useLoyaltyBanks,
   useSplitWallet,
   useUnarchiveWallet,
   useUpdateWallet,
@@ -89,6 +90,10 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [dueDate, setDueDate] = useState('');
   const [cardLast4, setCardLast4] = useState('');
   const [bankSchemaId, setBankSchemaId] = useState<string | null>(null);
+  // Producto de tarjeta: se elige en dos pasos (banco -> producto de ese
+  // banco). `loyaltyBankId` es puramente de UI -- lo que de verdad se manda
+  // es `cardProductId`.
+  const [loyaltyBankId, setLoyaltyBankId] = useState<string | null>(null);
   const [cardProductId, setCardProductId] = useState<string | null>(null);
   const [billingDay, setBillingDay] = useState('');
   const [paymentDueDay, setPaymentDueDay] = useState('');
@@ -149,16 +154,38 @@ export function WalletForm({ walletId }: WalletFormProps) {
 
   // Producto de tarjeta (catálogo de lealtad): de acá salen los programas de
   // puntos/cashback/descuento que aplican a esta cartera. Sólo tiene sentido
-  // en tarjetas de crédito (lo valida el backend).
+  // en tarjetas de crédito (lo valida el backend). Selector en dos pasos:
+  // primero el banco, después el producto DE ESE banco.
+  const loyaltyBanksQ = useLoyaltyBanks();
+  const loyaltyBankOptions = useMemo(
+    () => (loyaltyBanksQ.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+    [loyaltyBanksQ.data],
+  );
+
   const cardProductsQ = useCardProducts();
   const cardProductOptions = useMemo(
     () =>
-      (cardProductsQ.data ?? []).map((p) => ({
-        value: p.id,
-        label: `${p.bank_name} — ${p.name}`,
-      })),
-    [cardProductsQ.data],
+      (cardProductsQ.data ?? [])
+        .filter((p) => p.bank === loyaltyBankId)
+        .map((p) => ({ value: p.id, label: p.name })),
+    [cardProductsQ.data, loyaltyBankId],
   );
+
+  // El banco es puramente derivado del producto ya guardado (no viaja en la
+  // cartera) -- una vez que cargan los productos, se completa solo para que
+  // el selector de dos pasos arranque coherente al editar.
+  useEffect(() => {
+    if (loyaltyBankId || !cardProductId || !cardProductsQ.data) return;
+    const product = cardProductsQ.data.find((p) => p.id === cardProductId);
+    if (product) setLoyaltyBankId(product.bank);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardProductId, cardProductsQ.data]);
+
+  function onChangeLoyaltyBank(next: string) {
+    setLoyaltyBankId(next || null);
+    // Cambiar de banco invalida el producto elegido antes (era de otro banco).
+    setCardProductId(null);
+  }
 
   const isDebt = purpose === 'debt';
   const isSavings = purpose === 'savings';
@@ -389,14 +416,25 @@ export function WalletForm({ walletId }: WalletFormProps) {
           />
         ) : null}
 
-        {kind === 'credit' && cardProductOptions.length > 0 ? (
-          <Select
-            label="Producto de tarjeta (opcional)"
-            value={cardProductId}
-            onChange={setCardProductId}
-            options={[{ value: '', label: 'Sin especificar' }, ...cardProductOptions]}
-            placeholder="Sin especificar"
-          />
+        {kind === 'credit' ? (
+          <>
+            <Select
+              label="Banco (para recompensas, opcional)"
+              value={loyaltyBankId}
+              onChange={onChangeLoyaltyBank}
+              options={[{ value: '', label: 'Sin especificar' }, ...loyaltyBankOptions]}
+              placeholder="Sin especificar"
+            />
+            {loyaltyBankId ? (
+              <Select
+                label="Producto de ese banco"
+                value={cardProductId}
+                onChange={setCardProductId}
+                options={[{ value: '', label: 'Sin especificar' }, ...cardProductOptions]}
+                placeholder="Sin especificar"
+              />
+            ) : null}
+          </>
         ) : null}
 
         {kind === 'credit' && editing && existing.data?.card_product ? (
