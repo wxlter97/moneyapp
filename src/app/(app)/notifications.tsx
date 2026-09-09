@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/api/queries';
+import { pushDevices } from '@/api/resources';
 import { errorMessage } from '@/api/errors';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -35,6 +36,12 @@ export default function NotificationsScreen() {
   // dijo que no: `requestPermissionsAsync` simplemente no hace nada. Sin
   // esto, tocar "Activar avisos" en ese caso parecía no hacer nada.
   const [needsSystemSettings, setNeedsSystemSettings] = useState(false);
+  // Distinto de `saveError` (abajo, para los toggles de preferencias):
+  // este es específico del botón "Activar avisos" -- entre otras cosas
+  // cubre el caso en que el navegador ni siquiera llega a preguntar el
+  // permiso porque el backend no tiene las claves VAPID configuradas (ver
+  // `onEnable`), que si no se avisa queda indistinguible de "no pasa nada".
+  const [enableError, setEnableError] = useState<string | null>(null);
 
   useEffect(() => {
     checkPermission();
@@ -48,7 +55,24 @@ export default function NotificationsScreen() {
   async function onEnable() {
     setEnabling(true);
     setNeedsSystemSettings(false);
+    setEnableError(null);
     try {
+      // En la web, sin las claves VAPID configuradas en el backend (ver
+      // `generate_vapid_keys` en el backend) `registerForPushNotificationsAsync`
+      // devuelve null ANTES de pedirle permiso al navegador -- sin este
+      // chequeo eso se ve igual que "el usuario todavía no dijo que sí": el
+      // botón no hace absolutamente nada, ni siquiera aparece el diálogo de
+      // permiso del navegador, y no hay forma de saber por qué.
+      if (Platform.OS === 'web') {
+        const vapidPublicKey = await pushDevices.vapidPublicKey().catch(() => '');
+        if (!vapidPublicKey) {
+          setEnableError(
+            'El servidor todavía no tiene los avisos push configurados para la web.',
+          );
+          return;
+        }
+      }
+
       const device = await registerForPushNotificationsAsync();
       if (device) {
         await registerDevice(device);
@@ -62,6 +86,12 @@ export default function NotificationsScreen() {
           setNeedsSystemSettings(true);
         }
       }
+    } catch (err) {
+      // Antes: si `registerDevice` (el POST al backend) fallaba, el error
+      // quedaba sin capturar -- el spinner se apagaba y listo, sin ningún
+      // mensaje. Mismo síntoma de "no pasa nada".
+      haptics.error();
+      setEnableError(errorMessage(err, 'No se pudo activar los avisos.'));
     } finally {
       setEnabling(false);
       checkPermission();
@@ -143,6 +173,9 @@ export default function NotificationsScreen() {
                     Ya lo habías rechazado antes: el sistema no vuelve a preguntar. Activalo
                     desde Ajustes → Notificaciones.
                   </Text>
+                ) : null}
+                {enableError ? (
+                  <Text className="text-expense text-center text-xs">{enableError}</Text>
                 ) : null}
               </View>
             ) : null}
