@@ -12,7 +12,8 @@ import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { formatDayHeader } from '@/lib/date';
-import { groupByDay } from '@/lib/transactions';
+import { balanceAfterEach, groupByDay } from '@/lib/transactions';
+import { toNumber } from '@/lib/money';
 import { useColors } from '@/theme';
 
 /** Historial completo de movimientos de una cartera: se llega acá tocando
@@ -28,6 +29,16 @@ export default function WalletTransactionsScreen() {
 
   const items = query.data ?? [];
   const days = useMemo(() => groupByDay(items), [items]);
+  // Saldo de la cartera justo después de cada movimiento -- se camina hacia
+  // atrás desde el saldo de hoy, así que hace falta el historial COMPLETO
+  // (sin paginar), que es justo lo que devuelve `useTransactions` acá.
+  const balances = useMemo(
+    () =>
+      walletId && walletQ.data
+        ? balanceAfterEach(items, toNumber(walletQ.data.current_balance), walletId)
+        : new Map<string, number>(),
+    [items, walletQ.data, walletId],
+  );
 
   const refresh = usePullRefresh(query.isFetching && !query.isLoading, () => query.refetch());
 
@@ -100,6 +111,7 @@ export default function WalletTransactionsScreen() {
                       wallet={wallets.get(item.wallet)}
                       toWallet={item.to_wallet ? wallets.get(item.to_wallet) : undefined}
                       perspectiveWalletId={walletId}
+                      balanceAfter={balances.get(item.id)}
                       onPress={() => router.push(`/transaction/${item.id}`)}
                     />
                   </View>
