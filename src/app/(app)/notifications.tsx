@@ -10,9 +10,8 @@ import { Icon } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { ErrorState, LoadingState } from '@/components/ui/states';
-import { registerForPushNotificationsAsync } from '@/lib/notifications';
+import { registerDevice, registerForPushNotificationsAsync } from '@/lib/notifications';
 import { haptics } from '@/lib/haptics';
-import { pushDevices } from '@/api/resources';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -52,7 +51,7 @@ export default function NotificationsScreen() {
     try {
       const device = await registerForPushNotificationsAsync();
       if (device) {
-        await pushDevices.register(device.token, device.platform);
+        await registerDevice(device);
         haptics.success();
       } else {
         // Si seguimos sin permiso después de pedirlo, es porque el sistema
@@ -69,7 +68,10 @@ export default function NotificationsScreen() {
     }
   }
 
-  async function onToggle(field: 'remind_recurring' | 'remind_installments' | 'warn_budget', value: boolean) {
+  async function onToggle(
+    field: 'remind_recurring' | 'remind_installments' | 'warn_budget' | 'remind_low_balance' | 'warn_statement_due',
+    value: boolean,
+  ) {
     setSaveError(null);
     try {
       await update.mutateAsync({ [field]: value });
@@ -84,6 +86,18 @@ export default function NotificationsScreen() {
     setSaveError(null);
     try {
       await update.mutateAsync({ budget_threshold_pct: clamped });
+      haptics.selection();
+    } catch (err) {
+      haptics.error();
+      setSaveError(errorMessage(err, 'No se pudo guardar.'));
+    }
+  }
+
+  async function onStatementDaysChange(next: number) {
+    const clamped = Math.min(14, Math.max(1, next));
+    setSaveError(null);
+    try {
+      await update.mutateAsync({ statement_due_days_before: clamped });
       haptics.selection();
     } catch (err) {
       haptics.error();
@@ -112,7 +126,7 @@ export default function NotificationsScreen() {
                 </Text>
                 <Text className="text-text-muted text-xs">
                   {permission === 'unsupported'
-                    ? 'Probá desde un iPhone/Android real (no un simulador ni la web).'
+                    ? 'Probá desde un iPhone/Android real (no un simulador) o desde un navegador con soporte de notificaciones.'
                     : 'Dale permiso para poder avisarte de recurrentes, cuotas y presupuesto.'}
                 </Text>
               </View>
@@ -162,6 +176,20 @@ export default function NotificationsScreen() {
                 value={prefs.warn_budget}
                 onChange={(v) => onToggle('warn_budget', v)}
               />
+              <View className="h-px bg-border/30" />
+              <ToggleRow
+                title="Saldo bajo"
+                hint="Cuando una cartera cae por debajo de su umbral (se fija al editarla)."
+                value={prefs.remind_low_balance}
+                onChange={(v) => onToggle('remind_low_balance', v)}
+              />
+              <View className="h-px bg-border/30" />
+              <ToggleRow
+                title="Estado de cuenta por vencer"
+                hint="El pago de contado completo, no cuota por cuota."
+                value={prefs.warn_statement_due}
+                onChange={(v) => onToggle('warn_statement_due', v)}
+              />
             </Card>
 
             {prefs.warn_budget ? (
@@ -195,6 +223,46 @@ export default function NotificationsScreen() {
                       className="h-9 w-9 items-center justify-center rounded-full bg-surface-2 active:opacity-70 disabled:opacity-40"
                       accessibilityRole="button"
                       accessibilityLabel="Subir umbral"
+                    >
+                      <Icon name="plus" size={16} color={colors.text} />
+                    </Pressable>
+                  </View>
+                </View>
+              </Card>
+            ) : null}
+
+            {prefs.warn_statement_due ? (
+              <Card title="Anticipación del estado de cuenta">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-text-muted flex-1 pr-2 text-sm">
+                    Avisar {prefs.statement_due_days_before}{' '}
+                    {prefs.statement_due_days_before === 1 ? 'día' : 'días'} antes de que venza el
+                    pago.
+                  </Text>
+                  <View className="flex-row items-center gap-3">
+                    <Pressable
+                      onPress={() => onStatementDaysChange(prefs.statement_due_days_before - 1)}
+                      disabled={prefs.statement_due_days_before <= 1}
+                      className="h-9 w-9 items-center justify-center rounded-full bg-surface-2 active:opacity-70 disabled:opacity-40"
+                      accessibilityRole="button"
+                      accessibilityLabel="Bajar días de anticipación"
+                    >
+                      <Text className="text-text text-lg" style={{ fontFamily: fonts.semibold }}>
+                        −
+                      </Text>
+                    </Pressable>
+                    <Text
+                      className="text-text w-10 text-center text-base"
+                      style={{ fontFamily: fonts.semibold }}
+                    >
+                      {prefs.statement_due_days_before}d
+                    </Text>
+                    <Pressable
+                      onPress={() => onStatementDaysChange(prefs.statement_due_days_before + 1)}
+                      disabled={prefs.statement_due_days_before >= 14}
+                      className="h-9 w-9 items-center justify-center rounded-full bg-surface-2 active:opacity-70 disabled:opacity-40"
+                      accessibilityRole="button"
+                      accessibilityLabel="Subir días de anticipación"
                     >
                       <Icon name="plus" size={16} color={colors.text} />
                     </Pressable>

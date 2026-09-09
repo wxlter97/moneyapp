@@ -207,14 +207,29 @@ export const personalTokens = {
 
 // --- notificaciones push (sin X-Workspace-ID: son por usuario) --------
 export const pushDevices = {
-  register: (token: string, platform: 'ios' | 'android') =>
+  /** `keys` sólo aplica (y es requerido por el backend) para
+   * `platform: 'web'` -- las claves p256dh/auth de la PushSubscription del
+   * navegador, sin las cuales no se puede cifrar el payload (RFC 8291). */
+  register: (
+    token: string,
+    platform: 'ios' | 'android' | 'web',
+    keys?: { p256dh: string; auth: string },
+  ) =>
     api
-      .post('/push-devices/', { token, platform }, { skipWorkspace: true })
+      .post('/push-devices/', { token, platform, ...keys }, { skipWorkspace: true })
       .then(() => undefined),
   unregister: (token: string) =>
     api
       .post('/push-devices/unregister/', { token }, { skipWorkspace: true })
       .then(() => undefined),
+  /** Clave pública VAPID para `PushManager.subscribe({applicationServerKey})`
+   * -- pública por diseño, no requiere sesión. */
+  vapidPublicKey: () =>
+    api
+      .get<{ vapid_public_key: string }>('/push-devices/vapid-public-key/', {
+        skipWorkspace: true,
+      })
+      .then((r) => r.data.vapid_public_key),
 };
 
 export const notificationPreferences = {

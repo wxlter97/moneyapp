@@ -616,10 +616,11 @@ export function useRemoveReceipt() {
   });
 }
 
-/** Foto del recibo como data URI, lista para `<Image source={{uri}}>`. El
- * endpoint exige el mismo auth que el resto del API, así que no se puede
- * apuntar un <Image> directo a la URL — se trae por axios (que ya manda
- * los headers) y se arma el data URI acá. */
+/** Recibo (foto o PDF) como data URI, lista para `<Image source={{uri}}>`
+ * cuando es una imagen (ver `contentType` para decidir cómo mostrarlo -- un
+ * PDF no se puede dibujar así). El endpoint exige el mismo auth que el resto
+ * del API, así que no se puede apuntar un <Image>/link directo a la URL —
+ * se trae por axios (que ya manda los headers) y se arma el data URI acá. */
 export function useReceiptImage(id: string | undefined, hasReceipt: boolean) {
   const ws = useActiveWs();
   return useQuery({
@@ -627,7 +628,7 @@ export function useReceiptImage(id: string | undefined, hasReceipt: boolean) {
     queryFn: async () => {
       const { data, contentType } = await res.transactions.getReceiptBlob(id!);
       const base64 = encodeBase64(new Uint8Array(data));
-      return `data:${contentType};base64,${base64}`;
+      return { uri: `data:${contentType};base64,${base64}`, base64, contentType };
     },
     enabled: !!ws && !!id && hasReceipt,
     staleTime: Infinity,

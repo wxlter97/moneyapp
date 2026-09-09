@@ -3,6 +3,9 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { pushDevices } from '@/api/resources';
+import { registerWebPush, unsubscribeWebPush } from '@/lib/webPush';
+
 // Cómo se muestra un push que llega con la app abierta (foreground). Sin
 // esto, expo-notifications no la muestra en absoluto mientras la app está al
 // frente. `shouldShowAlert` quedó deprecado a favor de estos dos campos.
@@ -15,10 +18,9 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export interface RegisteredDevice {
-  token: string;
-  platform: 'ios' | 'android';
-}
+export type RegisteredDevice =
+  | { token: string; platform: 'ios' | 'android' }
+  | { token: string; platform: 'web'; p256dh: string; auth: string };
 
 // Se cachea en memoria (no hace falta persistirlo: se vuelve a pedir en cada
 // arranque) para poder des-registrar el mismo valor al cerrar sesión sin
@@ -41,7 +43,16 @@ export function getCachedPushDevice(): RegisteredDevice | null {
  * esta función simplemente no va a conseguir un token nunca; es esperable.
  */
 export async function registerForPushNotificationsAsync(): Promise<RegisteredDevice | null> {
-  if (Platform.OS === 'web') return null; // push web necesita otra config (VAPID) — fuera de alcance
+  if (Platform.OS === 'web') {
+    // Distinto protocolo por completo (Web Push/VAPID en vez de Expo Push):
+    // `vapidPublicKey` vacío (backend sin configurar, ver .env.example) ya
+    // hace que `registerWebPush` devuelva null sin pedir permiso siquiera.
+    const vapidPublicKey = await pushDevices.vapidPublicKey().catch(() => '');
+    const subscription = await registerWebPush(vapidPublicKey);
+    if (!subscription) return null;
+    cachedDevice = { token: subscription.endpoint, platform: 'web', p256dh: subscription.p256dh, auth: subscription.auth };
+    return cachedDevice;
+  }
   if (!Device.isDevice) return null; // simulador/emulador: no hay push real
 
   if (Platform.OS === 'android') {
@@ -79,6 +90,15 @@ export async function registerForPushNotificationsAsync(): Promise<RegisteredDev
 
 export function clearCachedPushDevice() {
   cachedDevice = null;
+}
+
+/** `pushDevices.register`, pero mandando las claves p256dh/auth cuando
+ * corresponde -- para no repetir el chequeo `platform === 'web'` en cada
+ * lugar que registra un `RegisteredDevice`. */
+export function registerDevice(device: RegisteredDevice): Promise<void> {
+  return device.platform === 'web'
+    ? pushDevices.register(device.token, 'web', { p256dh: device.p256dh, auth: device.auth })
+    : pushDevices.register(device.token, device.platform);
 }
 
 /** Se dispara al tocar una notificación (app en background o cerrada). */

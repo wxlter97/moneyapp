@@ -57,6 +57,40 @@ export interface GoogleLoginResponse extends TokenPairResponse {
   created: boolean;
 }
 
+/** Respuesta de POST /auth/token/ cuando el usuario tiene 2FA activo: en vez
+ * de tokens, un challenge de vida corta para el segundo paso
+ * (`twoFactor.verify`). */
+export interface TwoFactorRequiredResponse {
+  two_factor_required: true;
+  mfa_token: string;
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+}
+
+/** POST /auth/2fa/setup/ -- secreto pendiente de confirmar (todavía no sirve
+ * para el login hasta `twoFactor.enable`). */
+export interface TwoFactorSetupResponse {
+  secret: string;
+  otpauth_url: string;
+}
+
+/** POST /auth/2fa/backup-codes/ -- los códigos vienen en claro UNA sola vez;
+ * hay que mostrarlos para que el usuario los guarde. */
+export interface TwoFactorBackupCodesResponse {
+  backup_codes: string[];
+}
+
+/** POST /auth/2fa/enable/ -- igual que arriba, más la confirmación explícita. */
+export interface TwoFactorEnableResponse extends TwoFactorBackupCodesResponse {
+  enabled: true;
+}
+
+export interface TwoFactorVerifyResponse extends TokenPairResponse {
+  user: User;
+}
+
 // ---------------------------------------------------------------------------
 // Workspaces
 // ---------------------------------------------------------------------------
@@ -135,6 +169,13 @@ export interface NotificationPreferences {
   warn_budget: boolean;
   /** % del presupuesto de una categoría a partir del cual avisar (50-100). */
   budget_threshold_pct: number;
+  /** Cartera por debajo de su propio `Wallet.low_balance_threshold`. */
+  remind_low_balance: boolean;
+  /** Vencimiento del ESTADO DE CUENTA completo de una tarjeta (no cuota por
+   * cuota, eso ya es `remind_installments`). */
+  warn_statement_due: boolean;
+  /** Con cuántos días de anticipación avisar (1-14). */
+  statement_due_days_before: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +222,9 @@ export interface Wallet {
   /** Saldo propio + el de los descendientes. */
   aggregated_balance: Money;
   counts_toward_net_worth: boolean;
+  /** Avisa (push) si `current_balance` cae por debajo de esto, en la moneda
+   * de esta cartera. `null` = sin aviso. */
+  low_balance_threshold: Money | null;
   /** Límite de la tarjeta de crédito (solo `kind: 'credit'`). */
   credit_limit: Money | null;
   /** Crédito disponible = límite + saldo; null si no es tarjeta con límite. */
@@ -225,6 +269,7 @@ export interface WalletInput {
   currency?: string;
   opening_balance?: Money;
   counts_toward_net_worth?: boolean;
+  low_balance_threshold?: Money | null;
   credit_limit?: Money | null;
   goal_amount?: Money | null;
   goal_date?: ISODate | null;
@@ -452,10 +497,16 @@ export const RECURRENCE_LABEL: Record<RecurrenceFrequency, string> = {
 
 export interface RecurringExpense {
   id: UUID;
-  /** Nombre libre ("Netflix", "iCloud+"...); vacío = usar el de la categoría. */
+  type: TransactionType;
+  /** Nombre libre ("Netflix", "iCloud+"...); vacío = usar el de la categoría
+   * (o "Transferencia a <cartera>" si es una transferencia). */
   name: string;
-  category: UUID;
+  /** Requerida en income/expense; null en transfer. */
+  category: UUID | null;
   wallet: UUID;
+  /** Solo transferencias: cartera destino (p. ej. aporte automático a una
+   * cartera de ahorro con meta). */
+  to_wallet: UUID | null;
   amount: Money;
   frequency: RecurrenceFrequency;
   next_due_date: ISODate;
@@ -465,9 +516,13 @@ export interface RecurringExpense {
 }
 
 export interface RecurringExpenseInput {
+  /** Opcional: si se omite y se manda `category`, se deduce de ahí. Requerido
+   * (y explícito) para una transferencia. */
+  type?: TransactionType;
   name?: string;
-  category: UUID;
+  category?: UUID | null;
   wallet: UUID;
+  to_wallet?: UUID | null;
   amount: Money;
   frequency: RecurrenceFrequency;
   next_due_date: ISODate;
@@ -720,6 +775,10 @@ export interface ScheduledItem {
   category_name: string | null;
   wallet: UUID;
   wallet_name: string;
+  /** Sólo un recurrente de tipo transferencia (aporte automático a otra
+   * cartera, p. ej. una meta de ahorro) los trae. */
+  to_wallet: UUID | null;
+  to_wallet_name: string | null;
 }
 
 export interface CashflowPoint {

@@ -15,6 +15,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
         <Text className="text-text-muted text-sm">{label}</Text>
         <TextInput
           ref={ref}
+          accessibilityLabel={label}
           placeholderTextColor="#6B7480"
           onFocus={(e) => {
             setFocused(true);

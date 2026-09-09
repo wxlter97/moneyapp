@@ -81,6 +81,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [debtOwedToUs, setDebtOwedToUs] = useState(false); // deuda: "me deben"
   const [parentId, setParentId] = useState<string | null>(null);
   const [countsNet, setCountsNet] = useState(true);
+  const [lowBalanceThreshold, setLowBalanceThreshold] = useState('0.00');
   const [isDefault, setIsDefault] = useState(false);
   const [goalAmount, setGoalAmount] = useState('0.00');
   const [goalDate, setGoalDate] = useState('');
@@ -122,6 +123,9 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setAmount(Math.abs(bal).toFixed(2));
     setParentId(w.parent);
     setCountsNet(w.counts_toward_net_worth);
+    setLowBalanceThreshold(
+      w.low_balance_threshold ? toNumber(w.low_balance_threshold).toFixed(2) : '0.00',
+    );
     setIsDefault(w.is_default);
     setGoalAmount(w.goal_amount ? toNumber(w.goal_amount).toFixed(2) : '0.00');
     setGoalDate(w.goal_date ?? '');
@@ -273,6 +277,8 @@ export function WalletForm({ walletId }: WalletFormProps) {
       parent: parentId || null,
       opening_balance: signed.toFixed(2),
       counts_toward_net_worth: countsNet,
+      low_balance_threshold:
+        toNumber(lowBalanceThreshold) > 0 ? toNumber(lowBalanceThreshold).toFixed(2) : null,
       credit_limit:
         kind === 'credit' && toNumber(creditLimit) > 0
           ? toNumber(creditLimit).toFixed(2)
@@ -640,6 +646,18 @@ export function WalletForm({ walletId }: WalletFormProps) {
             trackColor={{ true: colors.primary, false: colors.surface2 }}
             thumbColor="#FFFFFF"
           />
+        </View>
+
+        <View className="gap-1.5 rounded-xl bg-surface-2 px-3 py-2.5">
+          <AmountInput
+            label="Avisar de saldo bajo"
+            value={lowBalanceThreshold}
+            onChangeText={setLowBalanceThreshold}
+            currency={currency}
+          />
+          <Text className="text-text-muted text-xs">
+            Te avisamos si el saldo cae por debajo de este monto. Déjalo en 0 para no recibir aviso.
+          </Text>
         </View>
 
         <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">

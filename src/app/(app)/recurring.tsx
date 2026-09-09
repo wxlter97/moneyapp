@@ -73,8 +73,11 @@ export default function RecurringScreen() {
         ) : (
           <Card>
             {items.map((r, i) => {
-              const cat = categories.get(r.category);
+              const isTransfer = r.type === 'transfer';
+              const cat = r.category ? categories.get(r.category) : undefined;
               const wallet = wallets.get(r.wallet);
+              const toWallet = r.to_wallet ? wallets.get(r.to_wallet) : undefined;
+              const title = r.name || (isTransfer ? `Transferencia a ${toWallet?.name ?? '—'}` : cat?.name) || 'Categoría';
               return (
                 <Pressable
                   key={r.id}
@@ -88,9 +91,9 @@ export default function RecurringScreen() {
                   accessibilityRole="button"
                 >
                   <CategoryAvatar
-                    icon={cat?.icon}
-                    color={cat?.color}
-                    fallbackIcon="repeat"
+                    icon={isTransfer ? undefined : cat?.icon}
+                    color={isTransfer ? undefined : cat?.color}
+                    fallbackIcon={isTransfer ? 'swap' : 'repeat'}
                     size={40}
                   />
                   <View className="flex-1">
@@ -99,12 +102,13 @@ export default function RecurringScreen() {
                       style={{ fontFamily: fonts.semibold }}
                       numberOfLines={1}
                     >
-                      {r.name || cat?.name || 'Categoría'}
+                      {title}
                       {r.is_active ? '' : ' · pausado'}
                     </Text>
                     <Text className="text-text-muted text-xs" numberOfLines={1}>
-                      {RECURRENCE_LABEL[r.frequency]} · {wallet?.name ?? '—'} · próx.{' '}
-                      {formatShortDate(r.next_due_date)}
+                      {RECURRENCE_LABEL[r.frequency]} ·{' '}
+                      {isTransfer ? `${wallet?.name ?? '—'} → ${toWallet?.name ?? '—'}` : (wallet?.name ?? '—')} ·
+                      próx. {formatShortDate(r.next_due_date)}
                     </Text>
                   </View>
                   <Money value={r.amount} currency={wallet?.currency ?? 'USD'} className="text-sm font-semibold" />

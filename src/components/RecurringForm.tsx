@@ -15,11 +15,13 @@ import {
   RECURRENCE_LABEL,
   type RecurrenceFrequency,
   type RecurringExpenseInput,
+  type TransactionType,
 } from '@/api/types';
 import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
+import { Segmented } from '@/components/ui/Segmented';
 import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
@@ -44,10 +46,12 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
   const update = useUpdateRecurringExpense();
   const remove = useDeleteRecurringExpense();
 
+  const [type, setType] = useState<TransactionType>('expense');
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('0.00');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [walletId, setWalletId] = useState<string | null>(null);
+  const [toWalletId, setToWalletId] = useState<string | null>(null);
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly');
   const [nextDue, setNextDue] = useState(todayISO());
   const [isActive, setIsActive] = useState(true);
@@ -56,26 +60,35 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
   const [prefilled, setPrefilled] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  const isTransfer = type === 'transfer';
+
   useEffect(() => {
     if (!editing || prefilled || !existing.data) return;
     const r = existing.data;
+    setType(r.type);
     setName(r.name ?? '');
     setAmount(toNumber(r.amount).toFixed(2));
     setCategoryId(r.category);
     setWalletId(r.wallet);
+    setToWalletId(r.to_wallet);
     setFrequency(r.frequency);
     setNextDue(r.next_due_date);
     setIsActive(r.is_active);
     setPrefilled(true);
   }, [editing, prefilled, existing.data]);
 
+  // Sólo categorías del tipo elegido -- igual que en "Nueva transacción":
+  // una vez que cambiás Gasto/Ingreso, la categoría vieja (del otro tipo) ya
+  // no aplica.
   const categoryOptions = useMemo(
     () =>
-      (categoriesQ.data ?? []).map((c) => ({
-        value: c.id,
-        label: c.parent ? `  ${c.name}` : c.name,
-      })),
-    [categoriesQ.data],
+      (categoriesQ.data ?? [])
+        .filter((c) => c.type === type)
+        .map((c) => ({
+          value: c.id,
+          label: c.parent ? `  ${c.name}` : c.name,
+        })),
+    [categoriesQ.data, type],
   );
 
   const walletOptions = useMemo(
@@ -83,18 +96,39 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
     [assignableWallets],
   );
 
+  // La cartera destino no puede ser la misma que la de origen.
+  const toWalletOptions = useMemo(
+    () => walletOptions.filter((w) => w.value !== walletId),
+    [walletOptions, walletId],
+  );
+
   const amountNum = toNumber(amount);
   const busy = create.isPending || update.isPending || remove.isPending;
-  const canSubmit = amountNum > 0 && !!categoryId && !!walletId && !!nextDue && !busy;
+  const canSubmit =
+    amountNum > 0 &&
+    !!walletId &&
+    !!nextDue &&
+    (isTransfer ? !!toWalletId && toWalletId !== walletId : !!categoryId) &&
+    !busy;
+
+  function onChangeType(next: TransactionType) {
+    setType(next);
+    setCategoryId(null);
+    // Al pasar a transferencia la categoría ya no aplica; al salir de
+    // transferencia, la cartera destino tampoco.
+    if (next === 'transfer') setToWalletId((prev) => (prev === walletId ? null : prev));
+  }
 
   async function onSubmit() {
-    if (!categoryId || !walletId) return;
+    if (!walletId) return;
     setFormError(null);
     setFields({});
     const payload: RecurringExpenseInput = {
+      type,
       name: name.trim(),
-      category: categoryId,
+      category: isTransfer ? null : categoryId,
       wallet: walletId,
+      to_wallet: isTransfer ? toWalletId : null,
       amount: amountNum.toFixed(2),
       frequency,
       next_due_date: nextDue,
@@ -129,9 +163,19 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
       className="flex-1"
     >
       <ScrollView contentContainerClassName="gap-4 py-3" keyboardShouldPersistTaps="handled">
+        <Segmented
+          value={type}
+          onChange={onChangeType}
+          options={[
+            { value: 'expense', label: 'Gasto' },
+            { value: 'income', label: 'Ingreso' },
+            { value: 'transfer', label: 'Transfer.' },
+          ]}
+        />
+
         <TextField
           label="Nombre (opcional)"
-          placeholder="Netflix, iCloud, gimnasio…"
+          placeholder={isTransfer ? 'Aporte a meta de ahorro…' : 'Netflix, iCloud, gimnasio…'}
           value={name}
           onChangeText={setName}
           error={fields.name}
@@ -139,23 +183,39 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
 
         <AmountInput label="Monto" value={amount} onChangeText={setAmount} error={fields.amount} />
 
-        <Select
-          label="Categoría"
-          value={categoryId}
-          onChange={setCategoryId}
-          options={categoryOptions}
-          placeholder={categoriesQ.isLoading ? 'Cargando…' : 'Elegir categoría'}
-          error={fields.category}
-        />
+        {!isTransfer ? (
+          <Select
+            label="Categoría"
+            value={categoryId}
+            onChange={setCategoryId}
+            options={categoryOptions}
+            placeholder={categoriesQ.isLoading ? 'Cargando…' : 'Elegir categoría'}
+            error={fields.category}
+          />
+        ) : null}
 
         <Select
-          label="Cartera"
+          label={isTransfer ? 'Desde' : 'Cartera'}
           value={walletId}
-          onChange={setWalletId}
+          onChange={(v) => {
+            setWalletId(v);
+            if (v === toWalletId) setToWalletId(null);
+          }}
           options={walletOptions}
           placeholder={walletsQ.isLoading ? 'Cargando…' : 'Elegir cartera'}
           error={fields.wallet}
         />
+
+        {isTransfer ? (
+          <Select
+            label="A (cartera destino)"
+            value={toWalletId}
+            onChange={setToWalletId}
+            options={toWalletOptions}
+            placeholder={walletsQ.isLoading ? 'Cargando…' : 'Elegir cartera'}
+            error={fields.to_wallet}
+          />
+        ) : null}
 
         <Select
           label="Frecuencia"

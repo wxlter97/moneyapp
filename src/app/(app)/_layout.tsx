@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useCreateWorkspace, useWorkspaces } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
-import { pushDevices } from '@/api/resources';
 import { AppLockGate } from '@/components/security/AppLockGate';
-import { addNotificationTapListener, registerForPushNotificationsAsync } from '@/lib/notifications';
+import {
+  addNotificationTapListener,
+  registerDevice,
+  registerForPushNotificationsAsync,
+} from '@/lib/notifications';
 import { useAuthStore } from '@/store/auth';
 import { useSecurityStore } from '@/store/security';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -56,7 +59,7 @@ export default function AppLayout() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     registerForPushNotificationsAsync()
-      .then((device) => (device ? pushDevices.register(device.token, device.platform) : undefined))
+      .then((device) => (device ? registerDevice(device) : undefined))
       .catch(() => {});
   }, [status]);
 
@@ -250,6 +253,10 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="security"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="two-factor"
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen

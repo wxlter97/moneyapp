@@ -1,6 +1,17 @@
 /** Llamadas de autenticación contra el backend Django (simplejwt). */
 import { api, setTokens, clearTokens } from './client';
-import type { GoogleLoginResponse, RegisterResponse, TokenPairResponse, User } from './types';
+import type {
+  GoogleLoginResponse,
+  RegisterResponse,
+  TokenPairResponse,
+  TwoFactorBackupCodesResponse,
+  TwoFactorEnableResponse,
+  TwoFactorRequiredResponse,
+  TwoFactorSetupResponse,
+  TwoFactorStatus,
+  TwoFactorVerifyResponse,
+  User,
+} from './types';
 
 export interface LoginCredentials {
   /** El backend usa `username` (TokenObtainPairView por defecto), no email. */
@@ -16,13 +27,27 @@ export interface RegisterInput {
   last_name?: string;
 }
 
-/** POST /auth/token/ — guarda el par de tokens y devuelve el usuario. */
-export async function login(creds: LoginCredentials): Promise<User> {
-  const { data } = await api.post<TokenPairResponse>('/auth/token/', creds, {
-    skipWorkspace: true,
-  });
+/** Resultado de `login`: o entró directo, o hace falta el código de 2FA
+ * (segundo paso, ver `twoFactor.verify`) -- en ese caso todavía NO hay
+ * tokens guardados. */
+export type LoginResult =
+  | { twoFactorRequired: false; user: User }
+  | { twoFactorRequired: true; mfaToken: string };
+
+/** POST /auth/token/ — si el usuario no tiene 2FA, guarda el par de tokens y
+ * devuelve el usuario; si lo tiene, no guarda nada y devuelve el challenge
+ * del segundo paso. */
+export async function login(creds: LoginCredentials): Promise<LoginResult> {
+  const { data } = await api.post<TokenPairResponse | TwoFactorRequiredResponse>(
+    '/auth/token/',
+    creds,
+    { skipWorkspace: true },
+  );
+  if ('two_factor_required' in data) {
+    return { twoFactorRequired: true, mfaToken: data.mfa_token };
+  }
   await setTokens({ access: data.access, refresh: data.refresh });
-  return me();
+  return { twoFactorRequired: false, user: await me() };
 }
 
 /** POST /auth/register/ — crea la cuenta y deja la sesión iniciada. */
@@ -78,3 +103,44 @@ export async function me(): Promise<User> {
 export async function logout(): Promise<void> {
   await clearTokens();
 }
+
+// --- 2FA (TOTP) ---------------------------------------------------------
+export const twoFactor = {
+  status: () =>
+    api.get<TwoFactorStatus>('/auth/2fa/', { skipWorkspace: true }).then((r) => r.data),
+
+  /** Genera (o reinicia) el secreto pendiente de confirmar. */
+  setup: () =>
+    api.post<TwoFactorSetupResponse>('/auth/2fa/setup/', {}, { skipWorkspace: true }).then((r) => r.data),
+
+  /** Confirma con un código real del secreto de `setup`. Los códigos de
+   * respaldo vuelven en claro UNA sola vez. */
+  enable: (code: string) =>
+    api
+      .post<TwoFactorEnableResponse>('/auth/2fa/enable/', { code }, { skipWorkspace: true })
+      .then((r) => r.data),
+
+  disable: (password: string) =>
+    api.post('/auth/2fa/disable/', { password }, { skipWorkspace: true }).then(() => undefined),
+
+  regenerateBackupCodes: (password: string) =>
+    api
+      .post<TwoFactorBackupCodesResponse>(
+        '/auth/2fa/backup-codes/',
+        { password },
+        { skipWorkspace: true },
+      )
+      .then((r) => r.data),
+
+  /** Segundo paso del login: `mfaToken` del challenge + código (TOTP o de
+   * respaldo) a cambio de los tokens reales. */
+  verify: async (mfaToken: string, code: string): Promise<User> => {
+    const { data } = await api.post<TwoFactorVerifyResponse>(
+      '/auth/2fa/verify/',
+      { mfa_token: mfaToken, code },
+      { skipWorkspace: true },
+    );
+    await setTokens({ access: data.access, refresh: data.refresh });
+    return data.user;
+  },
+};
