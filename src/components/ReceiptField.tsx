@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useReceiptImage, useRemoveReceipt, useUploadReceipt } from '@/api/queries';
 import { Icon } from '@/components/ui/Icon';
 import { haptics } from '@/lib/haptics';
-import { pickReceiptImage, type PickedFile } from '@/lib/receipt';
+import {
+  isPdfType,
+  pickReceiptDocument,
+  pickReceiptImage,
+  writePdfToTempFile,
+  type PickedFile,
+} from '@/lib/receipt';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -33,17 +39,19 @@ export function ReceiptField({
   const colors = useColors();
   const [picking, setPicking] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [openingPdf, setOpeningPdf] = useState(false);
   const upload = useUploadReceipt();
   const remove = useRemoveReceipt();
-  const existingImage = useReceiptImage(transactionId, hasReceipt);
+  const existingReceipt = useReceiptImage(transactionId, hasReceipt);
 
-  const previewUri = pendingFile?.uri ?? existingImage.data ?? null;
-  const loadingPreview = !pendingFile && hasReceipt && existingImage.isLoading;
+  const previewUri = pendingFile?.uri ?? existingReceipt.data?.uri ?? null;
+  const isPdf = isPdfType(pendingFile?.type ?? existingReceipt.data?.contentType);
+  const loadingPreview = !pendingFile && hasReceipt && existingReceipt.isLoading;
   const busy = upload.isPending || remove.isPending;
 
-  async function onPick(source: 'camera' | 'library') {
+  async function onPick(source: 'camera' | 'library' | 'document') {
     setPicking(false);
-    const file = await pickReceiptImage(source);
+    const file = source === 'document' ? await pickReceiptDocument() : await pickReceiptImage(source);
     if (!file) return;
 
     if (!transactionId) {
@@ -56,6 +64,30 @@ export function ReceiptField({
       haptics.success();
     } catch {
       haptics.error();
+    }
+  }
+
+  /** Ver el PDF con el visor del sistema: en web un `data:`/`blob:` URI se
+   * abre solo en una pestaña nueva, pero en nativo hace falta un archivo de
+   * verdad primero (iOS/Android no abren un `data:` URI con la app de PDF
+   * del sistema) -- de ahí `writePdfToTempFile` sólo para ese caso. */
+  async function onOpenPdf() {
+    if (!previewUri) return;
+    haptics.tap();
+    if (Platform.OS === 'web' || !previewUri.startsWith('data:')) {
+      Linking.openURL(previewUri).catch(() => haptics.error());
+      return;
+    }
+    const base64 = existingReceipt.data?.base64;
+    if (!base64) return;
+    setOpeningPdf(true);
+    try {
+      const fileUri = writePdfToTempFile(base64, `recibo-${transactionId ?? Date.now()}.pdf`);
+      await Linking.openURL(fileUri);
+    } catch {
+      haptics.error();
+    } finally {
+      setOpeningPdf(false);
     }
   }
 
@@ -79,13 +111,17 @@ export function ReceiptField({
       {previewUri || loadingPreview ? (
         <View className="flex-row items-center gap-3">
           <Pressable
-            onPress={() => previewUri && setViewerOpen(true)}
-            disabled={!previewUri}
+            onPress={() => (previewUri && isPdf ? onOpenPdf() : previewUri && setViewerOpen(true))}
+            disabled={!previewUri || openingPdf}
             accessibilityRole="button"
-            accessibilityLabel="Ver recibo"
+            accessibilityLabel={isPdf ? 'Abrir PDF' : 'Ver recibo'}
             className="h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-surface-2 active:opacity-70"
           >
-            {previewUri ? (
+            {openingPdf ? (
+              <ActivityIndicator color={colors.textMuted} />
+            ) : previewUri && isPdf ? (
+              <Icon name="receipt" size={22} color={colors.textMuted} />
+            ) : previewUri ? (
               <Image source={{ uri: previewUri }} className="h-14 w-14" resizeMode="cover" />
             ) : (
               <ActivityIndicator color={colors.textMuted} />
@@ -127,6 +163,16 @@ export function ReceiptField({
             <Icon name="image" size={15} color={colors.text} />
             <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
               Galería
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onPick('document')}
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-surface-2 py-2.5 active:opacity-70"
+            accessibilityRole="button"
+          >
+            <Icon name="receipt" size={15} color={colors.text} />
+            <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+              PDF
             </Text>
           </Pressable>
         </View>
