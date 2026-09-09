@@ -10,9 +10,8 @@ import { Icon } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { ErrorState, LoadingState } from '@/components/ui/states';
-import { registerForPushNotificationsAsync } from '@/lib/notifications';
+import { registerDevice, registerForPushNotificationsAsync } from '@/lib/notifications';
 import { haptics } from '@/lib/haptics';
-import { pushDevices } from '@/api/resources';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -52,7 +51,7 @@ export default function NotificationsScreen() {
     try {
       const device = await registerForPushNotificationsAsync();
       if (device) {
-        await pushDevices.register(device.token, device.platform);
+        await registerDevice(device);
         haptics.success();
       } else {
         // Si seguimos sin permiso después de pedirlo, es porque el sistema
@@ -127,7 +126,7 @@ export default function NotificationsScreen() {
                 </Text>
                 <Text className="text-text-muted text-xs">
                   {permission === 'unsupported'
-                    ? 'Probá desde un iPhone/Android real (no un simulador ni la web).'
+                    ? 'Probá desde un iPhone/Android real (no un simulador) o desde un navegador con soporte de notificaciones.'
                     : 'Dale permiso para poder avisarte de recurrentes, cuotas y presupuesto.'}
                 </Text>
               </View>

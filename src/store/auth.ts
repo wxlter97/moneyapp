@@ -11,6 +11,7 @@ import { loadTokens, registerAuthFailureHandler } from '@/api/client';
 import { pushDevices } from '@/api/resources';
 import type { User } from '@/api/types';
 import { getCachedPushDevice, clearCachedPushDevice } from '@/lib/notifications';
+import { unsubscribeWebPush } from '@/lib/webPush';
 import { useWorkspaceStore } from './workspace';
 
 type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
@@ -101,6 +102,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     const device = getCachedPushDevice();
     if (device) {
       await pushDevices.unregister(device.token).catch(() => {});
+      if (device.platform === 'web') await unsubscribeWebPush().catch(() => {});
       clearCachedPushDevice();
     }
     await authApi.logout();
