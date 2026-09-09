@@ -452,10 +452,16 @@ export const RECURRENCE_LABEL: Record<RecurrenceFrequency, string> = {
 
 export interface RecurringExpense {
   id: UUID;
-  /** Nombre libre ("Netflix", "iCloud+"...); vacío = usar el de la categoría. */
+  type: TransactionType;
+  /** Nombre libre ("Netflix", "iCloud+"...); vacío = usar el de la categoría
+   * (o "Transferencia a <cartera>" si es una transferencia). */
   name: string;
-  category: UUID;
+  /** Requerida en income/expense; null en transfer. */
+  category: UUID | null;
   wallet: UUID;
+  /** Solo transferencias: cartera destino (p. ej. aporte automático a una
+   * cartera de ahorro con meta). */
+  to_wallet: UUID | null;
   amount: Money;
   frequency: RecurrenceFrequency;
   next_due_date: ISODate;
@@ -465,9 +471,13 @@ export interface RecurringExpense {
 }
 
 export interface RecurringExpenseInput {
+  /** Opcional: si se omite y se manda `category`, se deduce de ahí. Requerido
+   * (y explícito) para una transferencia. */
+  type?: TransactionType;
   name?: string;
-  category: UUID;
+  category?: UUID | null;
   wallet: UUID;
+  to_wallet?: UUID | null;
   amount: Money;
   frequency: RecurrenceFrequency;
   next_due_date: ISODate;
@@ -720,6 +730,10 @@ export interface ScheduledItem {
   category_name: string | null;
   wallet: UUID;
   wallet_name: string;
+  /** Sólo un recurrente de tipo transferencia (aporte automático a otra
+   * cartera, p. ej. una meta de ahorro) los trae. */
+  to_wallet: UUID | null;
+  to_wallet_name: string | null;
 }
 
 export interface CashflowPoint {
