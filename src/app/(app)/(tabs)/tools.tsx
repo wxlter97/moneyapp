@@ -11,7 +11,7 @@ import { Segmented } from '@/components/ui/Segmented';
 import { haptics } from '@/lib/haptics';
 import { TOOL_GROUPS } from '@/lib/toolGroups';
 import { useColors } from '@/theme';
-import { ACCENTS } from '@/theme/accents';
+import { ACCENTS, type Accent } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 import { useThemeStore, type ThemePref } from '@/store/theme';
 import { useAccentStore } from '@/store/accent';
@@ -21,6 +21,37 @@ const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
   { value: 'dark', label: 'Oscuro' },
   { value: 'system', label: 'Sistema' },
 ];
+
+// "Brasa" se separa del resto del selector (ver más abajo): es el único
+// acento deliberadamente vivo, no una tonalidad tierra más.
+const MUTED_ACCENTS = ACCENTS.filter((a) => a.id !== 'ember');
+const EMBER_ACCENT = ACCENTS.find((a) => a.id === 'ember');
+
+function AccentSwatch({
+  accent,
+  scheme,
+  active,
+  onPress,
+}: {
+  accent: Accent;
+  scheme: 'light' | 'dark';
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        if (!active) haptics.selection();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={accent.label}
+      style={{ backgroundColor: accent[scheme].primary }}
+      className={`h-9 w-9 rounded-full border-2 ${active ? 'border-text' : 'border-transparent'}`}
+    />
+  );
+}
 
 /**
  * Herramientas: antes 18+ botones sueltos en un grid, costaba encontrar
@@ -77,26 +108,36 @@ export default function ToolsScreen() {
 
           <Text className="text-text-muted mb-2 mt-4 text-xs">Acento</Text>
           <View className="flex-row flex-wrap gap-3">
-            {ACCENTS.map((accent) => {
-              const active = accent.id === accentId;
-              return (
-                <Pressable
-                  key={accent.id}
-                  onPress={() => {
-                    if (!active) haptics.selection();
-                    setAccent(accent.id);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={accent.label}
-                  style={{ backgroundColor: accent[scheme].primary }}
-                  className={`h-9 w-9 rounded-full border-2 ${
-                    active ? 'border-text' : 'border-transparent'
-                  }`}
-                />
-              );
-            })}
+            {MUTED_ACCENTS.map((accent) => (
+              <AccentSwatch
+                key={accent.id}
+                accent={accent}
+                scheme={scheme}
+                active={accent.id === accentId}
+                onPress={() => setAccent(accent.id)}
+              />
+            ))}
           </View>
+
+          {/* "Brasa" es, a propósito, el único acento vivo -- se separa del
+              resto para que elegirlo sea una decisión consciente, no una
+              opción más entre las tonalidades tierra. */}
+          {EMBER_ACCENT ? (
+            <>
+              <View className="my-3 h-px bg-border/60" />
+              <View className="flex-row items-center gap-3">
+                <AccentSwatch
+                  accent={EMBER_ACCENT}
+                  scheme={scheme}
+                  active={EMBER_ACCENT.id === accentId}
+                  onPress={() => setAccent(EMBER_ACCENT.id)}
+                />
+                <Text className="text-text-muted flex-1 text-xs leading-4">
+                  Vivo -- a propósito, no combina con el resto de la paleta.
+                </Text>
+              </View>
+            </>
+          ) : null}
         </Card>
 
         <Text className="text-text-muted self-center text-xs">Versión {version}</Text>

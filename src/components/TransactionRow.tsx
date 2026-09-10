@@ -85,6 +85,11 @@ export function TransactionRow({
 
   const glyph = category?.icon;
   const dotColor = isTransfer ? undefined : category?.color;
+  // Un solo ícono junto al título, no dos: "dividida" importa más para leer
+  // el monto que "tiene recibo", así que gana si ambas son ciertas -- entre
+  // esto y la pill de abajo (presupuesto u origen) quedan como máximo dos
+  // señales visibles por fila, no cuatro.
+  const metaIcon = txn.split_group ? 'split' : txn.has_receipt ? 'camera' : null;
 
   const row = (
     // `className` no se resuelve en `Animated.View` de reanimated: el fondo
@@ -122,12 +127,7 @@ export function TransactionRow({
             >
               {title}
             </Text>
-            {txn.has_receipt ? (
-              <Icon name="camera" size={11} color={colors.textMuted} />
-            ) : null}
-            {txn.split_group ? (
-              <Icon name="split" size={11} color={colors.textMuted} />
-            ) : null}
+            {metaIcon ? <Icon name={metaIcon} size={11} color={colors.textMuted} /> : null}
           </View>
           <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
             {subtitle}

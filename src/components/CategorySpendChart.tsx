@@ -1,12 +1,12 @@
 import { Text, View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
+import { useColorScheme } from 'nativewind';
 
 import type { SpendRow } from '@/api/types';
 import { Money } from '@/components/ui/Money';
 import { toNumber } from '@/lib/money';
 import { useColors } from '@/theme';
-
-const PALETTE = ['#4F8CFF', '#FF9F5A', '#5AD1A6', '#F26D6D', '#B18CFF', '#FFD166'];
+import { ACCENTS } from '@/theme/accents';
 
 interface CategorySpendChartProps {
   rows: SpendRow[];
@@ -22,10 +22,16 @@ interface CategorySpendChartProps {
  */
 export function CategorySpendChart({ rows, currency, categoryColor }: CategorySpendChartProps) {
   const colors = useColors();
+  const { colorScheme } = useColorScheme();
+  const scheme = colorScheme === 'light' ? 'light' : 'dark';
+  // Reserva para categorías sin color propio: los mismos tonos "tierra" del
+  // selector de acento (sin "Brasa", el único deliberadamente vivo) -- así
+  // ninguna categoría cae en un color saturado ajeno a la paleta del tema.
+  const palette = ACCENTS.filter((a) => a.id !== 'ember').map((a) => a[scheme].primary);
   const segments = rows.map((r, i) => ({
     ...r,
     value: toNumber(r.spent),
-    color: categoryColor(r.category) ?? PALETTE[i % PALETTE.length],
+    color: categoryColor(r.category) ?? palette[i % palette.length],
   }));
   const total = segments.reduce((sum, s) => sum + s.value, 0);
 

@@ -314,6 +314,17 @@ function ListaTab({
   const deleteTxn = useDeleteTransaction();
   const showSnackbar = useSnackbarStore((s) => s.show);
 
+  // El aviso de "busca en todo, no sólo el mes" se ve unos segundos la
+  // primera vez que alguien busca, y nunca más (ver `store/ui.ts`).
+  const hasSeenSearchAllHint = useUIStore((s) => s.hasSeenSearchAllHint);
+  const dismissSearchAllHint = useUIStore((s) => s.dismissSearchAllHint);
+  const searchingForFirstTime = search.trim().length > 0 && !hasSeenSearchAllHint;
+  useEffect(() => {
+    if (!searchingForFirstTime) return;
+    const t = setTimeout(dismissSearchAllHint, 3000);
+    return () => clearTimeout(t);
+  }, [searchingForFirstTime, dismissSearchAllHint]);
+
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [walletFilter, setWalletFilter] = useState<string | null>(null);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
@@ -324,9 +335,11 @@ function ListaTab({
   // timeout del snackbar si nadie toca "Deshacer" antes.
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
 
-  // Cuántos filtros avanzados (aparte de texto y tipo, que ya se ven en su
-  // propio control) están activos -- para el numerito sobre el ícono.
+  // Cuántos filtros avanzados (aparte del texto, que ya se ve en su propio
+  // campo) están activos -- para el numerito sobre el ícono. El tipo ahora
+  // vive dentro de este mismo panel, así que cuenta acá también.
   const activeFilterCount =
+    (typeFilter !== 'all' ? 1 : 0) +
     (walletFilter ? 1 : 0) +
     (tagFilter ? 1 : 0) +
     (toNumber(amountMin) > 0 ? 1 : 0) +
@@ -334,6 +347,7 @@ function ListaTab({
 
   function clearAdvancedFilters() {
     haptics.tap();
+    setTypeFilter('all');
     setWalletFilter(null);
     setTagFilter(null);
     setAmountMin('0.00');
@@ -448,26 +462,29 @@ function ListaTab({
         </Pressable>
       </View>
 
-      {searching ? (
+      {searching && searchingForFirstTime ? (
         <Text className="text-text-muted -mt-1 text-xs">
           Buscando en todos tus movimientos, no solo en el mes visible.
         </Text>
       ) : null}
 
-      <Segmented
-        value={typeFilter}
-        onChange={setTypeFilter}
-        options={[
-          { value: 'all', label: 'Todas' },
-          { value: 'income', label: 'Ingresos' },
-          { value: 'expense', label: 'Gastos' },
-          { value: 'transfer', label: 'Transfer.' },
-        ]}
-      />
-
       {filtersOpen ? (
         <FadeInView>
           <View className="gap-3 rounded-2xl border border-border/60 bg-surface p-3">
+            <View className="gap-1.5">
+              <Text className="text-text-muted text-xs uppercase tracking-wide">Tipo</Text>
+              <Segmented
+                value={typeFilter}
+                onChange={setTypeFilter}
+                options={[
+                  { value: 'all', label: 'Todas' },
+                  { value: 'income', label: 'Ingresos' },
+                  { value: 'expense', label: 'Gastos' },
+                  { value: 'transfer', label: 'Transfer.' },
+                ]}
+              />
+            </View>
+
             <View className="gap-1.5">
               <Text className="text-text-muted text-xs uppercase tracking-wide">Cartera</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">

@@ -533,11 +533,9 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
               <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
                 Cuenta para el presupuesto
               </Text>
-              <Text className="text-text-muted text-xs">
-                {inBudget
-                  ? 'Descuenta del presupuesto de su categoría.'
-                  : 'No afecta el presupuesto (sí el saldo).'}
-              </Text>
+              {/* Una sola línea fija en vez de una que cambia según el estado
+                  del switch -- misma info, sin pedir releerla en cada toque. */}
+              <Text className="text-text-muted text-xs">Resta del presupuesto si está activo.</Text>
             </View>
             <Switch
               value={inBudget}
