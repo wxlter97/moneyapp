@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FadeInView } from '@/components/ui/FadeInView';
@@ -18,17 +18,14 @@ import {
 import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import type { ScheduledItem } from '@/api/types';
 import { AddTransactionFab } from '@/components/AddTransactionFab';
-import { BudgetProgressRow } from '@/components/BudgetProgressRow';
-import { CategorySpendChart } from '@/components/CategorySpendChart';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SubTabs } from '@/components/SubTabs';
 import { SummaryTriple } from '@/components/SummaryTriple';
 import { TransactionRow } from '@/components/TransactionRow';
-import { WalletRow } from '@/components/WalletRow';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Card } from '@/components/ui/Card';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { SearchField } from '@/components/ui/SearchField';
@@ -108,21 +105,32 @@ function ResumenTab({ currency }: { currency: string }) {
   const wallets = useWallets();
   const budget = useBudgetReport();
   const scheduled = useScheduled();
+  const netWorth = useNetWorth();
   const { map: categories } = useCategoryMap();
 
   const spendingWallets = (wallets.data ?? []).filter((w) => w.purpose === 'spending');
-  const loading = summary.isLoading || wallets.isLoading;
-  const refreshing = summary.isFetching || wallets.isFetching || budget.isFetching || scheduled.isFetching;
+  const loading = summary.isLoading || wallets.isLoading || netWorth.isLoading;
+  const refreshing =
+    summary.isFetching || wallets.isFetching || budget.isFetching || scheduled.isFetching || netWorth.isFetching;
   const refresh = usePullRefresh(loading ? false : refreshing, () => {
     summary.refetch();
     wallets.refetch();
     budget.refetch();
     scheduled.refetch();
+    netWorth.refetch();
   });
 
   if (loading) return <LoadingState />;
   if (summary.isError)
     return <ErrorState error={summary.error} onRetry={summary.refetch} />;
+
+  const budgetTotals = budget.data?.totals;
+  const budgeted = toNumber(budgetTotals?.budgeted);
+  const remaining = toNumber(budgetTotals?.remaining);
+  const overBudget = remaining < 0;
+  const hasBudget = (budget.data?.rows.length ?? 0) > 0;
+  const topCategory = summary.data?.top_expense_categories[0];
+  const month = currentYearMonth();
 
   return (
     <ScrollView
@@ -160,71 +168,120 @@ function ResumenTab({ currency }: { currency: string }) {
 
       <ScheduledCard items={scheduled.data ?? []} loading={scheduled.isLoading} currency={currency} />
 
-      <Card
-        title="Carteras"
-        animated
-        index={1}
-        action={
-          <Link href="/wallets" asChild>
-            <Text className="text-primary text-xs">Ver todo</Text>
-          </Link>
-        }
-      >
-        {spendingWallets.length === 0 ? (
-          <EmptyState title="Sin carteras de gasto" />
-        ) : (
-          <View className="gap-3">
-            {spendingWallets.map((w) => (
-              <Pressable
-                key={w.id}
-                onPress={() => {
-                  haptics.tap();
-                  router.push(`/wallet-transactions?wallet=${w.id}`);
-                }}
-                className="active:opacity-70"
-                accessibilityRole="button"
-              >
-                <WalletRow wallet={w} />
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </Card>
+      {/* Vistazo condensado: Carteras y Presupuesto ya tienen su propia
+          pantalla con el detalle completo (listas, barras, historial) --
+          acá sólo referenciamos la cifra y un toque lleva a esa pantalla,
+          en vez de repetir listas enteras con su propio "Ver todo" cada
+          una (eran 3 cards separadas antes de esto). */}
+      <View className="gap-1.5">
+        <Text className="text-text-muted text-xs font-semibold uppercase tracking-wide">
+          De un vistazo
+        </Text>
+        <View className="-m-1.5 flex-row flex-wrap">
+          <GlanceTile icon="card" label="Carteras" onPress={() => router.push('/wallets')}>
+            {spendingWallets.length === 0 ? (
+              <Text className="text-text-muted text-sm">Crear una</Text>
+            ) : (
+              <>
+                <Money value={netWorth.data?.by_purpose.spending} currency={currency} className="text-lg font-bold" />
+                <Text className="text-text-muted text-[11px]" numberOfLines={1}>
+                  {spendingWallets.length === 1 ? '1 cartera' : `${spendingWallets.length} carteras`}
+                </Text>
+              </>
+            )}
+          </GlanceTile>
 
-      <Card
-        title="Presupuesto"
-        animated
-        index={2}
-        action={
-          <Link href="/budgets" asChild>
-            <Text className="text-primary text-xs">Ver todo</Text>
-          </Link>
-        }
-      >
-        {budget.isError ? (
-          <ErrorState error={budget.error} onRetry={budget.refetch} />
-        ) : (budget.data?.rows.length ?? 0) === 0 ? (
-          <EmptyState title="Sin presupuesto este mes" />
-        ) : (
-          budget.data!.rows.slice(0, 5).map((row, i) => (
-            <View key={row.category}>
-              {i > 0 ? <View className="h-px bg-border/30" /> : null}
-              <BudgetProgressRow row={row} currency={currency} month={currentYearMonth()} />
-            </View>
-          ))
-        )}
-      </Card>
+          <GlanceTile icon="bars" label="Presupuesto" onPress={() => router.push('/budgets')}>
+            {!hasBudget ? (
+              <Text className="text-text-muted text-sm">Sin ajustar</Text>
+            ) : (
+              <>
+                <Money
+                  value={Math.abs(remaining)}
+                  currency={currency}
+                  tone={overBudget ? 'expense' : 'income'}
+                  className="text-lg font-bold"
+                />
+                <Text className="text-text-muted text-[11px]" numberOfLines={1}>
+                  {overBudget ? 'excedido' : 'restante'} de{' '}
+                  <Money value={budgeted} currency={currency} tone="muted" className="text-[11px]" />
+                </Text>
+              </>
+            )}
+          </GlanceTile>
 
-      {(summary.data?.top_expense_categories.length ?? 0) > 0 ? (
-        <Card title="Gasto por categoría" animated index={3}>
-          <CategorySpendChart
-            rows={summary.data!.top_expense_categories}
-            currency={currency}
-            categoryColor={(id) => categories.get(id)?.color}
-          />
-        </Card>
-      ) : null}
+          <GlanceTile
+            icon="tag"
+            label="Gasto principal"
+            wide
+            onPress={() =>
+              topCategory
+                ? router.push(`/category-transactions?category=${topCategory.category}&y=${month.year}&m=${month.month}`)
+                : router.push('/budgets')
+            }
+          >
+            {!topCategory ? (
+              <Text className="text-text-muted text-sm">Sin gastos categorizados este mes</Text>
+            ) : (
+              <View className="flex-row items-center justify-between gap-2">
+                <View className="flex-1 flex-row items-center gap-2">
+                  <View
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: categories.get(topCategory.category)?.color ?? colors.textMuted }}
+                  />
+                  <Text
+                    className="text-text flex-1 text-sm"
+                    style={{ fontFamily: fonts.semibold }}
+                    numberOfLines={1}
+                  >
+                    {topCategory.category_name ?? 'Sin categoría'}
+                  </Text>
+                </View>
+                <Money value={topCategory.spent} currency={currency} tone="expense" className="text-lg font-bold" />
+              </View>
+            )}
+          </GlanceTile>
+        </View>
+      </View>
     </ScrollView>
+  );
+}
+
+function GlanceTile({
+  icon,
+  label,
+  wide = false,
+  onPress,
+  children,
+}: {
+  icon: IconName;
+  label: string;
+  /** Ocupa la fila completa en vez de la mitad -- para la tile que necesita
+   * más lugar (nombre de categoría + monto). */
+  wide?: boolean;
+  onPress: () => void;
+  children: React.ReactNode;
+}) {
+  const colors = useColors();
+  return (
+    <View className={`p-1.5 ${wide ? 'w-full' : 'w-1/2'}`}>
+      <Pressable
+        onPress={() => {
+          haptics.tap();
+          onPress();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        className="gap-1 rounded-3xl bg-surface-2 p-3.5 active:opacity-60"
+      >
+        <View className="flex-row items-center justify-between">
+          <Icon name={icon} size={15} color={colors.textMuted} />
+          <Icon name="chevron-right" size={13} color={colors.textMuted} />
+        </View>
+        <Text className="text-text-muted mt-1 text-[11px] uppercase tracking-wide">{label}</Text>
+        {children}
+      </Pressable>
+    </View>
   );
 }
 

@@ -41,7 +41,13 @@ export function Button({
       }}
       onPress={(e) => {
         if (isDisabled) return;
-        haptics.tap();
+        // El primario es casi siempre la acción con peso de la pantalla
+        // (Guardar, Entrar, Eliminar) -- un toque medio en vez del mismo
+        // toque liviano que cualquier otro botón secundario ("Cancelar",
+        // "Reintentar"), para que la intensidad del háptico refleje qué tan
+        // importante es la acción, no que todo se sienta igual.
+        if (variant === 'primary') haptics.impact();
+        else haptics.tap();
         onPress?.(e);
       }}
       {...rest}
