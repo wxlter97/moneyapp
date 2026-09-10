@@ -8,9 +8,11 @@
     "scheme": "budget",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.wxlter.budget"
     },
     "android": {
+      "package": "dev.wxlter.budget",
       "adaptiveIcon": {
         "backgroundColor": "#0B0D10",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
