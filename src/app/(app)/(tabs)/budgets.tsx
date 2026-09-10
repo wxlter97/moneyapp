@@ -55,11 +55,15 @@ export default function BudgetScreen() {
         }
         subtitle={
           <View>
+            {/* Tamaño "hero" (52px) reservado para el patrimonio neto en
+                Vista general -- acá va una escala secundaria: en la pestaña
+                "Restante" este mismo número se repite, más grande, dentro
+                del anillo de abajo, así que este texto no necesita competir
+                con él. */}
             <Money
               value={tab === 'restante' ? Math.abs(remaining) : spent}
               currency={currency}
-              hero
-              className="text-[52px] leading-[56px]"
+              className="text-[34px] font-bold leading-[38px]"
             />
             <Text className="text-text-muted text-sm">
               {tab === 'restante'

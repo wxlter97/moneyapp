@@ -21,6 +21,7 @@ import { ReceiptField } from '@/components/ReceiptField';
 import { TagPicker } from '@/components/TagPicker';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
+import { FadeInView } from '@/components/ui/FadeInView';
 import { Icon } from '@/components/ui/Icon';
 import { NumPad } from '@/components/ui/NumPad';
 import { PickerRow } from '@/components/ui/PickerRow';
@@ -74,6 +75,11 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [openRow, setOpenRow] = useState<OpenRow>(null);
   const [pendingReceipt, setPendingReceipt] = useState<PickedFile | null>(null);
+  // El flujo por defecto es monto + categoría + cartera + fecha; nota,
+  // etiquetas, recibo y el toggle de presupuesto quedan colapsados detrás de
+  // "Más detalles" salvo que la transacción que se está editando ya traiga
+  // algo ahí adentro (ver el efecto de abajo, corre una vez llega el prefill).
+  const [detailsOpen, setDetailsOpen] = useState(false);
   // Descuento sugerido: sólo al crear (ver docstring más abajo), aplicado a
   // mano con el botón "Aplicar descuento" -- nunca automático.
   const [discountProgramId, setDiscountProgramId] = useState<string | null>(null);
@@ -106,6 +112,13 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
     setTagNames((t.tags ?? []).map((tag) => tag.name));
     setInBudget(t.counts_toward_budget);
     setPrefilled(true);
+    const hasExtraDetails =
+      !!t.description?.trim() ||
+      (t.tags?.length ?? 0) > 0 ||
+      t.has_receipt ||
+      !t.counts_toward_budget ||
+      (t.loyalty_earnings?.length ?? 0) > 0;
+    if (hasExtraDetails) setDetailsOpen(true);
   }, [editing, prefilled, existing.data, categoriesQ.data]);
 
   const walletOptions = useMemo(
@@ -474,24 +487,6 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
           </View>
         ) : null}
 
-        {editing && (existing.data?.loyalty_earnings?.length ?? 0) > 0 ? (
-          <View className="gap-1 rounded-xl bg-surface-2 px-3 py-2.5">
-            <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-              Recompensas de este movimiento
-            </Text>
-            {existing.data!.loyalty_earnings.map((e, i) => (
-              <Text key={i} className="text-text-muted text-xs">
-                {e.kind === 'points'
-                  ? `+${toNumber(e.points)} puntos`
-                  : e.kind === 'cashback'
-                    ? `+${formatMoney(e.amount ?? '0', currency)} cashback`
-                    : `Ahorraste ${formatMoney(e.saved_amount ?? '0', currency)} de descuento`}
-                {e.program_name ? ` · ${e.program_name}` : ''}
-              </Text>
-            ))}
-          </View>
-        ) : null}
-
         {!isTransfer ? (
           <Pressable
             onPress={() => {
@@ -510,40 +505,88 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
 
         <DateField label="Fecha" value={date} onChange={setDate} error={fields.date} />
 
-        <TextField
-          label="Nota (opcional)"
-          placeholder="Descripción"
-          value={note}
-          onChangeText={setNote}
-          error={fields.description}
-        />
+        {/* Con esto el alta por defecto queda en monto + categoría + cartera
+            + fecha -- nota, etiquetas, recibo y el toggle de presupuesto
+            (todo opcional en la inmensa mayoría de los movimientos) quedan
+            un toque más allá en vez de siempre a la vista. */}
+        <Pressable
+          onPress={() => {
+            haptics.tap();
+            setDetailsOpen((v) => !v);
+          }}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: detailsOpen }}
+          className="flex-row items-center gap-1.5 self-start py-1 active:opacity-60"
+        >
+          <Text className="text-text-muted text-sm" style={{ fontFamily: fonts.semibold }}>
+            Más detalles
+          </Text>
+          <Icon
+            name={detailsOpen ? 'chevron-up' : 'chevron-down'}
+            size={14}
+            color={colors.textMuted}
+          />
+        </Pressable>
 
-        <TagPicker value={tagNames} onChange={setTagNames} />
+        {detailsOpen ? (
+          <FadeInView>
+            <View className="gap-4">
+              <TextField
+                label="Nota (opcional)"
+                placeholder="Descripción"
+                value={note}
+                onChangeText={setNote}
+                error={fields.description}
+              />
 
-        <ReceiptField
-          transactionId={transactionId}
-          hasReceipt={editing && (existing.data?.has_receipt ?? false)}
-          pendingFile={pendingReceipt}
-          onPendingFileChange={setPendingReceipt}
-        />
+              <TagPicker value={tagNames} onChange={setTagNames} />
 
-        {showBudgetSwitch ? (
-          <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
-            <View className="flex-1 pr-2">
-              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                Cuenta para el presupuesto
-              </Text>
-              {/* Una sola línea fija en vez de una que cambia según el estado
-                  del switch -- misma info, sin pedir releerla en cada toque. */}
-              <Text className="text-text-muted text-xs">Resta del presupuesto si está activo.</Text>
+              <ReceiptField
+                transactionId={transactionId}
+                hasReceipt={editing && (existing.data?.has_receipt ?? false)}
+                pendingFile={pendingReceipt}
+                onPendingFileChange={setPendingReceipt}
+              />
+
+              {showBudgetSwitch ? (
+                <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
+                  <View className="flex-1 pr-2">
+                    <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                      Cuenta para el presupuesto
+                    </Text>
+                    {/* Una sola línea fija en vez de una que cambia según el
+                        estado del switch -- misma info, sin pedir releerla
+                        en cada toque. */}
+                    <Text className="text-text-muted text-xs">Resta del presupuesto si está activo.</Text>
+                  </View>
+                  <Switch
+                    value={inBudget}
+                    onValueChange={setInBudget}
+                    trackColor={{ true: colors.primary, false: colors.surface2 }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+              ) : null}
+
+              {editing && (existing.data?.loyalty_earnings?.length ?? 0) > 0 ? (
+                <View className="gap-1 rounded-xl bg-surface-2 px-3 py-2.5">
+                  <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                    Recompensas de este movimiento
+                  </Text>
+                  {existing.data!.loyalty_earnings.map((e, i) => (
+                    <Text key={i} className="text-text-muted text-xs">
+                      {e.kind === 'points'
+                        ? `+${toNumber(e.points)} puntos`
+                        : e.kind === 'cashback'
+                          ? `+${formatMoney(e.amount ?? '0', currency)} cashback`
+                          : `Ahorraste ${formatMoney(e.saved_amount ?? '0', currency)} de descuento`}
+                      {e.program_name ? ` · ${e.program_name}` : ''}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
             </View>
-            <Switch
-              value={inBudget}
-              onValueChange={setInBudget}
-              trackColor={{ true: colors.primary, false: colors.surface2 }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
+          </FadeInView>
         ) : null}
 
         <Button
