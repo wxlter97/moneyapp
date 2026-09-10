@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Appearance } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -20,6 +20,7 @@ import {
 } from '@expo-google-fonts/manrope';
 
 import { queryClient } from '@/lib/queryClient';
+import { QUERY_PERSIST_MAX_AGE, queryPersister, shouldPersistQuery } from '@/lib/queryPersister';
 import { applyGlobalFont } from '@/lib/globalFont';
 import { darkColors, lightColors } from '@/theme';
 import { getAccent, hexToRgbTriplet } from '@/theme/accents';
@@ -137,7 +138,14 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={[{ flex: 1 }, accentVars]}>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister: queryPersister,
+          maxAge: QUERY_PERSIST_MAX_AGE,
+          dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+        }}
+      >
         <SafeAreaProvider>
           <ThemeProvider value={navThemeFor(scheme, accentShade.primary)}>
             <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
@@ -161,7 +169,7 @@ export default function RootLayout() {
             <SnackbarHost />
           </ThemeProvider>
         </SafeAreaProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
       {showSplash ? (
         <SplashOverlay
           ready={fontsLoaded && authStatus !== 'loading'}

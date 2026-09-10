@@ -29,11 +29,25 @@ import { currentYearMonth, type YearMonth } from '@/lib/date';
 import { useWorkspaceStore } from '@/store/workspace';
 import { qk } from './keys';
 
-/** Invalida todo lo scoped al workspace activo (tras una mutación). */
+/**
+ * Invalida todo lo scoped al workspace activo (tras una mutación).
+ *
+ * A propósito NO devuelve la promesa de `invalidateQueries`: los ~40 sitios
+ * que hacen `onSuccess: invalidate` pasan esta función tal cual como
+ * callback, y React Query espera lo que ese callback devuelva antes de
+ * resolver `mutateAsync`. Si devolviera la promesa, cada "guardar" se
+ * quedaba esperando el refetch de TODO el workspace (historial, dashboard,
+ * presupuestos...) antes de cerrar el modal o navegar -- de ahí la
+ * sensación de espera. Al no devolverla, el refetch sigue en segundo plano
+ * (las queries montadas se actualizan solas al llegar) y la UI reacciona
+ * apenas responde el POST/PATCH/DELETE en sí.
+ */
 function useInvalidateWorkspace() {
   const ws = useActiveWs();
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: ['ws', ws], type: 'all' });
+  return () => {
+    void qc.invalidateQueries({ queryKey: ['ws', ws], type: 'all' });
+  };
 }
 
 function useActiveWs() {
