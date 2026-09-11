@@ -96,6 +96,31 @@ function fillRect(buf, w, h, x0, y0, x1, y1, color) {
   }
 }
 
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  let t = lenSq === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const projx = x1 + t * dx;
+  const projy = y1 + t * dy;
+  const ddx = px - projx;
+  const ddy = py - projy;
+  return Math.sqrt(ddx * ddx + ddy * ddy);
+}
+
+function drawLine(buf, w, h, x1, y1, x2, y2, thickness, color) {
+  const minX = Math.max(0, Math.floor(Math.min(x1, x2) - thickness));
+  const maxX = Math.min(w, Math.ceil(Math.max(x1, x2) + thickness));
+  const minY = Math.max(0, Math.floor(Math.min(y1, y2) - thickness));
+  const maxY = Math.min(h, Math.ceil(Math.max(y1, y2) + thickness));
+  for (let y = minY; y < maxY; y++) {
+    for (let x = minX; x < maxX; x++) {
+      if (distToSegment(x, y, x1, y1, x2, y2) <= thickness / 2) setPixel(buf, w, x, y, ...color);
+    }
+  }
+}
+
 function downsample(buf, bigW, bigH, factor) {
   const outW = bigW / factor;
   const outH = bigH / factor;
@@ -126,24 +151,59 @@ function downsample(buf, bigW, bigH, factor) {
   return out;
 }
 
-// --- El glifo: barras ascendentes (presupuesto/tendencia), 4 rects planos,
-// sin redondeo. `boxScale` controla qué fracción del lienzo ocupan (para
-// respetar la zona segura de los íconos adaptativos/maskable de Android). --
+// --- El glifo: signo de dólar. La "S" se traza como una polilínea gruesa
+// (mismo recurso que el símbolo wxlter. de la esquina y las barras de la
+// versión anterior: nada de geometría de arcos) y la barra vertical la
+// cruza de punta a punta. `boxScale` controla qué fracción del lienzo
+// ocupa (zona segura de los íconos adaptativos/maskable de Android). -----
 
-function drawBars(buf, w, h, boxScale, color) {
-  const bars = 4;
-  const gap = w * 0.045 * (1 / boxScale > 1.4 ? 1 : boxScale);
-  const boxW = w * boxScale;
-  const boxH = h * boxScale;
-  const x0 = (w - boxW) / 2;
-  const yBase = h / 2 + boxH / 2;
-  const barW = (boxW - gap * (bars - 1)) / bars;
-  const heights = [0.34, 0.56, 0.78, 1];
+function drawDollar(buf, w, h, boxScale, color) {
+  const cx = w / 2;
+  const cy = h / 2;
+  const unit = h * boxScale;
+  const X = (fx) => cx + fx * unit;
+  const Y = (fy) => cy + fy * unit;
 
-  for (let i = 0; i < bars; i++) {
-    const bx0 = x0 + i * (barW + gap);
-    const bh = boxH * heights[i];
-    fillRect(buf, w, h, bx0, yBase - bh, bx0 + barW, yBase, color);
+  const sPoints = [
+    [0.3, -0.36],
+    [-0.22, -0.36],
+    [-0.22, 0],
+    [0.22, 0],
+    [0.22, 0.36],
+    [-0.3, 0.36],
+  ];
+  const sThickness = unit * 0.16;
+  for (let i = 0; i < sPoints.length - 1; i++) {
+    drawLine(buf, w, h, X(sPoints[i][0]), Y(sPoints[i][1]), X(sPoints[i + 1][0]), Y(sPoints[i + 1][1]), sThickness, color);
+  }
+
+  const barThickness = unit * 0.115;
+  fillRect(buf, w, h, cx - barThickness / 2, Y(-0.47), cx + barThickness / 2, Y(0.47), color);
+}
+
+// --- El símbolo wxlter. (la marca del sitio: zigzag amarillo faro sobre
+// tinta) en una esquina, a modo de sello de marca — solo en los ícono
+// planos de bordes completos (no en las capas adaptativas/maskable de
+// Android, que un launcher puede recortar a un círculo y perderían la
+// esquina por completo). --------------------------------------------------
+
+function drawCornerMark(buf, w, h, color) {
+  const box = w * 0.2;
+  const margin = w * 0.08;
+  const ox = w - margin - box;
+  const oy = h - margin - box;
+  const X = (v) => ox + (v / 100) * box;
+  const Y = (v) => oy + (v / 100) * box;
+  const stroke = box * 0.16;
+  const pts = [
+    [14, 24],
+    [32, 76],
+    [50, 44],
+    [68, 76],
+    [86, 24],
+  ];
+  for (let i = 0; i < pts.length - 1; i++) {
+    drawLine(buf, w, h, X(pts[i][0]), Y(pts[i][1]), X(pts[i + 1][0]), Y(pts[i + 1][1]), stroke, color);
   }
 }
 
@@ -152,7 +212,8 @@ function drawFullIcon(size) {
   const h = size;
   const buf = makeCanvas(w, h);
   fillRect(buf, w, h, 0, 0, w, h, INK);
-  drawBars(buf, w, h, 0.56, FARO);
+  drawDollar(buf, w, h, 0.56, FARO);
+  drawCornerMark(buf, w, h, FARO);
   return buf;
 }
 
@@ -161,7 +222,7 @@ function drawMaskableIcon(size) {
   const h = size;
   const buf = makeCanvas(w, h);
   fillRect(buf, w, h, 0, 0, w, h, INK);
-  drawBars(buf, w, h, 0.4, FARO); // zona segura ~80% de diámetro
+  drawDollar(buf, w, h, 0.36, FARO); // zona segura ~80% de diámetro
   return buf;
 }
 
@@ -169,7 +230,15 @@ function drawForegroundLayer(size) {
   const w = size;
   const h = size;
   const buf = makeCanvas(w, h); // transparente
-  drawBars(buf, w, h, 0.42, FARO); // dentro de la zona segura del ícono adaptativo
+  drawDollar(buf, w, h, 0.38, FARO); // dentro de la zona segura del ícono adaptativo
+  return buf;
+}
+
+function drawMonochromeLayer(size) {
+  const w = size;
+  const h = size;
+  const buf = makeCanvas(w, h); // transparente; Android lo retiñe con el tema del sistema
+  drawDollar(buf, w, h, 0.38, [17, 17, 17, 255]);
   return buf;
 }
 
@@ -181,17 +250,9 @@ function drawBackgroundLayer(size) {
   return buf;
 }
 
-function drawMonochromeLayer(size) {
-  const w = size;
-  const h = size;
-  const buf = makeCanvas(w, h); // transparente; Android lo retiñe con el tema del sistema
-  drawBars(buf, w, h, 0.42, [17, 17, 17, 255]);
-  return buf;
-}
-
 function drawSplashIcon(w, h) {
   const buf = makeCanvas(w, h); // transparente; se centra sobre el fondo papel del splash
-  drawBars(buf, w, h, 0.86, INK);
+  drawDollar(buf, w, h, 0.8, INK);
   return buf;
 }
 
