@@ -14,7 +14,7 @@ const MARKER = '<!-- pwa:injected -->';
 const HEAD_TAGS = `
     ${MARKER}
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#0B0D10" />
+    <meta name="theme-color" content="#f4f3ef" />
     <meta name="color-scheme" content="dark light" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
