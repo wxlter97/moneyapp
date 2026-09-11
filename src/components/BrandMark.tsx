@@ -26,12 +26,12 @@ const CIRC = 2 * Math.PI * R;
 const MID = SIZE / 2;
 const ARC_LEN = CIRC / 3 - 4; // -4: deja un hueco visible entre los tres arcos
 
-// Tres tonos del mismo acento (azul) — monocromo a propósito, un solo color
-// en toda la app en vez de una marca multicolor sobre un chrome neutro.
+// wxlter.: rampa de tinta (gris a negro) para los tres arcos — monocromo
+// a propósito — con el punto central en amarillo faro como único acento.
 const ARCS = [
-  { color: '#8FB4FF', rotate: -90 },
-  { color: '#5B93FF', rotate: 30 },
-  { color: '#2A5FE0', rotate: 150 },
+  { color: '#6B6B63', rotate: -90 },
+  { color: '#3D3D38', rotate: 30 },
+  { color: '#111111', rotate: 150 },
 ] as const;
 
 /**
@@ -93,7 +93,7 @@ export function BrandMark({ size = SIZE, animate = true }: BrandMarkProps) {
             width: SIZE * 0.16 * scale,
             height: SIZE * 0.16 * scale,
             borderRadius: SIZE * 0.08 * scale,
-            backgroundColor: '#F2F4F7',
+            backgroundColor: '#FFDB00',
           },
           dotStyle,
         ]}

@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withRepeat,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -23,22 +20,24 @@ interface SplashOverlayProps {
 }
 
 // Coincide con `backgroundColor` del splash nativo en app.json: el handoff
-// entre el splash del sistema y este overlay es invisible.
-const SPLASH_BG = '#0B0D10';
+// entre el splash del sistema y este overlay es invisible. Papel (wxlter.),
+// no el fondo oscuro del tema interno de la app — el splash es un momento
+// de marca fijo, independiente del tema claro/oscuro que elija el usuario.
+const SPLASH_BG = '#f4f3ef';
 const MIN_HOLD_MS = 1250;
 
 /**
  * Splash animado propio, no genérico: se muestra apenas se oculta el splash
  * nativo (mismo color de fondo, sin parpadeo) y encima dibuja la marca de la
- * app con un resorte + degradado con movimiento, para dar una primera
- * impresión con personalidad antes de entrar al dashboard.
+ * app con un resorte, para dar una primera impresión con personalidad antes
+ * de entrar al dashboard. Plano — sin degradado ni resplandor difuminado,
+ * acorde al sistema wxlter. (sin blur, sin sombras).
  */
 export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
   const [minHoldDone, setMinHoldDone] = useState(false);
 
   const overlayOpacity = useSharedValue(1);
   const markScale = useSharedValue(0.9);
-  const glow = useSharedValue(0.5);
   const wordOpacity = useSharedValue(0);
   const wordY = useSharedValue(8);
 
@@ -47,7 +46,6 @@ export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
     markScale.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.back(1.2)) });
     wordOpacity.value = withDelay(650, withTiming(1, { duration: 420 }));
     wordY.value = withDelay(650, withTiming(0, { duration: 420, easing: Easing.out(Easing.cubic) }));
-    glow.value = withRepeat(withSequence(withTiming(1, { duration: 1400 }), withTiming(0.5, { duration: 1400 })), -1, true);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -66,7 +64,6 @@ export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
 
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
   const markStyle = useAnimatedStyle(() => ({ transform: [{ scale: markScale.value }] }));
-  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value * 0.35, transform: [{ scale: 0.8 + glow.value * 0.3 }] }));
   const wordStyle = useAnimatedStyle(() => ({
     opacity: wordOpacity.value,
     transform: [{ translateY: wordY.value }],
@@ -74,31 +71,12 @@ export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: SPLASH_BG }, overlayStyle]} pointerEvents="none">
-      <LinearGradient
-        colors={['#101528', SPLASH_BG, SPLASH_BG]}
-        start={{ x: 0.15, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          { position: 'absolute', top: '50%', left: '50%', marginLeft: -170, marginTop: -190 },
-          glowStyle,
-        ]}
-      >
-        {/* Tres círculos concéntricos con opacidad decreciente: aproximan un
-            resplandor radial suave sin depender de un blur real. */}
-        <View style={{ width: 340, height: 340, borderRadius: 170, backgroundColor: '#3D6BE0', opacity: 0.14 }} />
-        <View style={{ position: 'absolute', top: 60, left: 60, width: 220, height: 220, borderRadius: 110, backgroundColor: '#5B93FF', opacity: 0.18 }} />
-        <View style={{ position: 'absolute', top: 110, left: 110, width: 120, height: 120, borderRadius: 60, backgroundColor: '#8FB4FF', opacity: 0.26 }} />
-      </Animated.View>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18 }}>
         <Animated.View style={markStyle}>
           <BrandMark size={112} />
         </Animated.View>
         <Animated.View style={wordStyle}>
-          <Text style={{ color: '#F2F4F7', fontSize: 24, fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
+          <Text style={{ color: '#111111', fontSize: 24, fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
             budget
           </Text>
         </Animated.View>
