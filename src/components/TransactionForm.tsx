@@ -36,15 +36,29 @@ import { todayISO } from '@/lib/date';
 import { formatMoney, toNumber } from '@/lib/money';
 import { useSnackbarStore } from '@/store/snackbar';
 
+/** Precarga sin depender de una Transaction existente -- viene de un ítem
+ * "Programado" (recurrente o cuota) que todavía no se registró. */
+export interface TransactionPrefill {
+  type: TransactionType;
+  amount: string;
+  categoryId?: string | null;
+  walletId: string;
+  toWalletId?: string | null;
+  date: string;
+  note?: string;
+}
+
 interface TransactionFormProps {
   transactionId?: string;
   /** Precarga los datos de esta transacción sin editarla: se guarda como una nueva. */
   duplicateFromId?: string;
+  /** Precarga desde un ítem "Programado" (ver `TransactionPrefill`). */
+  prefill?: TransactionPrefill;
 }
 
 type OpenRow = 'category' | 'from' | 'to' | null;
 
-export function TransactionForm({ transactionId, duplicateFromId }: TransactionFormProps) {
+export function TransactionForm({ transactionId, duplicateFromId, prefill }: TransactionFormProps) {
   const colors = useColors();
   const editing = !!transactionId;
   const sourceId = transactionId ?? duplicateFromId;
@@ -94,10 +108,10 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
   }, [assignableWallets]);
 
   useEffect(() => {
-    if (editing || duplicateFromId || walletDefaulted || !defaultWalletId) return;
+    if (editing || duplicateFromId || !!prefill || walletDefaulted || !defaultWalletId) return;
     setWalletId(defaultWalletId);
     setWalletDefaulted(true);
-  }, [editing, duplicateFromId, walletDefaulted, defaultWalletId]);
+  }, [editing, duplicateFromId, prefill, walletDefaulted, defaultWalletId]);
 
   useEffect(() => {
     if ((!editing && !duplicateFromId) || prefilled || !existing.data || !categoriesQ.data) return;
@@ -112,14 +126,29 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
     setTagNames((t.tags ?? []).map((tag) => tag.name));
     setInBudget(t.counts_toward_budget);
     setPrefilled(true);
+    // La nota vive arriba, siempre a la vista -- no cuenta para decidir si
+    // "Más detalles" arranca abierto (ver el bloque de más abajo).
     const hasExtraDetails =
-      !!t.description?.trim() ||
       (t.tags?.length ?? 0) > 0 ||
       t.has_receipt ||
       !t.counts_toward_budget ||
       (t.loyalty_earnings?.length ?? 0) > 0;
     if (hasExtraDetails) setDetailsOpen(true);
   }, [editing, prefilled, existing.data, categoriesQ.data]);
+
+  // Viene de tocar un ítem "Programado" (recurrente o cuota): precarga todo
+  // para que solo haga falta confirmar y guardar.
+  useEffect(() => {
+    if (editing || duplicateFromId || !prefill || prefilled) return;
+    setType(prefill.type);
+    setAmount(String(Number(prefill.amount).toFixed(2)));
+    setCategoryId(prefill.categoryId ?? null);
+    setWalletId(prefill.walletId);
+    setToWalletId(prefill.toWalletId ?? null);
+    setDate(prefill.date);
+    setNote(prefill.note ?? '');
+    setPrefilled(true);
+  }, [editing, duplicateFromId, prefill, prefilled]);
 
   const walletOptions = useMemo(
     () =>
@@ -364,6 +393,14 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
 
         {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
 
+        <TextField
+          label="Nota (opcional)"
+          placeholder="Descripción"
+          value={note}
+          onChangeText={setNote}
+          error={fields.description}
+        />
+
         <View className="gap-1">
           <CategoryPickerField
             categories={categoriesQ.data ?? []}
@@ -505,10 +542,10 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
 
         <DateField label="Fecha" value={date} onChange={setDate} error={fields.date} />
 
-        {/* Con esto el alta por defecto queda en monto + categoría + cartera
-            + fecha -- nota, etiquetas, recibo y el toggle de presupuesto
-            (todo opcional en la inmensa mayoría de los movimientos) quedan
-            un toque más allá en vez de siempre a la vista. */}
+        {/* Con esto el alta por defecto queda en monto + nota + categoría +
+            cartera + fecha -- etiquetas, recibo y el toggle de presupuesto
+            (opcionales en la inmensa mayoría de los movimientos) quedan un
+            toque más allá en vez de siempre a la vista. */}
         <Pressable
           onPress={() => {
             haptics.tap();
@@ -531,14 +568,6 @@ export function TransactionForm({ transactionId, duplicateFromId }: TransactionF
         {detailsOpen ? (
           <FadeInView>
             <View className="gap-4">
-              <TextField
-                label="Nota (opcional)"
-                placeholder="Descripción"
-                value={note}
-                onChangeText={setNote}
-                error={fields.description}
-              />
-
               <TagPicker value={tagNames} onChange={setTagNames} />
 
               <ReceiptField
