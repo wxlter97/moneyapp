@@ -300,9 +300,13 @@ function ScheduledCard({
   return (
     <Card title="Programado" animated index={0}>
       {items.map((it, i) => (
-        <View
+        <Pressable
           key={`${it.kind}-${it.source_id}-${it.date}`}
-          className={`flex-row items-center gap-3 py-2.5 ${i > 0 ? 'border-t border-border/60' : ''}`}
+          onPress={() => {
+            haptics.tap();
+            openScheduledItem(it);
+          }}
+          className={`flex-row items-center gap-3 py-2.5 active:opacity-60 ${i > 0 ? 'border-t border-border/60' : ''}`}
         >
           <View className="w-12">
             <Text className="text-text-muted text-xs">{formatShortDate(it.date)}</Text>
@@ -323,10 +327,31 @@ function ScheduledCard({
             tone="muted"
             className="text-sm"
           />
-        </View>
+        </Pressable>
       ))}
     </Card>
   );
+}
+
+/** Abre "Agregar transacción" con los datos del ítem ya cargados -- el
+ * recurrente/cuota de origen no se toca, esto solo ahorra tipear al
+ * registrarlo a mano. Un recurrente tipo transferencia (aporte automático a
+ * una meta) abre como transferencia; el resto, como gasto. */
+function openScheduledItem(it: ScheduledItem) {
+  const params: Record<string, string> = {
+    prefillType: it.to_wallet ? 'transfer' : 'expense',
+    prefillWallet: it.wallet,
+    prefillAmount: it.amount,
+    prefillDate: it.date,
+  };
+  if (it.to_wallet) params.prefillToWallet = it.to_wallet;
+  if (it.category) params.prefillCategory = it.category;
+  if (it.description) params.prefillNote = it.description;
+
+  const qs = Object.entries(params)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&');
+  router.push(`/transaction/new?${qs}`);
 }
 
 // ---------------------------------------------------------------------------
