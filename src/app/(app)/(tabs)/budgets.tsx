@@ -121,13 +121,12 @@ export default function BudgetScreen() {
                 </Text>
               </Ring>
             </View>
-            {budget.data.groups.map((g, i) => (
+            {budget.data.groups.map((g) => (
               <GroupCard
                 key={g.group ?? g.group_name}
                 group={g}
                 currency={currency}
                 month={month}
-                index={i}
               />
             ))}
           </>
@@ -146,14 +145,13 @@ export default function BudgetScreen() {
                 </Labeled>
               </View>
             </Card>
-            {budget.data.groups.map((g, i) => (
+            {budget.data.groups.map((g) => (
               <GroupCard
                 key={g.group ?? g.group_name}
                 group={g}
                 currency={currency}
                 month={month}
                 showProvision
-                index={i}
               />
             ))}
           </>
@@ -168,19 +166,20 @@ function GroupCard({
   currency,
   month,
   showProvision = false,
-  index = 0,
 }: {
   group: BudgetGroup;
   currency: string;
   month: YearMonth;
   showProvision?: boolean;
-  index?: number;
 }) {
   const spent = toNumber(group.spent);
   const budgeted = toNumber(group.budgeted);
   const remaining = toNumber(group.remaining);
+  // Antes entraba con un fundido escalonado (`Card animated index={i}`) --
+  // Presupuesto es una pestaña, se revisita todo el tiempo, así que el goteo
+  // se repetía en cada visita en vez de verse una sola vez.
   return (
-    <Card title={group.group_name} animated index={index}>
+    <Card title={group.group_name}>
       <Text className="text-text-muted mb-3 text-xs">
         <Money value={spent} currency={currency} tone="muted" />
         <Text> / </Text>

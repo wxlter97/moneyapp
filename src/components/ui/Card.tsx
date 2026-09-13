@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { fonts } from '@/theme/typography';
 
@@ -10,33 +9,14 @@ interface CardProps {
   /** Contenido alineado a la derecha del título (ej. un enlace, un valor). */
   action?: ReactNode;
   className?: string;
-  /** Anima la entrada (deslizar + fundido). Úsalo en listas de cards. */
-  animated?: boolean;
-  /** Índice para escalonar la animación de entrada. */
-  index?: number;
 }
 
-export function Card({
-  children,
-  title,
-  action,
-  className = '',
-  animated = false,
-  index = 0,
-}: CardProps) {
-  const v = useRef(new Animated.Value(animated ? 0 : 1)).current;
-
-  useEffect(() => {
-    if (!animated) return;
-    Animated.timing(v, {
-      toValue: 1,
-      duration: 240,
-      delay: Math.min(index, 6) * 45,
-      useNativeDriver: true,
-    }).start();
-  }, [animated, index, v]);
-
-  const body = (
+// Tenía una entrada animada opcional (`animated`/`index`, fundido + desli-
+// zamiento escalonado) para listas de cards -- se sacó: esas listas viven en
+// pestañas que se revisitan todo el tiempo (Presupuesto, Vista general), así
+// que el goteo se repetía en cada visita en vez de verse una sola vez.
+export function Card({ children, title, action, className = '' }: CardProps) {
+  return (
     <View
       className={`rounded-3xl bg-surface/95 p-4 ${className}`}
       style={{
@@ -61,20 +41,5 @@ export function Card({
       )}
       {children}
     </View>
-  );
-
-  if (!animated) return body;
-
-  return (
-    <Animated.View
-      style={{
-        opacity: v,
-        transform: [
-          { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
-        ],
-      }}
-    >
-      {body}
-    </Animated.View>
   );
 }
