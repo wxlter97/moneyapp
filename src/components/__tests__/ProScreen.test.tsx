@@ -1,0 +1,141 @@
+import { Linking } from 'react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+
+import ProScreen from '@/app/(app)/pro';
+import type { MyPlan, Plan } from '@/api/types';
+
+// `ModalHeader`/`Screen` importan `expo-router` para el gesto de "volver" --
+// mismo motivo que en TwoFactorScreen.test.tsx.
+jest.mock('expo-router', () => ({
+  router: { push: jest.fn(), back: jest.fn(), canGoBack: () => false },
+}));
+
+jest.mock('expo-linking', () => ({
+  createURL: jest.fn(() => 'budget://pro'),
+}));
+
+const mockMyPlanQuery = jest.fn();
+const mockPlansQuery = jest.fn();
+const mockCheckout = jest.fn();
+const mockCancel = jest.fn();
+
+jest.mock('@/api/queries', () => ({
+  useMyPlan: () => mockMyPlanQuery(),
+  usePlans: () => mockPlansQuery(),
+  useCheckout: () => ({ mutateAsync: mockCheckout, isPending: false }),
+  useCancelSubscription: () => ({ mutateAsync: mockCancel, isPending: false }),
+}));
+
+const FREE_PLAN: Plan = {
+  id: 'plan-free',
+  code: 'free',
+  name: 'Gratis',
+  description: '',
+  max_workspaces_owned: 1,
+  max_members_per_workspace: 2,
+  max_active_recurring: 5,
+  features: {},
+  prices: [],
+};
+
+const PRO_PLAN: Plan = {
+  id: 'plan-pro',
+  code: 'pro',
+  name: 'Pro',
+  description: '',
+  max_workspaces_owned: null,
+  max_members_per_workspace: null,
+  max_active_recurring: null,
+  features: { import_email: true, export: false },
+  prices: [
+    { id: 'price-monthly', billing_period: 'monthly', amount: 1.99, currency: 'USD', is_active: true },
+    { id: 'price-annual', billing_period: 'annual', amount: 19.99, currency: 'USD', is_active: true },
+  ],
+};
+
+function myPlan(overrides: Partial<MyPlan> = {}, extra: Record<string, unknown> = {}) {
+  return {
+    data: { plan: FREE_PLAN, subscription: null, ...overrides },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: jest.fn(),
+    ...extra,
+  };
+}
+
+describe('ProScreen', () => {
+  beforeEach(() => {
+    mockCheckout.mockReset().mockResolvedValue({ checkout_url: 'https://pay.example.com/x', subscription_id: 's1' });
+    mockCancel.mockReset().mockResolvedValue({ id: 's1', status: 'canceled' });
+    mockPlansQuery.mockReset().mockReturnValue({ data: [FREE_PLAN, PRO_PLAN], isLoading: false });
+    jest.spyOn(Linking, 'openURL').mockReset().mockResolvedValue(true as never);
+  });
+
+  it('en el plan gratis, muestra los límites reales y solo las features en `true`', async () => {
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    expect(screen.getByText('Estás en el plan Gratis')).toBeTruthy();
+    expect(screen.getByText(/1 presupuesto, 2 miembros por presupuesto, 5 recurrentes activos/)).toBeTruthy();
+    expect(screen.getByText('Importación automática por correo')).toBeTruthy();
+    expect(screen.queryByText('Exportar tus datos')).toBeNull(); // `export: false` en el fixture
+  });
+
+  it('lista los precios activos del plan Pro', async () => {
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    expect(screen.getByRole('button', { name: 'Mensual · USD 1.99' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Anual · USD 19.99' })).toBeTruthy();
+  });
+
+  it('elegir un precio arranca el checkout y abre la URL devuelta', async () => {
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Mensual · USD 1.99' }));
+
+    expect(mockCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({ plan_price: 'price-monthly', success_url: 'budget://pro', cancel_url: 'budget://pro' }),
+    );
+    await waitFor(() => expect(Linking.openURL).toHaveBeenCalledWith('https://pay.example.com/x'));
+  });
+
+  it('si el checkout falla, muestra el error del backend en vez de abrir nada', async () => {
+    mockCheckout.mockReset().mockRejectedValue(new Error('Proveedor no configurado todavía.'));
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Mensual · USD 1.99' }));
+
+    expect(await screen.findByText('Proveedor no configurado todavía.')).toBeTruthy();
+    expect(Linking.openURL).not.toHaveBeenCalled();
+  });
+
+  it('con una suscripción activa, muestra "Tenés Pro" y la opción de cancelar', async () => {
+    mockMyPlanQuery.mockReturnValue(
+      myPlan({
+        plan: PRO_PLAN,
+        subscription: {
+          id: 's1',
+          plan: PRO_PLAN,
+          billing_period: 'monthly',
+          status: 'active',
+          provider: 'manual',
+          current_period_end: null,
+          canceled_at: null,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }),
+    );
+    await render(<ProScreen />);
+
+    expect(screen.getByText('Tenés Pro')).toBeTruthy();
+    expect(screen.queryByText('Elegí tu plan')).toBeNull();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar suscripción' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar suscripción' }));
+    expect(mockCancel).toHaveBeenCalled();
+  });
+});

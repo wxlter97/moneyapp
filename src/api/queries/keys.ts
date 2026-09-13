@@ -9,6 +9,8 @@ export const qk = {
   me: () => ['me'] as const,
   workspaces: () => ['workspaces'] as const,
   notificationPreferences: () => ['notification-preferences'] as const,
+  plans: () => ['plans'] as const,
+  myPlan: () => ['billing', 'me'] as const,
   /** No van por workspace: la invitación es a alguien que ni es miembro todavía. */
   myInvitations: () => ['invitations', 'mine'] as const,
   bankEmailSchemas: () => ['bank-email-schemas'] as const,

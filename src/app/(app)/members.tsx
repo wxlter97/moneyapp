@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import {
   useInviteMember,
@@ -239,6 +240,11 @@ export default function MembersScreen() {
                 disabled={!email.trim()}
                 onPress={onInvite}
               />
+              {/* Mensaje puntual del backend al llegar al límite de
+                  miembros del plan (ver `can_add_member` en apps.billing). */}
+              {inviteError?.includes('límite') ? (
+                <Button label="Pasate a Pro" variant="ghost" onPress={() => router.push('/pro')} />
+              ) : null}
             </View>
           </Card>
         ) : (

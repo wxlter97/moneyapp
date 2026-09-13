@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { useCreateWorkspace, useDeleteWorkspace, useRenameWorkspace } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
@@ -264,6 +265,12 @@ export default function WorkspacesScreen() {
               disabled={!newName.trim()}
               onPress={onCreate}
             />
+            {/* El backend responde este mensaje puntual cuando se llegó al
+                límite de presupuestos del plan (ver `can_own_another_workspace`
+                en apps.billing) -- el resto de errores no ofrece este atajo. */}
+            {createError?.includes('límite') ? (
+              <Button label="Pasate a Pro" variant="ghost" onPress={() => router.push('/pro')} />
+            ) : null}
           </View>
         </Card>
       </ScrollView>

@@ -16,6 +16,7 @@ import type {
   CategoryBudgetInput,
   CategoryInput,
   CategoryTrendsResponse,
+  CheckoutResult,
   ConfirmEmailImportInput,
   CreditCardStatement,
   CreditCardStatementSummary,
@@ -32,16 +33,19 @@ import type {
   Membership,
   Money,
   MonthlySnapshot,
+  MyPlan,
   NetWorthBreakdown,
   NotificationPreferences,
   Paginated,
   PersonalAccessToken,
+  Plan,
   RecurringExpense,
   RecurringExpenseInput,
   RecurringSuggestion,
   ScheduledItem,
   SetForwardBudgetInput,
   SetForwardBudgetResult,
+  Subscription,
   Tag,
   TagSummary,
   Transaction,
@@ -248,6 +252,35 @@ export const notificationPreferences = {
     api
       .patch<NotificationPreferences>('/notification-preferences/', input, { skipWorkspace: true })
       .then((r) => r.data),
+};
+
+// --- pagos y suscripciones (sin X-Workspace-ID: son por usuario) ------
+export interface CheckoutInput {
+  plan_price: string;
+  /** Proveedor a usar; sin especificar, el backend usa el default. */
+  provider?: string;
+  success_url: string;
+  cancel_url: string;
+}
+
+export const plans = {
+  /** Catálogo de planes + precios activos -- nunca hardcodear nombre,
+   * límites ni precio en el cliente, vienen de acá. */
+  list: () => fetchAll<Plan>('/plans/'),
+};
+
+export const billing = {
+  /** Plan efectivo del usuario autenticado + su suscripción vigente (o
+   * `subscription: null` si está en el plan gratis). */
+  me: () => api.get<MyPlan>('/billing/me/', { skipWorkspace: true }).then((r) => r.data),
+  /** Arranca el checkout de un precio; `checkout_url` es a dónde redirigir
+   * al usuario para completarlo con el proveedor de pago. */
+  checkout: (input: CheckoutInput) =>
+    api.post<CheckoutResult>('/billing/checkout/', input, { skipWorkspace: true }).then((r) => r.data),
+  /** Cancela la suscripción vigente. Sigue activa hasta que termine el
+   * período ya pagado (el proveedor no reembolsa el resto). */
+  cancel: () =>
+    api.post<Subscription>('/billing/cancel/', {}, { skipWorkspace: true }).then((r) => r.data),
 };
 
 // --- carteras (wallets) -------------------------------------------------
