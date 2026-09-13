@@ -102,6 +102,13 @@ export const workspaces = {
     api
       .patch<Workspace>(`/workspaces/${id}/`, { base_currency }, { skipWorkspace: true })
       .then((r) => r.data),
+  /** Renombra el presupuesto. Solo owner. */
+  rename: (id: string, name: string) =>
+    api.patch<Workspace>(`/workspaces/${id}/`, { name }, { skipWorkspace: true }).then((r) => r.data),
+  /** Borra el presupuesto (soft delete). Solo owner; el backend rechaza
+   * borrar el único presupuesto del usuario. */
+  remove: (id: string) =>
+    api.delete(`/workspaces/${id}/`, { skipWorkspace: true }).then(() => undefined),
   /** Respaldo completo en JSON (carteras, categorías, etiquetas, presupuestos,
    * recurrentes, compras a plazo y transacciones). Solo owner.
    * Timeout más largo que el default (20s): con miles de movimientos, tanto

@@ -276,6 +276,10 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="workspaces"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="currencies"
           options={{ presentation: 'modal', headerShown: false }}
         />
