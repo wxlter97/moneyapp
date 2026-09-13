@@ -9,6 +9,7 @@ import { TextField } from '@/components/ui/TextField';
 import { dismissModal, ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { Card } from '@/components/ui/Card';
+import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { haptics } from '@/lib/haptics';
 import { downloadJsonFile, pickJsonFile } from '@/lib/export';
 import { formatDateTime, todayISO } from '@/lib/date';
@@ -113,6 +114,7 @@ export default function BackupScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Respaldo" />
+      <ProFeatureGate feature="backup">
       <ScrollView contentContainerClassName="gap-4 py-3" keyboardShouldPersistTaps="handled">
         <Card title="Descargar respaldo completo">
           <Text className="text-text-muted text-sm">
@@ -203,6 +205,7 @@ export default function BackupScreen() {
 
         {restored ? <Button label="Listo" onPress={dismissModal} /> : null}
       </ScrollView>
+      </ProFeatureGate>
     </Screen>
   );
 }

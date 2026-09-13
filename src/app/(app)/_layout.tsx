@@ -345,6 +345,22 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="delete-account"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="terms"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="privacy"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="refund-policy"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="pro"
           options={{ presentation: 'modal', headerShown: false }}
         />

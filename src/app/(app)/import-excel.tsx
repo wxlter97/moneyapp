@@ -7,6 +7,7 @@ import { errorMessage } from '@/api/errors';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ModalHeader } from '@/components/ui/ModalHeader';
+import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { Screen } from '@/components/ui/Screen';
 import { haptics } from '@/lib/haptics';
 import { downloadBinaryFile, pickFile } from '@/lib/export';
@@ -84,6 +85,7 @@ export default function ImportExcelScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Importar desde Excel" />
+      <ProFeatureGate feature="import_excel">
       <ScrollView contentContainerClassName="gap-4 py-3" keyboardShouldPersistTaps="handled">
         <Card title="1. Descargar la plantilla">
           <Text className="text-text-muted text-sm">
@@ -166,6 +168,7 @@ export default function ImportExcelScreen() {
           ) : null}
         </Card>
       </ScrollView>
+      </ProFeatureGate>
     </Screen>
   );
 }

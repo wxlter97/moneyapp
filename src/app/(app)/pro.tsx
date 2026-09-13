@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Linking, ScrollView, Text, View } from 'react-native';
 import * as ExpoLinking from 'expo-linking';
+import { router } from 'expo-router';
 
 import { useCancelSubscription, useCheckout, useMyPlan, usePlans } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
@@ -13,6 +14,7 @@ import { Screen } from '@/components/ui/Screen';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { formatMoney } from '@/lib/money';
+import { FEATURE_LABEL, type FeatureKey } from '@/lib/planFeatures';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -20,22 +22,6 @@ const PERIOD_LABEL: Record<BillingPeriod, string> = {
   monthly: 'Mensual',
   annual: 'Anual',
   lifetime: 'De por vida',
-};
-
-// Bajada en español por feature -- las claves coinciden con `Plan.features`
-// del backend (ver `seed_billing_plans`). Solo se listan las que el plan
-// Pro tiene en `true`, así que agregar/sacar una feature del lado del
-// backend actualiza esta pantalla sin tocar código.
-const FEATURE_LABEL: Record<string, string> = {
-  import_email: 'Importación automática por correo',
-  import_excel: 'Importar extractos de Excel',
-  net_worth_history: 'Historial de patrimonio neto',
-  advanced_reports: 'Tendencias, flujo de caja y más reportes',
-  export: 'Exportar tus datos',
-  backup: 'Respaldo y restauración con versiones',
-  loyalty: 'Puntos y cashback de tarjetas',
-  multi_currency: 'Múltiples monedas con conversión',
-  quick_add: 'Atajos de Apple Shortcuts',
 };
 
 /** "Hasta 1 presupuesto, 2 miembros por presupuesto" -- construido a partir
@@ -190,7 +176,7 @@ export default function ProScreen() {
                         <View key={key} className="flex-row items-center gap-2">
                           <Icon name="check" size={14} color={colors.income} />
                           <Text className="text-text-muted flex-1 text-sm">
-                            {FEATURE_LABEL[key] ?? key}
+                            {FEATURE_LABEL[key as FeatureKey] ?? key}
                           </Text>
                         </View>
                       ))}
@@ -223,6 +209,30 @@ export default function ProScreen() {
                   )}
                   {error ? <Text className="text-expense mt-2 text-xs">{error}</Text> : null}
                 </Card>
+
+                <Text className="text-text-muted px-2 text-center text-xs leading-4">
+                  Al suscribirte aceptás los{' '}
+                  <Text
+                    className="text-primary"
+                    onPress={() => {
+                      haptics.tap();
+                      router.push('/terms');
+                    }}
+                  >
+                    Términos de servicio
+                  </Text>{' '}
+                  y la{' '}
+                  <Text
+                    className="text-primary"
+                    onPress={() => {
+                      haptics.tap();
+                      router.push('/refund-policy');
+                    }}
+                  >
+                    política de reembolsos
+                  </Text>
+                  .
+                </Text>
               </>
             )}
           </>

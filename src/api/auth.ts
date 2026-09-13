@@ -129,6 +129,19 @@ export async function logout(): Promise<void> {
   await clearTokens();
 }
 
+/**
+ * POST /auth/me/delete/ — borra la cuenta del usuario autenticado.
+ * Irreversible. `password` si la cuenta tiene una utilizable (ver
+ * `user.has_password`); si no (cuenta de solo Google), pasar `confirm: true`
+ * en su lugar (ver `DeleteAccountSerializer` del backend). Si el usuario es
+ * owner de un workspace con otros miembros, el backend rechaza con 400 y un
+ * mensaje explicando qué resolver primero -- no hay tokens que limpiar acá,
+ * el llamador se encarga de cerrar sesión después de un 204.
+ */
+export async function deleteAccount(input: { password?: string; confirm?: boolean }): Promise<void> {
+  await api.post('/auth/me/delete/', input, { skipWorkspace: true });
+}
+
 // --- 2FA (TOTP) ---------------------------------------------------------
 export const twoFactor = {
   status: () =>

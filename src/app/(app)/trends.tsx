@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { useCashflow, useCategoryTrends } from '@/api/queries';
 import type { CategoryTrend } from '@/api/types';
 import { CashflowChart } from '@/components/CashflowChart';
+import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
@@ -52,6 +53,7 @@ export default function TrendsScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Tendencias" />
+      <ProFeatureGate feature="advanced_reports">
       <ScrollView contentContainerClassName="gap-4 py-2" refreshControl={refresh}>
         <View className="px-1">
           <Segmented
@@ -105,6 +107,7 @@ export default function TrendsScreen() {
           </>
         )}
       </ScrollView>
+      </ProFeatureGate>
     </Screen>
   );
 }

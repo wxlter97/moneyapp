@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import {
   useCategories,
@@ -23,6 +23,7 @@ import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { todayISO } from '@/lib/date';
 import { toNumber } from '@/lib/money';
+import { isPlanUpgradeError } from '@/lib/planErrors';
 
 type OpenRow = 'category' | 'wallet' | null;
 
@@ -111,6 +112,9 @@ export default function ConfirmImportScreen() {
           ) : null}
 
           {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
+          {isPlanUpgradeError(formError) ? (
+            <Button label="Pasate a Pro" variant="ghost" onPress={() => router.push('/pro')} />
+          ) : null}
 
           <Segmented
             value={type}

@@ -116,6 +116,17 @@ export default function AccountScreen() {
             </View>
           )}
         </Card>
+
+        <Card title="Zona de peligro">
+          <Text className="text-text-muted mb-3 text-sm leading-5">
+            Borrar tu cuenta es permanente -- se lleva todo presupuesto que sea sólo tuyo.
+          </Text>
+          <Button
+            label="Borrar cuenta"
+            variant="ghost"
+            onPress={() => router.push('/delete-account')}
+          />
+        </Card>
       </ScrollView>
     </Screen>
   );
