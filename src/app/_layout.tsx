@@ -22,13 +22,19 @@ import {
 import { queryClient } from '@/lib/queryClient';
 import { QUERY_PERSIST_MAX_AGE, queryPersister, shouldPersistQuery } from '@/lib/queryPersister';
 import { applyGlobalFont } from '@/lib/globalFont';
+import { initSentry } from '@/lib/sentry';
 import { darkColors, lightColors } from '@/theme';
 import { resolveAccent, hexToRgbTriplet } from '@/theme/accents';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
 import { useAccentStore } from '@/store/accent';
+import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { SplashOverlay } from '@/components/SplashOverlay';
 import { SnackbarHost } from '@/components/ui/Snackbar';
+
+// Antes que cualquier otra cosa, para capturar hasta errores de arranque
+// muy tempranos (no-op sin `EXPO_PUBLIC_SENTRY_DSN`, ver `lib/sentry.ts`).
+initSentry();
 
 // Mantiene visible el splash nativo (imagen estática de app.json) hasta que
 // lo ocultamos a mano, apenas el overlay animado de abajo ya está pintado.
@@ -138,6 +144,7 @@ export default function RootLayout() {
   }, []);
 
   return (
+    <AppErrorBoundary>
     <GestureHandlerRootView style={[{ flex: 1 }, accentVars]}>
       <PersistQueryClientProvider
         client={queryClient}
@@ -178,5 +185,6 @@ export default function RootLayout() {
         />
       ) : null}
     </GestureHandlerRootView>
+    </AppErrorBoundary>
   );
 }
