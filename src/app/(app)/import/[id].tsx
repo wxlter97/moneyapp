@@ -56,6 +56,9 @@ export default function ConfirmImportScreen() {
     if (log.extracted_amount) setAmount(toNumber(log.extracted_amount).toFixed(2));
     if (log.extracted_date) setDate(log.extracted_date);
     setDescription(log.extracted_merchant || log.raw_email_subject || '');
+    // Adivinada por comercio (ver `suggested_category` en el backend) --
+    // igual la puede cambiar antes de confirmar, esto solo ahorra el toque.
+    if (log.suggested_category) setCategoryId(log.suggested_category);
     setPrefilled(true);
   }, [prefilled, logQ.data, walletsQ.data]);
 
@@ -135,6 +138,11 @@ export default function ConfirmImportScreen() {
               loading={categoriesQ.isLoading}
               error={fields.category}
             />
+            {log?.suggested_category_name && categoryId === log.suggested_category ? (
+              <Text className="text-text-muted text-xs">
+                Sugerida por compras anteriores en "{log.extracted_merchant}"
+              </Text>
+            ) : null}
 
             <PickerRow
               label="Cartera"
