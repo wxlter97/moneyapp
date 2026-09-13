@@ -1,17 +1,12 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import { Image } from 'react-native';
 import Animated, {
   Easing,
-  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface BrandMarkProps {
   size?: number;
@@ -19,85 +14,35 @@ interface BrandMarkProps {
   animate?: boolean;
 }
 
-const SIZE = 120;
-const STROKE = 10;
-const R = (SIZE - STROKE) / 2;
-const CIRC = 2 * Math.PI * R;
-const MID = SIZE / 2;
-const ARC_LEN = CIRC / 3 - 4; // -4: deja un hueco visible entre los tres arcos
-
-// wxlter.: rampa de tinta (gris a negro) para los tres arcos — monocromo
-// a propósito — con el punto central en amarillo faro como único acento.
-const ARCS = [
-  { color: '#6B6B63', rotate: -90 },
-  { color: '#3D3D38', rotate: 30 },
-  { color: '#111111', rotate: 150 },
-] as const;
-
 /**
- * Marca de la app: tres arcos (uno por sección) que se dibujan y convergen
- * en un anillo completo, con un punto central que aparece con un resorte.
- * 100% vectorial — no depende de ningún asset de imagen.
+ * Marca de la app: el mismo arte que el ícono (piggy bank), no una versión
+ * vectorial aparte -- antes esto dibujaba tres arcos abstractos propios que
+ * habían quedado desactualizados cuando el ícono cambió de arte (ver
+ * `assets/images/icon.png`, ya usado también para el ícono de la PWA).
+ * Simple pop-in con resorte al montar; sin el dibujo progresivo de antes.
  */
-export function BrandMark({ size = SIZE, animate = true }: BrandMarkProps) {
-  const scale = size / SIZE;
-  const draw0 = useSharedValue(ARC_LEN);
-  const draw1 = useSharedValue(ARC_LEN);
-  const draw2 = useSharedValue(ARC_LEN);
-  const dot = useSharedValue(0);
+export function BrandMark({ size = 64, animate = true }: BrandMarkProps) {
+  const scale = useSharedValue(animate ? 0.85 : 1);
+  const opacity = useSharedValue(animate ? 0 : 1);
 
   useEffect(() => {
     if (!animate) return;
-    [draw0, draw1, draw2].forEach((v, i) => {
-      v.value = withDelay(
-        160 + i * 150,
-        withTiming(0, { duration: 620, easing: Easing.out(Easing.cubic) }),
-      );
-    });
-    dot.value = withDelay(760, withSpring(1, { damping: 9, stiffness: 140 }));
+    scale.value = withSpring(1, { damping: 12, stiffness: 140 });
+    opacity.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animate]);
 
-  const props0 = useAnimatedProps(() => ({ strokeDashoffset: draw0.value }));
-  const props1 = useAnimatedProps(() => ({ strokeDashoffset: draw1.value }));
-  const props2 = useAnimatedProps(() => ({ strokeDashoffset: draw2.value }));
-  const arcProps = [props0, props1, props2];
-
-  const dotStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: dot.value }],
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
   }));
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {ARCS.map((arc, i) => (
-          <AnimatedCircle
-            key={arc.color}
-            cx={MID}
-            cy={MID}
-            r={R}
-            stroke={arc.color}
-            strokeWidth={STROKE}
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray={`${ARC_LEN} ${CIRC}`}
-            animatedProps={arcProps[i]}
-            transform={`rotate(${arc.rotate} ${MID} ${MID})`}
-          />
-        ))}
-      </Svg>
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            width: SIZE * 0.16 * scale,
-            height: SIZE * 0.16 * scale,
-            borderRadius: SIZE * 0.08 * scale,
-            backgroundColor: '#FFDB00',
-          },
-          dotStyle,
-        ]}
+    <Animated.View style={style}>
+      <Image
+        source={require('../../assets/images/icon.png')}
+        style={{ width: size, height: size, borderRadius: size * 0.22 }}
       />
-    </View>
+    </Animated.View>
   );
 }
