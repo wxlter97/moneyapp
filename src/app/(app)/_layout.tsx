@@ -24,6 +24,7 @@ function Centered({ children }: { children: React.ReactNode }) {
 export default function AppLayout() {
   const colors = useColors();
   const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
 
   const wsHydrated = useWorkspaceStore((s) => s.hydrated);
@@ -71,6 +72,17 @@ export default function AppLayout() {
       router.push(data.type === 'budget_threshold' ? '/budgets' : '/dashboard');
     });
   }, [setActiveId]);
+
+  // Cuenta nueva (ver `User.onboarding_completed`, default `false` sólo para
+  // las que se crean desde acá en más -- las de antes ya nacen en `true`):
+  // una sola vez, apenas hay un workspace activo, la manda al tour en vez de
+  // dejarla entrar directo a un dashboard vacío sin ninguna explicación.
+  // `onboarding.tsx` es quien la saca de ahí (termina o salta el tour).
+  useEffect(() => {
+    if (activeId && user && !user.onboarding_completed) {
+      router.replace('/onboarding');
+    }
+  }, [activeId, user]);
 
   if (status === 'loading') {
     return (
@@ -302,6 +314,18 @@ export default function AppLayout() {
         <Stack.Screen
           name="about"
           options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="help"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        {/* No es un modal como el resto: se siente pantalla completa a
+            propósito (es un tour, no una hoja que se descarta con un
+            gesto) -- `gestureEnabled: false` evita salir a mitad de camino
+            con el swipe-back de iOS ("Saltar" es la salida explícita). */}
+        <Stack.Screen
+          name="onboarding"
+          options={{ headerShown: false, gestureEnabled: false }}
         />
         <Stack.Screen
           name="tools/[group]"
