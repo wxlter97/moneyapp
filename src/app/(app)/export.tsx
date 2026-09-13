@@ -5,6 +5,7 @@ import { useTransactions } from '@/api/queries';
 import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import { Button } from '@/components/ui/Button';
 import { ModalHeader } from '@/components/ui/ModalHeader';
+import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { Screen } from '@/components/ui/Screen';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { downloadTextFile, transactionsToCsv } from '@/lib/export';
@@ -28,6 +29,7 @@ export default function ExportScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Exportar datos" />
+      <ProFeatureGate feature="export">
       <ScrollView contentContainerClassName="gap-4 py-3">
         {txQuery.isLoading ? (
           <LoadingState />
@@ -61,6 +63,7 @@ export default function ExportScreen() {
           </>
         )}
       </ScrollView>
+      </ProFeatureGate>
     </Screen>
   );
 }

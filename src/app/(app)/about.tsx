@@ -1,7 +1,9 @@
 import { Linking, ScrollView, Text, View } from 'react-native';
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 
 import { BrandMark } from '@/components/BrandMark';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
@@ -73,6 +75,22 @@ export default function AboutScreen() {
             >
               wxlter.dev
             </Text>
+          </View>
+        </Card>
+
+        <Card title="Legal">
+          <View className="gap-2">
+            <Button
+              label="Términos de servicio"
+              variant="ghost"
+              onPress={() => router.push('/terms')}
+            />
+            <Button label="Privacidad" variant="ghost" onPress={() => router.push('/privacy')} />
+            <Button
+              label="Reembolsos y cancelación"
+              variant="ghost"
+              onPress={() => router.push('/refund-policy')}
+            />
           </View>
         </Card>
 

@@ -13,6 +13,7 @@ import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { EmptyState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { isPlanUpgradeError } from '@/lib/planErrors';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -268,7 +269,7 @@ export default function WorkspacesScreen() {
             {/* El backend responde este mensaje puntual cuando se llegó al
                 límite de presupuestos del plan (ver `can_own_another_workspace`
                 en apps.billing) -- el resto de errores no ofrece este atajo. */}
-            {createError?.includes('límite') ? (
+            {isPlanUpgradeError(createError) ? (
               <Button label="Pasate a Pro" variant="ghost" onPress={() => router.push('/pro')} />
             ) : null}
           </View>

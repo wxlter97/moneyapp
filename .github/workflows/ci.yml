@@ -10,6 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sin secretos commiteados
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -17,6 +24,13 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # No bloquea el build: hoy son vulnerabilidades moderadas en tooling de
+      # build de Expo (@expo/cli, config-plugins), no en código que corre en
+      # el cliente -- se resuelven con un bump de SDK de Expo, no acá. Sólo
+      # informativo hasta entonces.
+      - name: Dependencias sin vulnerabilidades conocidas (informativo)
+        run: npm audit --omit=dev || true
 
       # Los tipos de rutas de expo-router (.expo/types/router.d.ts) solo se
       # generan al arrancar Metro; sin ellos `tsc` falla en los href tipados.

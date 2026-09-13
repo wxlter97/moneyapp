@@ -10,6 +10,7 @@ import {
 } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
 import type { ExchangeRate } from '@/api/types';
+import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ModalHeader } from '@/components/ui/ModalHeader';
@@ -113,25 +114,27 @@ export default function CurrenciesScreen() {
             Todas tus carteras ya están en {baseCurrency} — no hace falta ninguna tasa.
           </Text>
         ) : (
-          <Card title="Tasas de cambio">
-            <Text className="text-text-muted mb-3 text-sm leading-5">
-              Cuánto vale 1 unidad de cada moneda en {baseCurrency}. Se cargan a mano
-              (no hay conversión automática); sin tasa, esa cartera no entra en los
-              totales de arriba.
-            </Text>
-            <View className="gap-4">
-              {foreignCurrencies.map((currency, i) => (
-                <View key={currency}>
-                  {i > 0 ? <View className="mb-4 h-px bg-border/30" /> : null}
-                  <RateRow
-                    currency={currency}
-                    baseCurrency={baseCurrency}
-                    existing={ratesByCurrency.get(currency)}
-                  />
-                </View>
-              ))}
-            </View>
-          </Card>
+          <ProFeatureGate feature="multi_currency" variant="inline">
+            <Card title="Tasas de cambio">
+              <Text className="text-text-muted mb-3 text-sm leading-5">
+                Cuánto vale 1 unidad de cada moneda en {baseCurrency}. Se cargan a mano
+                (no hay conversión automática); sin tasa, esa cartera no entra en los
+                totales de arriba.
+              </Text>
+              <View className="gap-4">
+                {foreignCurrencies.map((currency, i) => (
+                  <View key={currency}>
+                    {i > 0 ? <View className="mb-4 h-px bg-border/30" /> : null}
+                    <RateRow
+                      currency={currency}
+                      baseCurrency={baseCurrency}
+                      existing={ratesByCurrency.get(currency)}
+                    />
+                  </View>
+                ))}
+              </View>
+            </Card>
+          </ProFeatureGate>
         )}
 
         {unusedRates.length > 0 ? (

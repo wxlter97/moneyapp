@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { ModalHeader } from '@/components/ui/ModalHeader';
+import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
@@ -40,6 +41,7 @@ export default function NetWorthHistoryScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Patrimonio neto" />
+      <ProFeatureGate feature="net_worth_history">
       <ScrollView contentContainerClassName="gap-4 py-2" refreshControl={refresh}>
         {q.isLoading ? (
           <LoadingState />
@@ -108,6 +110,7 @@ export default function NetWorthHistoryScreen() {
           </>
         )}
       </ScrollView>
+      </ProFeatureGate>
     </Screen>
   );
 }

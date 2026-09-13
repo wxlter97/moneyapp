@@ -20,6 +20,7 @@ import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { isPlanUpgradeError } from '@/lib/planErrors';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { useAuthStore } from '@/store/auth';
@@ -242,7 +243,7 @@ export default function MembersScreen() {
               />
               {/* Mensaje puntual del backend al llegar al límite de
                   miembros del plan (ver `can_add_member` en apps.billing). */}
-              {inviteError?.includes('límite') ? (
+              {isPlanUpgradeError(inviteError) ? (
                 <Button label="Pasate a Pro" variant="ghost" onPress={() => router.push('/pro')} />
               ) : null}
             </View>

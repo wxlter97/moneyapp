@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { router } from 'expo-router';
 
 import {
   useCreatePersonalToken,
@@ -23,6 +24,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { config } from '@/config';
 import { formatDateTime } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
+import { isPlanUpgradeError } from '@/lib/planErrors';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -155,12 +157,16 @@ export default function ShortcutsScreen() {
               placeholder={walletsQ.isLoading ? 'Cargando…' : 'Elegir'}
             />
             {createError ? <Text className="text-expense text-xs">{createError}</Text> : null}
-            <Button
-              label="Generar token"
-              loading={createToken.isPending}
-              disabled={!name.trim() || !walletId}
-              onPress={onCreate}
-            />
+            {isPlanUpgradeError(createError) ? (
+              <Button label="Pasate a Pro" variant="ghost" onPress={() => router.push('/pro')} />
+            ) : (
+              <Button
+                label="Generar token"
+                loading={createToken.isPending}
+                disabled={!name.trim() || !walletId}
+                onPress={onCreate}
+              />
+            )}
           </View>
         </Card>
 

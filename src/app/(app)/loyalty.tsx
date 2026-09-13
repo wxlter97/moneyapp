@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { useLoyaltySummary } from '@/api/queries';
 import { useWalletMap } from '@/api/queries/lookups';
+import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { Card } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
 import { ModalHeader } from '@/components/ui/ModalHeader';
@@ -32,6 +33,7 @@ export default function LoyaltyScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Recompensas" />
+      <ProFeatureGate feature="loyalty">
       <ScrollView contentContainerClassName="gap-4 py-2" refreshControl={refresh}>
         {summary.isLoading ? (
           <LoadingState />
@@ -120,6 +122,7 @@ export default function LoyaltyScreen() {
           </>
         )}
       </ScrollView>
+      </ProFeatureGate>
     </Screen>
   );
 }
