@@ -3,6 +3,8 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 
+import { AccentColorPicker } from '@/components/AccentColorPicker';
+import { InstallAppCard } from '@/components/InstallAppCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
@@ -10,7 +12,7 @@ import { Segmented } from '@/components/ui/Segmented';
 import { haptics } from '@/lib/haptics';
 import { TOOL_GROUPS } from '@/lib/toolGroups';
 import { useColors } from '@/theme';
-import { ACCENTS, type Accent } from '@/theme/accents';
+import { ACCENTS, resolveAccent } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 import { useThemeStore, type ThemePref } from '@/store/theme';
 import { useAccentStore } from '@/store/accent';
@@ -21,25 +23,21 @@ const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'Sistema' },
 ];
 
-// "Brasa" se separa del resto del selector (ver más abajo): es el único
-// acento deliberadamente vivo, no una tonalidad tierra más.
-const MUTED_ACCENTS = ACCENTS.filter((a) => a.id !== 'ember');
-const EMBER_ACCENT = ACCENTS.find((a) => a.id === 'ember');
-
 // Círculos de color solos, sin nombre, eran difíciles de distinguir entre sí
 // (paleta "tierra": a propósito de baja saturación, ver `theme/accents.ts`)
 // y sin ningún orden aparente -- esta fila los muestra como una lista
 // vertical de opciones (punto de color + nombre + check), mismo lenguaje que
 // cualquier selector de una sola opción, en el mismo orden en que se definen
-// (claro → oscuro, ver `ACCENTS`).
+// (claro → oscuro, ver `ACCENTS`) -- "Brasa" va en la misma lista que el
+// resto, sin separarla ni explicarla aparte: es una opción más.
 function AccentOption({
-  accent,
-  scheme,
+  swatchColor,
+  label,
   active,
   onPress,
 }: {
-  accent: Accent;
-  scheme: 'light' | 'dark';
+  swatchColor: string;
+  label: string;
   active: boolean;
   onPress: () => void;
 }) {
@@ -54,12 +52,9 @@ function AccentOption({
       accessibilityState={{ selected: active }}
       className="w-1/2 flex-row items-center gap-2 py-2 pr-2 active:opacity-60"
     >
-      <View
-        className="h-6 w-6 rounded-full"
-        style={{ backgroundColor: accent[scheme].primary }}
-      />
+      <View className="h-6 w-6 rounded-full" style={{ backgroundColor: swatchColor }} />
       <Text className="text-text flex-1 text-sm" numberOfLines={1}>
-        {accent.label}
+        {label}
       </Text>
       {active ? <Icon name="check" size={14} color={colors.text} /> : null}
     </Pressable>
@@ -80,11 +75,16 @@ export default function ToolsScreen() {
   const scheme = colorScheme === 'light' ? 'light' : 'dark';
   const accentId = useAccentStore((s) => s.accent);
   const setAccent = useAccentStore((s) => s.setAccent);
+  const customHex = useAccentStore((s) => s.customHex);
+  const setCustomHex = useAccentStore((s) => s.setCustomHex);
+  const customSwatch = resolveAccent('custom', customHex)[scheme].primary;
 
   return (
     <View className="flex-1 bg-bg">
       <ScrollView contentContainerClassName="px-4 pb-32 self-center w-full max-w-[560px] gap-4">
         <ScreenHeader title="Herramientas" />
+
+        <InstallAppCard />
 
         <Card title="Gestión">
           {/* Antes cada tile entraba con un fundido escalonado (`FadeInView
@@ -123,34 +123,27 @@ export default function ToolsScreen() {
 
           <Text className="text-text-muted mb-1 mt-4 text-xs">Acento</Text>
           <View className="-mb-2 flex-row flex-wrap">
-            {MUTED_ACCENTS.map((accent) => (
+            {ACCENTS.map((accent) => (
               <AccentOption
                 key={accent.id}
-                accent={accent}
-                scheme={scheme}
+                swatchColor={accent[scheme].primary}
+                label={accent.label}
                 active={accent.id === accentId}
                 onPress={() => setAccent(accent.id)}
               />
             ))}
+            <AccentOption
+              swatchColor={customSwatch}
+              label="Personalizado"
+              active={accentId === 'custom'}
+              onPress={() => setAccent('custom')}
+            />
           </View>
 
-          {/* "Brasa" es, a propósito, el único acento vivo -- se separa del
-              resto (misma fila que el resto los confundiría con "una
-              tonalidad tierra más") para que elegirlo sea una decisión
-              consciente, con su propia explicación al lado. */}
-          {EMBER_ACCENT ? (
-            <>
-              <View className="my-3 h-px bg-border/60" />
-              <AccentOption
-                accent={EMBER_ACCENT}
-                scheme={scheme}
-                active={EMBER_ACCENT.id === accentId}
-                onPress={() => setAccent(EMBER_ACCENT.id)}
-              />
-              <Text className="text-text-muted -mt-1 text-xs leading-4">
-                Vivo -- a propósito, no combina con el resto de la paleta.
-              </Text>
-            </>
+          {accentId === 'custom' ? (
+            <View className="mt-3">
+              <AccentColorPicker hex={customHex} onChange={setCustomHex} />
+            </View>
           ) : null}
         </Card>
 

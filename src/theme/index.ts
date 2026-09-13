@@ -14,7 +14,7 @@
 import { useColorScheme } from 'nativewind';
 
 import { useAccentStore } from '@/store/accent';
-import { getAccent } from './accents';
+import { resolveAccent } from './accents';
 
 export interface ThemeColors {
   bg: string;
@@ -69,9 +69,10 @@ export const colors = darkColors;
 export function useColors(): ThemeColors {
   const { colorScheme } = useColorScheme();
   const accentId = useAccentStore((s) => s.accent);
+  const customHex = useAccentStore((s) => s.customHex);
   const scheme = colorScheme === 'light' ? 'light' : 'dark';
   const base = scheme === 'light' ? lightColors : darkColors;
-  const accent = getAccent(accentId)[scheme];
+  const accent = resolveAccent(accentId, customHex)[scheme];
   return { ...base, primary: accent.primary, primaryFg: accent.primaryFg };
 }
 

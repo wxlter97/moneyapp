@@ -23,7 +23,7 @@ import { queryClient } from '@/lib/queryClient';
 import { QUERY_PERSIST_MAX_AGE, queryPersister, shouldPersistQuery } from '@/lib/queryPersister';
 import { applyGlobalFont } from '@/lib/globalFont';
 import { darkColors, lightColors } from '@/theme';
-import { getAccent, hexToRgbTriplet } from '@/theme/accents';
+import { resolveAccent, hexToRgbTriplet } from '@/theme/accents';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
 import { useAccentStore } from '@/store/accent';
@@ -83,7 +83,8 @@ export default function RootLayout() {
   // la pisamos con `vars()` (API de nativewind para esto, no un hack) para
   // que también reaccionen, en las tres plataformas.
   const accentId = useAccentStore((s) => s.accent);
-  const accentShade = getAccent(accentId)[scheme];
+  const customHex = useAccentStore((s) => s.customHex);
+  const accentShade = resolveAccent(accentId, customHex)[scheme];
   const accentVars = useMemo(
     () =>
       vars({
