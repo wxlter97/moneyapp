@@ -235,6 +235,10 @@ export interface Wallet {
   /** current_balance / goal_amount, o null si no hay meta. */
   progress_pct: number | null;
   card_last4: string | null;
+  /** Plásticos adicionales de esta MISMA cuenta (titular + adicionales
+   * comparten saldo/límite/estado de cuenta) -- una compra con cualquiera
+   * de ellos, o con `card_last4`, cae en esta cartera. */
+  extra_cards: WalletCard[];
   billing_cycle_day: number | null;
   payment_due_day: number | null;
   interest_rate: string | null;
@@ -259,6 +263,13 @@ export interface Wallet {
   updated_at: ISODateTime;
 }
 
+/** Un plástico adicional de una cartera (ver `Wallet.extra_cards`). Sin
+ * `id`: la lista se manda completa y reemplaza a la anterior entera. */
+export interface WalletCard {
+  last4: string;
+  label?: string;
+}
+
 /** Payload de alta/edición de cartera. */
 export interface WalletInput {
   name: string;
@@ -275,6 +286,7 @@ export interface WalletInput {
   goal_date?: ISODate | null;
   monthly_contribution?: Money | null;
   card_last4?: string | null;
+  extra_cards?: WalletCard[];
   billing_cycle_day?: number | null;
   payment_due_day?: number | null;
   interest_rate?: string | null;

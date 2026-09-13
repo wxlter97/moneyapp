@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { router } from 'expo-router';
 
 import {
@@ -17,7 +26,7 @@ import {
   useWallets,
 } from '@/api/queries';
 import { errorMessage, fieldErrors } from '@/api/errors';
-import type { WalletInput, WalletKind, WalletPurpose } from '@/api/types';
+import type { WalletCard, WalletInput, WalletKind, WalletPurpose } from '@/api/types';
 import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
@@ -90,6 +99,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [interestRate, setInterestRate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [cardLast4, setCardLast4] = useState('');
+  const [extraCards, setExtraCards] = useState<WalletCard[]>([]);
   const [bankSchemaId, setBankSchemaId] = useState<string | null>(null);
   // Producto de tarjeta: se elige en dos pasos (banco -> producto de ese
   // banco). `loyaltyBankId` es puramente de UI -- lo que de verdad se manda
@@ -134,6 +144,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setInterestRate(w.interest_rate ? toNumber(w.interest_rate).toString() : '');
     setDueDate(w.due_date ?? '');
     setCardLast4(w.card_last4 ?? '');
+    setExtraCards(w.extra_cards ?? []);
     setBankSchemaId(w.bank_schema);
     setCardProductId(w.card_product);
     setBillingDay(w.billing_cycle_day ? String(w.billing_cycle_day) : '');
@@ -291,6 +302,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
       interest_rate: isDebt && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
       due_date: isDebt && dueDate ? dueDate : null,
       card_last4: cardNumberEligible && cardLast4.trim() ? cardLast4.trim() : null,
+      extra_cards: cardNumberEligible ? extraCards : [],
       bank_schema: cardNumberEligible ? bankSchemaId || null : null,
       card_product: kind === 'credit' ? cardProductId || null : null,
       billing_cycle_day: cardStatementEligible ? parseDay(billingDay) : null,
@@ -581,6 +593,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
               keyboardType="number-pad"
               placeholder="4242"
             />
+            <ExtraCardsField value={extraCards} onChange={setExtraCards} />
             {bankOptions.length > 0 ? (
               <Select
                 label="Banco (opcional)"
@@ -845,6 +858,130 @@ function GoalProjectionCard({
       {data.on_track === false ? (
         <Text className="text-warning text-xs">Vas más lento que tu fecha objetivo.</Text>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * Plásticos adicionales de la MISMA cuenta (titular + adicionales
+ * comparten saldo/límite/estado de cuenta -- ver docstring de `WalletCard`
+ * en el backend): una compra con cualquiera de ellos cae en esta cartera.
+ * Reemplazo completo al guardar (como `TagPicker`), no altas/bajas
+ * incrementales contra el servidor.
+ */
+function ExtraCardsField({
+  value,
+  onChange,
+}: {
+  value: WalletCard[];
+  onChange: (cards: WalletCard[]) => void;
+}) {
+  const colors = useColors();
+  const [adding, setAdding] = useState(false);
+  const [draftLast4, setDraftLast4] = useState('');
+  const [draftLabel, setDraftLabel] = useState('');
+
+  function cancelAdd() {
+    setAdding(false);
+    setDraftLast4('');
+    setDraftLabel('');
+  }
+
+  function commitAdd() {
+    if (draftLast4.length !== 4) return;
+    if (value.some((c) => c.last4 === draftLast4)) return;
+    haptics.tap();
+    onChange([...value, { last4: draftLast4, label: draftLabel.trim() }]);
+    cancelAdd();
+  }
+
+  function remove(last4: string) {
+    haptics.tap();
+    onChange(value.filter((c) => c.last4 !== last4));
+  }
+
+  return (
+    <View className="gap-1.5">
+      <Text className="text-text-muted text-sm">Tarjetas adicionales (misma cuenta, opcional)</Text>
+      <Text className="text-text-muted text-xs">
+        Titular + adicionales de esta tarjeta: una compra con cualquiera cae acá.
+      </Text>
+
+      {value.map((c) => (
+        <View
+          key={c.last4}
+          className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5"
+        >
+          <Text className="text-text text-sm">
+            ···{c.last4}
+            {c.label ? `  ·  ${c.label}` : ''}
+          </Text>
+          <Pressable
+            onPress={() => remove(c.last4)}
+            accessibilityRole="button"
+            accessibilityLabel={`Quitar tarjeta terminada en ${c.last4}`}
+            hitSlop={8}
+          >
+            <Icon name="close" size={14} color={colors.textMuted} />
+          </Pressable>
+        </View>
+      ))}
+
+      {adding ? (
+        <View className="gap-2 rounded-xl border border-primary bg-surface p-3">
+          <View className="flex-row gap-2">
+            <TextInput
+              autoFocus
+              value={draftLast4}
+              onChangeText={(t) => setDraftLast4(t.replace(/\D/g, '').slice(0, 4))}
+              keyboardType="number-pad"
+              placeholder="1234"
+              placeholderTextColor={colors.textMuted}
+              maxLength={4}
+              accessibilityLabel="Últimos 4 dígitos de la tarjeta adicional"
+              className="h-10 w-20 rounded-xl border border-border bg-surface-2 px-3 text-text text-sm"
+            />
+            <TextInput
+              value={draftLabel}
+              onChangeText={setDraftLabel}
+              onSubmitEditing={commitAdd}
+              placeholder='Etiqueta (opcional, ej. "Adicional")'
+              placeholderTextColor={colors.textMuted}
+              maxLength={50}
+              accessibilityLabel="Etiqueta de la tarjeta adicional"
+              className="h-10 flex-1 rounded-xl border border-border bg-surface-2 px-3 text-text text-sm"
+            />
+          </View>
+          <View className="flex-row gap-3">
+            <Pressable onPress={commitAdd} disabled={draftLast4.length !== 4} accessibilityRole="button">
+              <Text
+                className={draftLast4.length === 4 ? 'text-primary text-xs' : 'text-text-muted text-xs'}
+                style={{ fontFamily: fonts.semibold }}
+              >
+                Agregar
+              </Text>
+            </Pressable>
+            <Pressable onPress={cancelAdd} accessibilityRole="button">
+              <Text className="text-text-muted text-xs">Cancelar</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => {
+            haptics.tap();
+            setAdding(true);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Agregar tarjeta adicional"
+          className="flex-row items-center gap-1.5 self-start py-1 active:opacity-60"
+        >
+          <Icon name="plus" size={12} color={colors.primary} />
+          <Text className="text-primary text-xs" style={{ fontFamily: fonts.semibold }}>
+            Agregar tarjeta
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
