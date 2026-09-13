@@ -56,23 +56,33 @@ export default function OverviewScreen() {
     <View className="flex-1 bg-bg">
       <SectionHeader
         title="Vista general"
-        subtitle={
+        right={
           <Pressable
             onPress={() => {
               haptics.tap();
               router.push('/net-worth-history');
             }}
+            className="rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
             accessibilityRole="button"
             accessibilityLabel="Ver historial de patrimonio neto"
-            className="w-full items-center active:opacity-70"
           >
+            <Text className="text-text text-sm font-semibold">Historial</Text>
+          </Pressable>
+        }
+        subtitle={
+          // El monto ya no es tocable: era el elemento más grande de toda la
+          // pantalla y ocupaba casi todo el header, así que cualquier toque
+          // cerca del centro (p. ej. buscando el switch de mes debajo)
+          // mandaba a Historial por error. Ese acceso ahora vive en el botón
+          // de arriba, chico y a propósito.
+          <View className="w-full items-center">
             <Money
               value={netWorth.data?.net}
               currency={currency}
               hero
               className="text-center text-[52px] leading-[56px]"
             />
-          </Pressable>
+          </View>
         }
       >
         <SubTabs
