@@ -42,7 +42,8 @@ export type IconName =
   | 'archive'
   | 'mail'
   | 'info'
-  | 'gift';
+  | 'gift'
+  | 'star';
 
 interface IconProps {
   name: IconName;
@@ -300,6 +301,13 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
           <Path d="M12 7c-1.6 0-3.2-.9-3.2-2.6S9.8 2 11 2s1 2 1 5z" {...p} />
           <Path d="M12 7c1.6 0 3.2-.9 3.2-2.6S13.2 2 12 2s-1 2-1 5z" {...p} />
         </>
+      )}
+      {name === 'star' && (
+        <Path
+          d="M12 2.5l2.9 6.1 6.6.8-4.9 4.5 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6-4.9-4.5 6.6-.8L12 2.5z"
+          {...p}
+          strokeLinejoin="round"
+        />
       )}
       {name === 'face-id' && (
         <>

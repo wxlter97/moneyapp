@@ -343,6 +343,10 @@ export default function AppLayout() {
           name="account"
           options={{ presentation: 'modal', headerShown: false }}
         />
+        <Stack.Screen
+          name="pro"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
     </AppLockGate>
   );

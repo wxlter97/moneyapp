@@ -910,6 +910,62 @@ export interface CreditCardStatementSummary extends CreditCardStatement {
 export type WorkspaceBackup = Record<string, unknown>;
 
 // ---------------------------------------------------------------------------
+// Pagos y suscripciones (apps.billing) -- ver GET /plans/, /billing/me/
+// ---------------------------------------------------------------------------
+export type BillingPeriod = 'monthly' | 'annual' | 'lifetime';
+
+export interface PlanPrice {
+  id: UUID;
+  billing_period: BillingPeriod;
+  /** A diferencia de `Money`, viaja como número (no es un DecimalField). */
+  amount: number;
+  currency: string;
+  is_active: boolean;
+}
+
+/**
+ * Un plan tal como lo ve el cliente: límites (`null` = ilimitado) + un mapa
+ * de features a medida. Nunca hardcodees el precio ni los límites -- vienen
+ * de acá para poder ajustarlos sin subir versión nueva a las stores.
+ */
+export interface Plan {
+  id: UUID;
+  code: string;
+  name: string;
+  description: string;
+  max_workspaces_owned: number | null;
+  max_members_per_workspace: number | null;
+  max_active_recurring: number | null;
+  features: Record<string, boolean>;
+  prices: PlanPrice[];
+}
+
+export type SubscriptionStatus = 'pending' | 'active' | 'past_due' | 'canceled' | 'expired';
+
+export interface Subscription {
+  id: UUID;
+  plan: Plan;
+  billing_period: BillingPeriod | null;
+  status: SubscriptionStatus;
+  provider: string;
+  current_period_end: ISODateTime | null;
+  canceled_at: ISODateTime | null;
+  created_at: ISODateTime;
+}
+
+/** `GET /billing/me/` -- el plan efectivo del usuario autenticado + su
+ * suscripción vigente, si tiene una. */
+export interface MyPlan {
+  plan: Plan | null;
+  subscription: Subscription | null;
+}
+
+export interface CheckoutResult {
+  checkout_url: string;
+  subscription_id: UUID;
+}
+
+// ---------------------------------------------------------------------------
 // Errores DRF
 // ---------------------------------------------------------------------------
 /** Forma típica de un 400 de DRF: `{ campo: ["mensaje"], ... }` o `{ detail: "..." }`. */

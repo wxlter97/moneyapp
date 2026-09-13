@@ -1,6 +1,7 @@
 import { Image, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
+import { useMyPlan } from '@/api/queries';
 import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -20,6 +21,8 @@ import { fonts } from '@/theme/typography';
 export default function AccountScreen() {
   const colors = useColors();
   const user = useAuthStore((s) => s.user);
+  const myPlan = useMyPlan();
+  const isPro = myPlan.data?.plan?.code === 'pro';
 
   if (!user) return null;
 
@@ -54,6 +57,27 @@ export default function AccountScreen() {
               </Text>
               <Text className="text-text-muted text-xs">{user.email}</Text>
             </View>
+          </View>
+        </Card>
+
+        <Card title="Plan">
+          <View className="flex-row items-center gap-3">
+            <View
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: isPro ? colors.primary : colors.surface2 }}
+            >
+              <Icon name="star" size={16} color={isPro ? '#FFFFFF' : colors.textMuted} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                {myPlan.isLoading ? 'Cargando...' : isPro ? 'Pro' : 'Gratis'}
+              </Text>
+            </View>
+            <Button
+              label={isPro ? 'Gestionar' : 'Pasate a Pro'}
+              variant="ghost"
+              onPress={() => router.push('/pro')}
+            />
           </View>
         </Card>
 
