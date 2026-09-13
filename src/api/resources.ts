@@ -476,6 +476,9 @@ export const emailImportLogs = {
     api.post<EmailImportLog>(`/email-import-logs/${id}/confirm/`, input).then((r) => r.data),
   reject: (id: string) =>
     api.post<EmailImportLog>(`/email-import-logs/${id}/reject/`).then((r) => r.data),
+  /** Limpia (soft-delete) el historial de correos "no reconocidos". */
+  clearFailed: () =>
+    api.post<{ cleared: number }>('/email-import-logs/clear-failed/').then((r) => r.data),
 };
 
 // --- reportes (agregaciones) -----------------------------------------

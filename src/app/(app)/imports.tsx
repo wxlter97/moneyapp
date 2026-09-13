@@ -3,7 +3,12 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 
-import { useEmailImportLogs, useRejectEmailImport, useRotateInboundToken } from '@/api/queries';
+import {
+  useClearFailedEmailImports,
+  useEmailImportLogs,
+  useRejectEmailImport,
+  useRotateInboundToken,
+} from '@/api/queries';
 import { errorMessage } from '@/api/errors';
 import type { EmailImportLog, EmailImportStatus } from '@/api/types';
 import { Button } from '@/components/ui/Button';
@@ -37,13 +42,16 @@ export default function ImportsScreen() {
   const [showAll, setShowAll] = useState(false);
   const q = useEmailImportLogs(showAll ? undefined : 'pending');
   const reject = useRejectEmailImport();
+  const clearFailed = useClearFailedEmailImports();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   const activeWorkspace = useWorkspaceStore((s) =>
     s.workspaces.find((w) => w.id === s.activeId),
   );
 
   const items = q.data ?? [];
+  const failedCount = items.filter((log) => log.status === 'failed').length;
   const refresh = usePullRefresh(q.isFetching && !q.isLoading, () => q.refetch());
 
   async function onReject(id: string) {
@@ -54,6 +62,17 @@ export default function ImportsScreen() {
       haptics.error();
     } finally {
       setRejectingId(null);
+    }
+  }
+
+  async function onClearFailed() {
+    try {
+      await clearFailed.mutateAsync();
+      haptics.success();
+    } catch {
+      haptics.error();
+    } finally {
+      setConfirmingClear(false);
     }
   }
 
@@ -68,18 +87,49 @@ export default function ImportsScreen() {
       >
         {activeWorkspace ? <InboundEmailCard workspace={activeWorkspace} /> : null}
 
-        <Pressable
-          onPress={() => {
-            haptics.tap();
-            setShowAll((v) => !v);
-          }}
-          className="self-end py-1 active:opacity-60"
-          accessibilityRole="button"
-        >
-          <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
-            {showAll ? 'Solo pendientes' : 'Ver historial'}
-          </Text>
-        </Pressable>
+        <View className="flex-row items-center justify-between">
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              setShowAll((v) => !v);
+            }}
+            className="py-1 active:opacity-60"
+            accessibilityRole="button"
+          >
+            <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+              {showAll ? 'Solo pendientes' : 'Ver historial'}
+            </Text>
+          </Pressable>
+
+          {showAll && failedCount > 0 && !confirmingClear ? (
+            <Pressable
+              onPress={() => {
+                haptics.tap();
+                setConfirmingClear(true);
+              }}
+              className="py-1 active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Text className="text-text-muted text-sm">Limpiar no reconocidas</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {confirmingClear ? (
+          <View className="gap-2 rounded-2xl bg-expense/10 p-3">
+            <Text className="text-text text-sm">
+              ¿Borrar del historial {failedCount} correo(s) no reconocido(s)? No se puede deshacer.
+            </Text>
+            <View className="flex-row gap-2">
+              <View className="flex-1">
+                <Button label="Cancelar" variant="ghost" onPress={() => setConfirmingClear(false)} />
+              </View>
+              <View className="flex-1">
+                <Button label="Limpiar" loading={clearFailed.isPending} onPress={onClearFailed} />
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         {q.isLoading ? (
           <LoadingState />

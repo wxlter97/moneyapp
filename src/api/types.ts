@@ -720,12 +720,15 @@ export interface EmailImportLog {
   extracted_date: ISODate | null;
   resulting_transaction: UUID | null;
   error_message: string;
+  /** Adivinada por comercio (categoría más usada antes en ese comercio); null si no hay historial. */
+  suggested_category: UUID | null;
+  suggested_category_name: string | null;
   created_at: ISODateTime;
 }
 
 /** Datos para materializar la Transaction al confirmar una candidata. */
 export interface ConfirmEmailImportInput {
-  category: UUID;
+  category?: UUID;
   wallet?: UUID;
   amount?: string;
   date?: ISODate;

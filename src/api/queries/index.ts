@@ -874,6 +874,14 @@ export function useRejectEmailImport() {
   });
 }
 
+export function useClearFailedEmailImports() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: () => res.emailImportLogs.clearFailed(),
+    onSuccess: invalidate,
+  });
+}
+
 // --- reportes ---------------------------------------------------
 export function useNetWorth() {
   const ws = useActiveWs();
