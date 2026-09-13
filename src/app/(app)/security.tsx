@@ -12,6 +12,7 @@ import { PinPad } from '@/components/security/PinPad';
 import { haptics } from '@/lib/haptics';
 import { isBiometricAvailable } from '@/lib/security/biometrics';
 import { PIN_LENGTH, pinStore } from '@/lib/security/pin';
+import { useAuthStore } from '@/store/auth';
 import { useSecurityStore } from '@/store/security';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -26,6 +27,7 @@ type WizardPurpose = 'enable' | 'change';
  */
 export default function SecurityScreen() {
   const colors = useColors();
+  const twoFactorEnabled = useAuthStore((s) => s.user?.two_factor_enabled ?? false);
   const enabled = useSecurityStore((s) => s.enabled);
   const setEnabled = useSecurityStore((s) => s.setEnabled);
   const biometricEnabled = useSecurityStore((s) => s.biometricEnabled);
@@ -181,7 +183,12 @@ export default function SecurityScreen() {
                 Pide un código además de la contraseña al iniciar sesión.
               </Text>
             </View>
-            <Icon name="chevron-right" size={16} color={colors.textMuted} />
+            <View className="flex-row items-center gap-2">
+              <Text className={twoFactorEnabled ? 'text-income text-xs' : 'text-text-muted text-xs'}>
+                {twoFactorEnabled ? 'Activa' : 'Inactiva'}
+              </Text>
+              <Icon name="chevron-right" size={16} color={colors.textMuted} />
+            </View>
           </Pressable>
         </Card>
       </ScrollView>

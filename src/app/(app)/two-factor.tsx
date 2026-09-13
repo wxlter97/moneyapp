@@ -12,7 +12,14 @@ import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { useAuthStore } from '@/store/auth';
 import { fonts } from '@/theme/typography';
+
+/** Refleja el cambio en el usuario ya cargado en memoria -- Seguridad lo lee
+ * para mostrar "Activa/Inactiva" sin tener que volver a pedir `/auth/me/`. */
+function setTwoFactorEnabledInStore(enabled: boolean) {
+  useAuthStore.setState((s) => (s.user ? { user: { ...s.user, two_factor_enabled: enabled } } : s));
+}
 
 type Step =
   | 'loading'
@@ -49,6 +56,7 @@ export default function TwoFactorScreen() {
     try {
       const data = await twoFactor.status();
       setStep(data.enabled ? 'on' : 'off');
+      setTwoFactorEnabledInStore(data.enabled);
     } catch (err) {
       setError(errorMessage(err, 'No se pudo cargar el estado.'));
       setStep('off');
@@ -78,6 +86,7 @@ export default function TwoFactorScreen() {
       const data = await twoFactor.enable(code.trim());
       setBackupCodes(data.backup_codes);
       setStep('backup-codes');
+      setTwoFactorEnabledInStore(true);
       haptics.success();
     } catch (err) {
       haptics.error();
@@ -93,6 +102,7 @@ export default function TwoFactorScreen() {
     try {
       await twoFactor.disable(password);
       setPassword('');
+      setTwoFactorEnabledInStore(false);
       haptics.success();
       setStep('off');
     } catch (err) {

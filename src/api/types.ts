@@ -39,6 +39,8 @@ export interface User {
   profile_photo_url: string;
   /** true = puede entrar con "Continuar con Google" (se creó así, o lo vinculó después). */
   google_linked: boolean;
+  /** true = pide un código además de la contraseña al iniciar sesión (ver Herramientas → Seguridad). */
+  two_factor_enabled: boolean;
   date_joined: ISODateTime;
 }
 

@@ -200,6 +200,16 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setLoyaltyBankId(next || null);
     // Cambiar de banco invalida el producto elegido antes (era de otro banco).
     setCardProductId(null);
+    // Es el mismo banco real, pero vive en OTRO catálogo (el de reenvío de
+    // correos, ver `bankOptions`/`useBankEmailSchemas`) -- si hay uno con el
+    // mismo nombre lo asignamos de una, así no hace falta elegir "Banco" dos
+    // veces para lo mismo (ver el selector que se oculta más abajo cuando
+    // ya hay uno elegido acá).
+    const bank = loyaltyBanksQ.data?.find((b) => b.id === next);
+    const matchingSchema = bank
+      ? bankSchemasQ.data?.find((s) => s.bank_name.toLowerCase() === bank.name.toLowerCase())
+      : undefined;
+    setBankSchemaId(matchingSchema?.id ?? null);
   }
 
   const isDebt = purpose === 'debt';
@@ -594,7 +604,12 @@ export function WalletForm({ walletId }: WalletFormProps) {
               placeholder="4242"
             />
             <ExtraCardsField value={extraCards} onChange={setExtraCards} />
-            {bankOptions.length > 0 ? (
+            {/* En tarjetas de crédito con banco de recompensas ya elegido
+                arriba, no se vuelve a preguntar el mismo banco acá (ver
+                `onChangeLoyaltyBank`, que ya lo sincronizó). Sin ese banco de
+                recompensas -- o en cuentas que no son de crédito -- este
+                sigue siendo el único lugar para elegirlo. */}
+            {bankOptions.length > 0 && !(kind === 'credit' && loyaltyBankId) ? (
               <Select
                 label="Banco (opcional)"
                 value={bankSchemaId}
