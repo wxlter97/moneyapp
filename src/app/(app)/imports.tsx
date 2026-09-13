@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 
@@ -30,6 +30,7 @@ const STATUS_LABEL: Record<EmailImportStatus, string> = {
   confirmed: 'Confirmada',
   rejected: 'Rechazada',
   failed: 'No reconocida',
+  auto_handled: 'Resuelto automático',
 };
 
 /**
@@ -188,11 +189,15 @@ function ImportCard({
         </View>
         <View className="flex-1 gap-0.5">
           <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>
-            {log.extracted_merchant || log.bank_name || 'Correo bancario'}
+            {log.status === 'auto_handled'
+              ? 'Reenvío automático confirmado'
+              : log.extracted_merchant || log.bank_name || 'Correo bancario'}
           </Text>
           <Text className="text-text-muted text-xs" numberOfLines={1}>
-            {log.bank_name ?? 'Banco no identificado'}
-            {log.extracted_date ? ` · ${formatShortDate(log.extracted_date)}` : ''}
+            {log.status === 'auto_handled'
+              ? 'No era un correo bancario, era la verificación de tu proveedor de correo.'
+              : (log.bank_name ?? 'Banco no identificado')}
+            {log.status !== 'auto_handled' && log.extracted_date ? ` · ${formatShortDate(log.extracted_date)}` : ''}
           </Text>
           {log.raw_email_subject ? (
             <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
@@ -251,13 +256,74 @@ function ImportCard({
   );
 }
 
+type EmailProvider = 'gmail' | 'outlook' | 'icloud' | 'yahoo' | 'otro';
+
+/**
+ * Reenviar el correo a mano funciona siempre, pero es fricción que puede
+ * espantar a un usuario nuevo. Cada proveedor de correo activa el reenvío
+ * automático distinto -- esta guía junta los pasos exactos de cada uno.
+ *
+ * Ojo con Gmail: exige confirmar la dirección de reenvío con un click en un
+ * link que Gmail manda... a esa misma dirección (nuestro webhook, no una
+ * casilla que alguien lea). Lo confirmamos nosotros automáticamente apenas
+ * llega ese correo (ver `_confirm_gmail_forwarding_link` en el backend), así
+ * que del lado del usuario no hace falta ningún paso extra ahí.
+ */
+const PROVIDER_GUIDES: Record<EmailProvider, { label: string; settingsUrl?: string; steps: string[] }> = {
+  gmail: {
+    label: 'Gmail',
+    settingsUrl: 'https://mail.google.com/mail/u/0/#settings/fwdandpop',
+    steps: [
+      'Abrí Gmail en la compu → Configuración → "Ver todos los ajustes" → pestaña "Reenvío y POP/IMAP".',
+      'Tocá "Agregar una dirección de reenvío", pegá la dirección de arriba y confirmá.',
+      'Vas a ver "en espera de confirmación" — no hace falta que hagas nada más: la confirmamos nosotros solos en cuanto llega el correo de verificación (unos segundos).',
+      'Para que solo se reenvíen los correos del banco (no todo tu Gmail): Configuración → "Filtros y direcciones bloqueadas" → "Crear un filtro nuevo" → en "De" poné el correo o dominio de tu banco → "Crear filtro" → marcá "Reenviarlo a" y elegí la dirección ya verificada.',
+    ],
+  },
+  outlook: {
+    label: 'Outlook',
+    settingsUrl: 'https://outlook.live.com/mail/0/options/mail/forwarding',
+    steps: [
+      'Abrí Configuración → Correo → Reenvío.',
+      'Activá "Reenviar mi correo a otra cuenta" y pegá la dirección de arriba.',
+      'Empieza a funcionar de una, sin confirmación. Si querés limitarlo solo al banco, mejor creá una regla ("Correo" → "Reglas") que aplique a los mensajes de tu banco con la acción "Reenviar a", en vez del reenvío global.',
+    ],
+  },
+  icloud: {
+    label: 'iCloud',
+    settingsUrl: 'https://www.icloud.com/mail',
+    steps: [
+      'Entrá a icloud.com/mail → ícono de engranaje → Preferencias → pestaña "Reglas".',
+      'Agregá una regla: "Si el remitente es" el correo de tu banco → "Entonces reenviar a" y pegá la dirección de arriba.',
+      'Empieza a funcionar de una, sin confirmación.',
+    ],
+  },
+  yahoo: {
+    label: 'Yahoo',
+    steps: [
+      'Yahoo solo permite el reenvío automático con Yahoo Mail Plus (de pago) — con cuenta gratis no se puede activar.',
+      'La alternativa es reenviar a mano: cuando te llegue un correo del banco, abrilo, tocá "Reenviar" y pegá la dirección de arriba.',
+    ],
+  },
+  otro: {
+    label: 'Otro',
+    steps: [
+      'Buscá en los ajustes de tu correo algo como "Reglas", "Filtros" o "Reenvío automático" (forwarding).',
+      'La idea es la misma en todos: una regla que, cuando llegue un correo de tu banco, lo reenvíe a la dirección de arriba.',
+    ],
+  },
+};
+
 function InboundEmailCard({ workspace }: { workspace: { id: string; role: string; inbound_email: string } }) {
   const colors = useColors();
   const rotate = useRotateInboundToken();
   const [copied, setCopied] = useState(false);
   const [confirmingRotate, setConfirmingRotate] = useState(false);
   const [rotateError, setRotateError] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
+  const [provider, setProvider] = useState<EmailProvider>('gmail');
   const isOwner = workspace.role === 'owner';
+  const guide = PROVIDER_GUIDES[provider];
 
   async function onCopy() {
     await Clipboard.setStringAsync(workspace.inbound_email);
@@ -297,6 +363,71 @@ function InboundEmailCard({ workspace }: { workspace: { id: string; role: string
         </Text>
         <Icon name={copied ? 'check' : 'copy'} size={16} color={copied ? colors.income : colors.textMuted} />
       </Pressable>
+
+      <Pressable
+        onPress={() => {
+          haptics.tap();
+          setShowGuide((v) => !v);
+        }}
+        className="mt-3 self-start py-1 active:opacity-60"
+        accessibilityRole="button"
+      >
+        <Text className="text-primary text-xs" style={{ fontFamily: fonts.semibold }}>
+          {showGuide ? 'Ocultar guía de reenvío automático' : '¿Cómo activo el reenvío automático?'}
+        </Text>
+      </Pressable>
+
+      {showGuide ? (
+        <View className="mt-2 gap-3 rounded-2xl bg-surface-2 p-3">
+          <View className="flex-row flex-wrap gap-2">
+            {(Object.keys(PROVIDER_GUIDES) as EmailProvider[]).map((key) => {
+              const active = key === provider;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => {
+                    haptics.selection();
+                    setProvider(key);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  className={`rounded-full border px-3 py-1.5 active:opacity-70 ${
+                    active ? 'border-primary bg-primary' : 'border-border bg-surface'
+                  }`}
+                >
+                  <Text className={active ? 'text-primary-fg text-xs font-semibold' : 'text-text-muted text-xs'}>
+                    {PROVIDER_GUIDES[key].label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {guide.steps.map((step, i) => (
+            <View key={i} className="flex-row gap-2">
+              <Text className="text-text-muted text-xs" style={{ fontFamily: fonts.semibold }}>
+                {i + 1}.
+              </Text>
+              <Text className="text-text-muted flex-1 text-xs leading-5">{step}</Text>
+            </View>
+          ))}
+
+          {guide.settingsUrl ? (
+            <Pressable
+              onPress={() => {
+                haptics.tap();
+                Linking.openURL(guide.settingsUrl!);
+              }}
+              className="mt-1 self-start rounded-xl bg-surface px-3 py-2 active:opacity-70"
+              accessibilityRole="button"
+            >
+              <Text className="text-primary text-xs" style={{ fontFamily: fonts.semibold }}>
+                Abrir configuración de {guide.label}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {isOwner ? (
         confirmingRotate ? (

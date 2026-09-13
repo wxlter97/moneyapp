@@ -697,7 +697,7 @@ export interface MonthlySnapshot {
 // ---------------------------------------------------------------------------
 // Importación bancaria por correo (bandeja de revisión)
 // ---------------------------------------------------------------------------
-export type EmailImportStatus = 'pending' | 'confirmed' | 'rejected' | 'failed';
+export type EmailImportStatus = 'pending' | 'confirmed' | 'rejected' | 'failed' | 'auto_handled';
 
 /** Catálogo de bancos soportados por el importador -- para el selector de "banco" al crear una cartera. */
 export interface BankEmailSchema {
