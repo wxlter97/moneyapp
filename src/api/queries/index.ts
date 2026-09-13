@@ -17,6 +17,7 @@ import type {
   ConfirmEmailImportInput,
   EmailImportStatus,
   InstallmentPurchaseInput,
+  MyPlan,
   NotificationPreferences,
   RecurringExpenseInput,
   SetForwardBudgetInput,
@@ -325,6 +326,41 @@ export function useMarkAllNotificationsRead() {
       await qc.invalidateQueries({ queryKey: qk.notifications() });
       await qc.invalidateQueries({ queryKey: qk.unreadNotificationCount() });
     },
+  });
+}
+
+// --- pagos y suscripciones (por usuario, no por workspace) ------------
+/** Catálogo de planes + precios activos -- alimenta la pantalla de Pro sin
+ * hardcodear nombre, límites ni precio en el cliente. */
+export function usePlans() {
+  return useQuery({
+    queryKey: qk.plans(),
+    queryFn: res.plans.list,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Plan efectivo del usuario autenticado + su suscripción vigente. */
+export function useMyPlan() {
+  return useQuery({
+    queryKey: qk.myPlan(),
+    queryFn: res.billing.me,
+  });
+}
+
+export function useCheckout() {
+  return useMutation({
+    mutationFn: (input: res.CheckoutInput) => res.billing.checkout(input),
+  });
+}
+
+export function useCancelSubscription() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => res.billing.cancel(),
+    onSuccess: (subscription) => qc.setQueryData(qk.myPlan(), (prev: MyPlan | undefined) =>
+      prev ? { ...prev, subscription } : prev,
+    ),
   });
 }
 

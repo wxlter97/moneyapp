@@ -345,6 +345,10 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="pro"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="notification-center"
           options={{ presentation: 'modal', headerShown: false }}
         />

@@ -12,6 +12,8 @@ export const qk = {
   /** No van por workspace: es el historial del usuario, no de un presupuesto. */
   notifications: () => ['notifications'] as const,
   unreadNotificationCount: () => ['notifications', 'unread-count'] as const,
+  plans: () => ['plans'] as const,
+  myPlan: () => ['billing', 'me'] as const,
   /** No van por workspace: la invitación es a alguien que ni es miembro todavía. */
   myInvitations: () => ['invitations', 'mine'] as const,
   bankEmailSchemas: () => ['bank-email-schemas'] as const,
