@@ -1,22 +1,21 @@
 import { Linking, ScrollView, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 
+import { BrandMark } from '@/components/BrandMark';
 import { Card } from '@/components/ui/Card';
-import { Icon } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { haptics } from '@/lib/haptics';
-import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
 const CONTACT_EMAIL = 'me@wxlter.dev';
+const PORTFOLIO_URL = 'https://wxlter.dev';
 
 /**
  * Herramientas → Acerca de: qué es la app, quién la hace y en qué versión
  * está. Todo estático -- no pega al backend.
  */
 export default function AboutScreen() {
-  const colors = useColors();
   const version = Constants.expoConfig?.version ?? '—';
 
   return (
@@ -26,12 +25,7 @@ export default function AboutScreen() {
       <ScrollView contentContainerClassName="gap-4 py-2">
         <Card>
           <View className="items-center gap-3 py-2">
-            <View
-              className="h-16 w-16 items-center justify-center rounded-2xl"
-              style={{ backgroundColor: colors.primary }}
-            >
-              <Icon name="bolt" size={30} color="#FFFFFF" />
-            </View>
+            <BrandMark size={64} />
             <View className="items-center">
               <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
                 Budget
@@ -58,16 +52,28 @@ export default function AboutScreen() {
             </Text>
             .
           </Text>
-          <Text
-            className="text-primary mt-3 text-sm"
-            style={{ fontFamily: fonts.semibold }}
-            onPress={() => {
-              haptics.tap();
-              Linking.openURL(`mailto:${CONTACT_EMAIL}`);
-            }}
-          >
-            {CONTACT_EMAIL}
-          </Text>
+          <View className="mt-3 flex-row flex-wrap gap-x-4 gap-y-2">
+            <Text
+              className="text-primary text-sm"
+              style={{ fontFamily: fonts.semibold }}
+              onPress={() => {
+                haptics.tap();
+                Linking.openURL(`mailto:${CONTACT_EMAIL}`);
+              }}
+            >
+              {CONTACT_EMAIL}
+            </Text>
+            <Text
+              className="text-primary text-sm"
+              style={{ fontFamily: fonts.semibold }}
+              onPress={() => {
+                haptics.tap();
+                Linking.openURL(PORTFOLIO_URL);
+              }}
+            >
+              wxlter.dev
+            </Text>
+          </View>
         </Card>
 
         <Text className="text-text-muted self-center text-xs">
