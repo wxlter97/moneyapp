@@ -39,6 +39,9 @@ export interface User {
   profile_photo_url: string;
   /** true = puede entrar con "Continuar con Google" (se creó así, o lo vinculó después). */
   google_linked: boolean;
+  /** false en cuentas nuevas hasta que terminan o saltan el tour de bienvenida
+   * (`(app)/onboarding.tsx`); las cuentas de antes de este campo ya nacen en true. */
+  onboarding_completed: boolean;
   date_joined: ISODateTime;
 }
 

@@ -37,6 +37,9 @@ interface AuthState {
   signInWithGoogle: (idToken: string) => Promise<{ created: boolean }>;
   /** Vincula Google a la cuenta ya autenticada (Herramientas → Cuenta). */
   linkGoogleAccount: (idToken: string) => Promise<void>;
+  /** Termina o saltea el tour de bienvenida (`(app)/onboarding.tsx`) -- lo
+   * marca en el backend para que no dependa del dispositivo. */
+  markOnboardingCompleted: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -91,6 +94,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   linkGoogleAccount: async (idToken) => {
     const user = await authApi.linkGoogleAccount(idToken);
+    set({ user });
+  },
+
+  markOnboardingCompleted: async () => {
+    const user = await authApi.updateMe({ onboarding_completed: true });
     set({ user });
   },
 

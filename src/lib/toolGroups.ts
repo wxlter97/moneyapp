@@ -171,8 +171,14 @@ export const TOOL_GROUPS: ToolGroup[] = [
     id: 'more',
     icon: 'bolt',
     label: 'Más',
-    hint: 'Atajos y acerca de',
+    hint: 'Ayuda, atajos y acerca de',
     tools: [
+      {
+        icon: 'info',
+        label: 'Ayuda',
+        hint: 'Cómo funciona cada cosa, y repasar el tour de bienvenida',
+        onPress: () => router.push('/help'),
+      },
       {
         icon: 'bolt',
         label: 'Atajos',

@@ -95,6 +95,13 @@ export async function me(): Promise<User> {
   return data;
 }
 
+/** PATCH /auth/me/ — hoy sólo lo usa el tour de bienvenida
+ * (`(app)/onboarding.tsx`) para marcarse visto/saltado. */
+export async function updateMe(input: Partial<Pick<User, 'onboarding_completed'>>): Promise<User> {
+  const { data } = await api.patch<User>('/auth/me/', input, { skipWorkspace: true });
+  return data;
+}
+
 /**
  * Logout. simplejwt no tiene endpoint de logout cableado en las URLs del
  * backend; con ROTATE + BLACKLIST el refresh viejo queda inservible al
