@@ -6,6 +6,7 @@
  */
 import { api } from './client';
 import type {
+  AppNotification,
   Bank,
   BankEmailSchema,
   BudgetReport,
@@ -251,6 +252,24 @@ export const notificationPreferences = {
   update: (input: Partial<NotificationPreferences>) =>
     api
       .patch<NotificationPreferences>('/notification-preferences/', input, { skipWorkspace: true })
+      .then((r) => r.data),
+};
+
+// --- centro de notificaciones (sin X-Workspace-ID: es por usuario) ----
+export const notifications = {
+  /** Historial completo -- incluye resueltas, no sólo pendientes. */
+  list: () => fetchAll<AppNotification>('/notifications/', {}),
+  unreadCount: () =>
+    api
+      .get<{ count: number }>('/notifications/unread-count/', { skipWorkspace: true })
+      .then((r) => r.data.count),
+  markRead: (id: string) =>
+    api
+      .post<AppNotification>(`/notifications/${id}/read/`, {}, { skipWorkspace: true })
+      .then((r) => r.data),
+  markAllRead: () =>
+    api
+      .post<{ updated: number }>('/notifications/mark-all-read/', {}, { skipWorkspace: true })
       .then((r) => r.data),
 };
 

@@ -12,6 +12,7 @@ import {
   registerDevice,
   registerForPushNotificationsAsync,
 } from '@/lib/notifications';
+import { routeForNotification } from '@/lib/notificationRouting';
 import { useAuthStore } from '@/store/auth';
 import { useSecurityStore } from '@/store/security';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -69,7 +70,7 @@ export default function AppLayout() {
   useEffect(() => {
     return addNotificationTapListener((data) => {
       if (typeof data.workspace === 'string') setActiveId(data.workspace);
-      router.push(data.type === 'budget_threshold' ? '/budgets' : '/dashboard');
+      router.push(routeForNotification(data));
     });
   }, [setActiveId]);
 
@@ -345,6 +346,10 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="pro"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="notification-center"
           options={{ presentation: 'modal', headerShown: false }}
         />
       </Stack>
