@@ -10,7 +10,9 @@
  * `apps.notifications.models.Notification` del backend) -- siempre trae
  * `type` con el `kind` de la notificación.
  */
-export function routeForNotification(data: Record<string, unknown>): string {
+import type { Href } from 'expo-router';
+
+export function routeForNotification(data: Record<string, unknown>): Href {
   switch (data.type) {
     case 'budget_threshold':
       return '/budgets';
