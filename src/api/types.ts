@@ -41,6 +41,10 @@ export interface User {
   google_linked: boolean;
   /** true = pide un código además de la contraseña al iniciar sesión (ver Herramientas → Seguridad). */
   two_factor_enabled: boolean;
+  /** true = puede entrar con usuario/contraseña. false en una cuenta que
+   * entró solo por Google y todavía no le agregó una (ver Herramientas →
+   * Cuenta → Contraseña). */
+  has_password: boolean;
   /** false en cuentas nuevas hasta que terminan o saltan el tour de bienvenida
    * (`(app)/onboarding.tsx`); las cuentas de antes de este campo ya nacen en true. */
   onboarding_completed: boolean;

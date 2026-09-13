@@ -102,6 +102,24 @@ export async function updateMe(input: Partial<Pick<User, 'onboarding_completed'>
   return data;
 }
 
+/** POST /auth/password/change/ — cuenta con contraseña utilizable: la
+ * reemplaza probando la actual primero. Para una cuenta de solo Google, ver
+ * `setPassword`. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await api.post(
+    '/auth/password/change/',
+    { current_password: currentPassword, new_password: newPassword },
+    { skipWorkspace: true },
+  );
+}
+
+/** POST /auth/password/set/ — le agrega contraseña a una cuenta que hasta
+ * ahora solo entraba con "Continuar con Google" (`user.has_password ===
+ * false`), sin pedir una "actual" porque no hay ninguna. */
+export async function setPassword(newPassword: string): Promise<void> {
+  await api.post('/auth/password/set/', { new_password: newPassword }, { skipWorkspace: true });
+}
+
 /**
  * Logout. simplejwt no tiene endpoint de logout cableado en las URLs del
  * backend; con ROTATE + BLACKLIST el refresh viejo queda inservible al
