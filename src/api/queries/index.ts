@@ -286,6 +286,48 @@ export function useUpdateNotificationPreferences() {
   });
 }
 
+// --- centro de notificaciones (por usuario, no por workspace) ---------
+export function useNotifications() {
+  return useQuery({
+    queryKey: qk.notifications(),
+    queryFn: res.notifications.list,
+  });
+}
+
+/** El contador de la campanita del header -- se repolla cada minuto (única
+ * query de toda la app que lo hace) porque, a diferencia del resto, tiene
+ * que sentirse "vivo" sin depender de que el usuario dispare un refetch
+ * navegando a algún lado: vive montado en casi todas las pantallas. */
+export function useUnreadNotificationCount() {
+  return useQuery({
+    queryKey: qk.unreadNotificationCount(),
+    queryFn: res.notifications.unreadCount,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.notifications.markRead(id),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: qk.notifications() });
+      await qc.invalidateQueries({ queryKey: qk.unreadNotificationCount() });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => res.notifications.markAllRead(),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: qk.notifications() });
+      await qc.invalidateQueries({ queryKey: qk.unreadNotificationCount() });
+    },
+  });
+}
+
 // --- tokens personales (Atajos de Apple Shortcuts) --------------------
 export function usePersonalTokens() {
   const ws = useActiveWs();

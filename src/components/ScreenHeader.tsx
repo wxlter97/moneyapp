@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { NotificationBell } from './NotificationBell';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { Icon } from './ui/Icon';
 import { haptics } from '@/lib/haptics';
@@ -21,17 +22,20 @@ export function ScreenHeader({ title }: ScreenHeaderProps) {
     <View className="gap-1 pb-2 pt-1">
       <View className="flex-row items-start justify-between">
         <WorkspaceSwitcher />
-        <Pressable
-          onPress={() => {
-            haptics.tap();
-            signOut();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar sesión"
-          className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-60"
-        >
-          <Icon name="sign-out" size={16} color={colors.textMuted} />
-        </Pressable>
+        <View className="flex-row items-center gap-2">
+          <NotificationBell />
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              signOut();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar sesión"
+            className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-60"
+          >
+            <Icon name="sign-out" size={16} color={colors.textMuted} />
+          </Pressable>
+        </View>
       </View>
       {title ? (
         <Text

@@ -187,6 +187,35 @@ export interface NotificationPreferences {
   statement_due_days_before: number;
 }
 
+export type NotificationKind =
+  | 'invitation'
+  | 'email_import_pending'
+  | 'recurring_due'
+  | 'installment_due'
+  | 'budget_threshold'
+  | 'low_balance'
+  | 'statement_due';
+
+/** `resolved` = ya se resolvió desde su propia pantalla (invitación
+ * aceptada/rechazada, correo confirmado/rechazado) -- sigue en el
+ * historial, pero ya no pide acción. */
+export type NotificationStatus = 'unread' | 'read' | 'resolved';
+
+/** Nombrado `AppNotification` (no `Notification`) para no chocar con el
+ * tipo global `Notification` de la Web Notification API. */
+export interface AppNotification {
+  id: UUID;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  /** Mismo contrato `{type, workspace, ...}` que ya trae el payload de un
+   * push -- ver `routeForNotification` en `@/lib/notificationRouting`. */
+  data: Record<string, unknown>;
+  status: NotificationStatus;
+  workspace: UUID | null;
+  created_at: ISODateTime;
+}
+
 // ---------------------------------------------------------------------------
 // Carteras (Wallet) / patrimonio
 // ---------------------------------------------------------------------------
