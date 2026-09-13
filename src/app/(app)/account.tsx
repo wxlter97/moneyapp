@@ -1,6 +1,8 @@
 import { Image, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { GoogleSignInButton } from '@/components/GoogleSignInButton';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';
@@ -52,6 +54,21 @@ export default function AccountScreen() {
               </Text>
               <Text className="text-text-muted text-xs">{user.email}</Text>
             </View>
+          </View>
+        </Card>
+
+        <Card title="Contraseña">
+          <Text className="text-text-muted text-sm leading-5">
+            {user.has_password
+              ? 'Usá tu usuario y esta contraseña para entrar, además de (o en vez de) Google.'
+              : 'Tu cuenta entra solo con "Continuar con Google" -- todavía no tiene contraseña.'}
+          </Text>
+          <View className="mt-3">
+            <Button
+              label={user.has_password ? 'Cambiar contraseña' : 'Agregar contraseña'}
+              variant="ghost"
+              onPress={() => router.push('/password')}
+            />
           </View>
         </Card>
 
