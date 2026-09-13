@@ -77,6 +77,24 @@ export function useCreateWorkspace() {
   });
 }
 
+export function useRenameWorkspace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => res.workspaces.rename(id, name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workspaces() }),
+  });
+}
+
+/** Borra un presupuesto (no el activo necesariamente -- ver `workspaces.tsx`).
+ * Si borra el activo, quien llama debe elegir otro y actualizar el store. */
+export function useDeleteWorkspace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.workspaces.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workspaces() }),
+  });
+}
+
 export function useResetWorkspace() {
   const ws = useActiveWs();
   const qc = useQueryClient();

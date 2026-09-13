@@ -30,13 +30,19 @@ export const TOOL_GROUPS: ToolGroup[] = [
     id: 'account',
     icon: 'users',
     label: 'Cuenta',
-    hint: 'Perfil, seguridad, gente',
+    hint: 'Perfil, seguridad, gente, presupuestos',
     tools: [
       {
         icon: 'users',
         label: 'Perfil',
         hint: 'Tu cuenta y vincular Google',
         onPress: () => router.push('/account'),
+      },
+      {
+        icon: 'card',
+        label: 'Presupuestos',
+        hint: 'Ver, crear, renombrar o borrar los tuyos',
+        onPress: () => router.push('/workspaces'),
       },
       {
         icon: 'lock',
