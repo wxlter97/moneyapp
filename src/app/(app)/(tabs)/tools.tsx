@@ -5,7 +5,6 @@ import { useColorScheme } from 'nativewind';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Card } from '@/components/ui/Card';
-import { FadeInView } from '@/components/ui/FadeInView';
 import { Icon } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
 import { haptics } from '@/lib/haptics';
@@ -27,7 +26,13 @@ const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
 const MUTED_ACCENTS = ACCENTS.filter((a) => a.id !== 'ember');
 const EMBER_ACCENT = ACCENTS.find((a) => a.id === 'ember');
 
-function AccentSwatch({
+// Círculos de color solos, sin nombre, eran difíciles de distinguir entre sí
+// (paleta "tierra": a propósito de baja saturación, ver `theme/accents.ts`)
+// y sin ningún orden aparente -- esta fila los muestra como una lista
+// vertical de opciones (punto de color + nombre + check), mismo lenguaje que
+// cualquier selector de una sola opción, en el mismo orden en que se definen
+// (claro → oscuro, ver `ACCENTS`).
+function AccentOption({
   accent,
   scheme,
   active,
@@ -38,6 +43,7 @@ function AccentSwatch({
   active: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={() => {
@@ -46,10 +52,17 @@ function AccentSwatch({
       }}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      accessibilityLabel={accent.label}
-      style={{ backgroundColor: accent[scheme].primary }}
-      className={`h-9 w-9 rounded-full border-2 ${active ? 'border-text' : 'border-transparent'}`}
-    />
+      className="w-1/2 flex-row items-center gap-2 py-2 pr-2 active:opacity-60"
+    >
+      <View
+        className="h-6 w-6 rounded-full"
+        style={{ backgroundColor: accent[scheme].primary }}
+      />
+      <Text className="text-text flex-1 text-sm" numberOfLines={1}>
+        {accent.label}
+      </Text>
+      {active ? <Icon name="check" size={14} color={colors.text} /> : null}
+    </Pressable>
   );
 }
 
@@ -74,30 +87,32 @@ export default function ToolsScreen() {
         <ScreenHeader title="Herramientas" />
 
         <Card title="Gestión">
+          {/* Antes cada tile entraba con un fundido escalonado (`FadeInView
+              index={i}`) -- Herramientas es una pestaña, se revisita todo el
+              tiempo, así que el "goteo" se repetía en cada visita en vez de
+              verse una sola vez. Se muestran directo. */}
           <View className="-my-1 flex-row flex-wrap">
-            {TOOL_GROUPS.map((group, i) => (
+            {TOOL_GROUPS.map((group) => (
               <View key={group.id} className="w-1/2 p-1">
-                <FadeInView index={i}>
-                  <Pressable
-                    onPress={() => {
-                      haptics.tap();
-                      router.push(`/tools/${group.id}`);
-                    }}
-                    accessibilityRole="button"
-                    className="rounded-3xl bg-surface-2 p-3 active:opacity-60"
+                <Pressable
+                  onPress={() => {
+                    haptics.tap();
+                    router.push(`/tools/${group.id}`);
+                  }}
+                  accessibilityRole="button"
+                  className="rounded-3xl bg-surface-2 p-3 active:opacity-60"
+                >
+                  <Icon name={group.icon} size={20} color={colors.text} />
+                  <Text
+                    className="text-text mt-2.5 text-sm"
+                    style={{ fontFamily: fonts.semibold }}
                   >
-                    <Icon name={group.icon} size={20} color={colors.text} />
-                    <Text
-                      className="text-text mt-2.5 text-sm"
-                      style={{ fontFamily: fonts.semibold }}
-                    >
-                      {group.label}
-                    </Text>
-                    <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
-                      {group.hint}
-                    </Text>
-                  </Pressable>
-                </FadeInView>
+                    {group.label}
+                  </Text>
+                  <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
+                    {group.hint}
+                  </Text>
+                </Pressable>
               </View>
             ))}
           </View>
@@ -106,10 +121,10 @@ export default function ToolsScreen() {
         <Card title="Apariencia">
           <Segmented value={themePref} onChange={setThemePref} options={THEME_OPTIONS} />
 
-          <Text className="text-text-muted mb-2 mt-4 text-xs">Acento</Text>
-          <View className="flex-row flex-wrap gap-3">
+          <Text className="text-text-muted mb-1 mt-4 text-xs">Acento</Text>
+          <View className="-mb-2 flex-row flex-wrap">
             {MUTED_ACCENTS.map((accent) => (
-              <AccentSwatch
+              <AccentOption
                 key={accent.id}
                 accent={accent}
                 scheme={scheme}
@@ -120,22 +135,21 @@ export default function ToolsScreen() {
           </View>
 
           {/* "Brasa" es, a propósito, el único acento vivo -- se separa del
-              resto para que elegirlo sea una decisión consciente, no una
-              opción más entre las tonalidades tierra. */}
+              resto (misma fila que el resto los confundiría con "una
+              tonalidad tierra más") para que elegirlo sea una decisión
+              consciente, con su propia explicación al lado. */}
           {EMBER_ACCENT ? (
             <>
               <View className="my-3 h-px bg-border/60" />
-              <View className="flex-row items-center gap-3">
-                <AccentSwatch
-                  accent={EMBER_ACCENT}
-                  scheme={scheme}
-                  active={EMBER_ACCENT.id === accentId}
-                  onPress={() => setAccent(EMBER_ACCENT.id)}
-                />
-                <Text className="text-text-muted flex-1 text-xs leading-4">
-                  Vivo -- a propósito, no combina con el resto de la paleta.
-                </Text>
-              </View>
+              <AccentOption
+                accent={EMBER_ACCENT}
+                scheme={scheme}
+                active={EMBER_ACCENT.id === accentId}
+                onPress={() => setAccent(EMBER_ACCENT.id)}
+              />
+              <Text className="text-text-muted -mt-1 text-xs leading-4">
+                Vivo -- a propósito, no combina con el resto de la paleta.
+              </Text>
             </>
           ) : null}
         </Card>

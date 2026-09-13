@@ -56,23 +56,33 @@ export default function OverviewScreen() {
     <View className="flex-1 bg-bg">
       <SectionHeader
         title="Vista general"
-        subtitle={
+        right={
           <Pressable
             onPress={() => {
               haptics.tap();
               router.push('/net-worth-history');
             }}
+            className="rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
             accessibilityRole="button"
             accessibilityLabel="Ver historial de patrimonio neto"
-            className="w-full items-center active:opacity-70"
           >
+            <Text className="text-text text-sm font-semibold">Historial</Text>
+          </Pressable>
+        }
+        subtitle={
+          // El monto ya no es tocable: era el elemento más grande de toda la
+          // pantalla y ocupaba casi todo el header, así que cualquier toque
+          // cerca del centro (p. ej. buscando el switch de mes debajo)
+          // mandaba a Historial por error. Ese acceso ahora vive en el botón
+          // de arriba, chico y a propósito.
+          <View className="w-full items-center">
             <Money
               value={netWorth.data?.net}
               currency={currency}
               hero
               className="text-center text-[52px] leading-[56px]"
             />
-          </Pressable>
+          </View>
         }
       >
         <SubTabs
@@ -298,7 +308,7 @@ function ScheduledCard({
   if (items.length === 0) return null;
 
   return (
-    <Card title="Programado" animated index={0}>
+    <Card title="Programado">
       {items.map((it, i) => (
         <Pressable
           key={`${it.kind}-${it.source_id}-${it.date}`}
@@ -648,8 +658,13 @@ function ListaTab({
           // Mismo criterio que el total del mes: solo suma lo que ya está en
           // la moneda base, para no mezclar montos de otras carteras.
           const dayNet = summarizeByType(day.data.filter((t) => t.currency === currency)).net;
+          // Antes cada día entraba con un fundido escalonado (`FadeInView
+          // index={di}`) -- se sentía bien la primera vez, pero esta lista
+          // se re-renderiza todo el tiempo (cambiar de mes, filtrar, volver
+          // de otra pestaña), así que terminaba "titilando" en vez de verse
+          // pulido. Se muestra directo.
           return (
-            <FadeInView key={day.date} index={di}>
+            <View key={day.date}>
               <View className="flex-row items-baseline justify-between pb-1 pt-3">
                 <Text className="text-text-muted text-xs font-semibold uppercase tracking-wide">
                   {formatDayHeader(day.date)}
@@ -676,7 +691,7 @@ function ListaTab({
                   </View>
                 ))}
               </View>
-            </FadeInView>
+            </View>
           );
         })
       )}

@@ -1,7 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { FadeInView } from '@/components/ui/FadeInView';
 import { Icon } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
@@ -21,34 +20,35 @@ export default function ToolGroupScreen() {
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title={group?.label ?? 'Herramientas'} />
       <ScrollView contentContainerClassName="py-2">
+        {/* Sin fundido escalonado por tile (`FadeInView`): esta carpeta se
+            entra y se sale todo el tiempo, así que el goteo se repetía cada
+            vez en vez de verse una sola vez. */}
         <View className="-my-1 flex-row flex-wrap">
-          {(group?.tools ?? []).map((tool, i) => (
+          {(group?.tools ?? []).map((tool) => (
             <View key={tool.label} className="w-1/2 p-1">
-              <FadeInView index={i}>
-                <Pressable
-                  onPress={() => {
-                    haptics.tap();
-                    tool.onPress();
-                  }}
-                  accessibilityRole="button"
-                  className="rounded-3xl bg-surface-2 p-3 active:opacity-60"
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  tool.onPress();
+                }}
+                accessibilityRole="button"
+                className="rounded-3xl bg-surface-2 p-3 active:opacity-60"
+              >
+                <Icon
+                  name={tool.icon}
+                  size={20}
+                  color={tool.destructive ? colors.expense : colors.text}
+                />
+                <Text
+                  className="text-text mt-2.5 text-sm"
+                  style={{ fontFamily: fonts.semibold }}
                 >
-                  <Icon
-                    name={tool.icon}
-                    size={20}
-                    color={tool.destructive ? colors.expense : colors.text}
-                  />
-                  <Text
-                    className="text-text mt-2.5 text-sm"
-                    style={{ fontFamily: fonts.semibold }}
-                  >
-                    {tool.label}
-                  </Text>
-                  <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
-                    {tool.hint}
-                  </Text>
-                </Pressable>
-              </FadeInView>
+                  {tool.label}
+                </Text>
+                <Text className="text-text-muted mt-0.5 text-xs" numberOfLines={1}>
+                  {tool.hint}
+                </Text>
+              </Pressable>
             </View>
           ))}
         </View>

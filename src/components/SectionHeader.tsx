@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FadeInView } from './ui/FadeInView';
 import { GlassSurface } from './ui/GlassSurface';
 import { ScreenHeader } from './ScreenHeader';
 
@@ -39,19 +38,21 @@ export function SectionHeader({ title, subtitle, right, children }: SectionHeade
         style={{ paddingTop: insets.top + 8 }}
       >
         <ScreenHeader />
-        <FadeInView>
-          <View className="flex-row items-center justify-between pt-1">
-            {title ? (
-              <Text className="text-text-muted text-[13px] font-semibold uppercase tracking-wide">
-                {title}
-              </Text>
-            ) : (
-              <View />
-            )}
-            {right}
-          </View>
-          {subtitle ? <View className="mt-1">{subtitle}</View> : null}
-        </FadeInView>
+        {/* Antes entraba con un fundido (`FadeInView`) -- es la cabecera de
+            CASI todas las pantallas, así que se repetía en cada navegación
+            (cambiar de pestaña, abrir un modal) en vez de verse una sola
+            vez: más titileo que pulido. Se muestra directo. */}
+        <View className="flex-row items-center justify-between pt-1">
+          {title ? (
+            <Text className="text-text-muted text-[13px] font-semibold uppercase tracking-wide">
+              {title}
+            </Text>
+          ) : (
+            <View />
+          )}
+          {right}
+        </View>
+        {subtitle ? <View className="mt-1">{subtitle}</View> : null}
         {children ? <View className="mt-4">{children}</View> : null}
       </View>
     </GlassSurface>
