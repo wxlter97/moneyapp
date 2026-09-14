@@ -126,13 +126,11 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     setTagNames((t.tags ?? []).map((tag) => tag.name));
     setInBudget(t.counts_toward_budget);
     setPrefilled(true);
-    // La nota vive arriba, siempre a la vista -- no cuenta para decidir si
-    // "Más detalles" arranca abierto (ver el bloque de más abajo).
+    // La nota y el toggle de presupuesto viven arriba, siempre a la vista --
+    // no cuentan para decidir si "Más detalles" arranca abierto (ver el
+    // bloque de más abajo).
     const hasExtraDetails =
-      (t.tags?.length ?? 0) > 0 ||
-      t.has_receipt ||
-      !t.counts_toward_budget ||
-      (t.loyalty_earnings?.length ?? 0) > 0;
+      (t.tags?.length ?? 0) > 0 || t.has_receipt || (t.loyalty_earnings?.length ?? 0) > 0;
     if (hasExtraDetails) setDetailsOpen(true);
   }, [editing, prefilled, existing.data, categoriesQ.data]);
 
@@ -542,10 +540,31 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
 
         <DateField label="Fecha" value={date} onChange={setDate} error={fields.date} />
 
+        {showBudgetSwitch ? (
+          <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
+            <View className="flex-1 pr-2">
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                Cuenta para el presupuesto
+              </Text>
+              {/* Una sola línea fija en vez de una que cambia según el
+                  estado del switch -- misma info, sin pedir releerla
+                  en cada toque. */}
+              <Text className="text-text-muted text-xs">Resta del presupuesto si está activo.</Text>
+            </View>
+            <Switch
+              value={inBudget}
+              onValueChange={setInBudget}
+              trackColor={{ true: colors.primary, false: colors.surface2 }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        ) : null}
+
         {/* Con esto el alta por defecto queda en monto + nota + categoría +
-            cartera + fecha -- etiquetas, recibo y el toggle de presupuesto
-            (opcionales en la inmensa mayoría de los movimientos) quedan un
-            toque más allá en vez de siempre a la vista. */}
+            cartera + fecha + el toggle de presupuesto (cuando aplica) --
+            etiquetas y recibo (opcionales en la inmensa mayoría de los
+            movimientos) quedan un toque más allá en vez de siempre a la
+            vista. */}
         <Pressable
           onPress={() => {
             haptics.tap();
@@ -576,26 +595,6 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
                 pendingFile={pendingReceipt}
                 onPendingFileChange={setPendingReceipt}
               />
-
-              {showBudgetSwitch ? (
-                <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
-                  <View className="flex-1 pr-2">
-                    <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                      Cuenta para el presupuesto
-                    </Text>
-                    {/* Una sola línea fija en vez de una que cambia según el
-                        estado del switch -- misma info, sin pedir releerla
-                        en cada toque. */}
-                    <Text className="text-text-muted text-xs">Resta del presupuesto si está activo.</Text>
-                  </View>
-                  <Switch
-                    value={inBudget}
-                    onValueChange={setInBudget}
-                    trackColor={{ true: colors.primary, false: colors.surface2 }}
-                    thumbColor="#FFFFFF"
-                  />
-                </View>
-              ) : null}
 
               {editing && (existing.data?.loyalty_earnings?.length ?? 0) > 0 ? (
                 <View className="gap-1 rounded-xl bg-surface-2 px-3 py-2.5">
