@@ -16,8 +16,6 @@ const WARNING_THRESHOLD = 0.8;
 interface BudgetProgressRowProps {
   row: BudgetRow;
   currency?: string;
-  /** Muestra la línea de provisión acumulada (pantalla de Presupuestos). */
-  showProvision?: boolean;
   /** Rango del período del reporte (`period_start`/`period_end`): si se
    * pasan, tocar la fila lleva a los movimientos de esa categoría en ese
    * rango (con opción de ver todo el histórico). */
@@ -28,7 +26,6 @@ interface BudgetProgressRowProps {
 export function BudgetProgressRow({
   row,
   currency = 'USD',
-  showProvision = false,
   from,
   to,
 }: BudgetProgressRowProps) {
@@ -76,7 +73,7 @@ export function BudgetProgressRow({
 
       <ProgressBar progress={over ? 1 : ratio} state={state} />
 
-      {showProvision && provision > 0 ? (
+      {provision > 0 ? (
         <Text className="text-income text-[11px]">
           + <Money value={provision} currency={currency} tone="income" /> de provisión acumulada
         </Text>

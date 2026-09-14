@@ -98,14 +98,22 @@
 
 ## Fase 2 — Core UX
 
-- [ ] **Corrección: no son tan idénticas como dice el audit.** Confirmado en `(tabs)/budgets.tsx`:
-      "Restante" muestra el `Ring` grande + la lista de grupos; "Información" reemplaza el ring
-      por una card "Total del período" (presupuestado/gastado/disponible) y le agrega
-      `showProvision` a cada `GroupCard` (línea de provisión acumulada, ausente en "Restante").
-      La lista de categorías de abajo sí se repite igual entre ambas. Pendiente real, más acotado
-      que "fusionar en un toggle": decidir si esa diferencia (ring visual vs. desglose numérico +
-      provisión) amerita 2 tabs o si cabe todo en una sola vista — no es un bug, es una decisión
-      de producto.
+- [x] **Fusionadas "Restante"/"Información" en una sola vista.** ✅ Resuelto en
+      `(tabs)/budgets.tsx`. Se decidió con una maqueta comparativa (mismos tokens/componentes
+      reales, datos de ejemplo) antes de tocar código — ver el hallazgo de que no eran tan
+      idénticas como decía el audit: "Restante" tenía el `Ring`, "Información" la card "Total del
+      período" + la provisión acumulada por fila.
+  - Se eliminaron los `SubTabs` y el estado `tab`. La cabecera mantiene el framing "te
+    queda/te pasaste" (era el de "Restante") como número protagonista.
+  - El contenido ahora es continuo, sin nada oculto detrás de una pestaña: `Ring` → card
+    "Total del período" (presupuestado/gastado/disponible, antes solo en "Información") →
+    las 2 tarjetas de grupo, con la línea de provisión acumulada siempre visible cuando aplica
+    (antes solo en "Información").
+  - Limpieza de paso: `showProvision` era un prop siempre en `true` desde el único call site —
+    se sacó de `GroupCard` y `BudgetProgressRow` en vez de dejarlo como bandera muerta.
+  - Sin test nuevo: ninguna pantalla de `src/app` tiene test en este repo (convención existente,
+    la cobertura vive en `components`/`lib`/`store`) — se validó con `tsc --noEmit` limpio y el
+    suite completo (180/180) sin regresiones.
 - [x] **Corrección: el borrado ya tiene confirmación/undo en los dos puntos de entrada — no hay
       bug.** El audit no lo probó "para no tocar datos reales"; en código ya está bien resuelto:
   - Swipe-to-delete en la lista del dashboard (`(tabs)/dashboard.tsx:534`, `onSwipeDelete`):

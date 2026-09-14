@@ -7,7 +7,6 @@ import type { BudgetGroup, ISODate } from '@/api/types';
 import { BudgetProgressRow } from '@/components/BudgetProgressRow';
 import { PeriodSwitcher } from '@/components/PeriodSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
-import { SubTabs } from '@/components/SubTabs';
 import { Card } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
@@ -19,11 +18,8 @@ import { periodStart } from '@/lib/periods';
 import { toNumber } from '@/lib/money';
 import { useWorkspaceStore } from '@/store/workspace';
 
-type Tab = 'restante' | 'informacion';
-
 export default function BudgetScreen() {
   const colors = useColors();
-  const [tab, setTab] = useState<Tab>('restante');
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
   const budgetPeriod = activeWorkspace?.budget_period ?? 'monthly';
@@ -64,35 +60,21 @@ export default function BudgetScreen() {
         subtitle={
           <View>
             {/* Tamaño "hero" (52px) reservado para el patrimonio neto en
-                Vista general -- acá va una escala secundaria: en la pestaña
-                "Restante" este mismo número se repite, más grande, dentro
-                del anillo de abajo, así que este texto no necesita competir
-                con él. */}
+                Vista general -- acá va una escala secundaria: este mismo
+                número se repite, más grande, dentro del anillo de abajo, así
+                que este texto no necesita competir con él. */}
             <Money
-              value={tab === 'restante' ? Math.abs(remaining) : spent}
+              value={Math.abs(remaining)}
               currency={currency}
               className="text-[34px] font-bold leading-[38px]"
             />
             <Text className="text-text-muted text-sm">
-              {tab === 'restante'
-                ? over
-                  ? 'te pasaste'
-                  : 'te queda'
-                : 'gastado hasta la fecha'}{' '}
-              de <Money value={budgeted} currency={currency} tone="muted" />
+              {over ? 'te pasaste' : 'te queda'} de{' '}
+              <Money value={budgeted} currency={currency} tone="muted" />
             </Text>
           </View>
         }
-      >
-        <SubTabs
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: 'restante', label: 'Restante' },
-            { value: 'informacion', label: 'Información' },
-          ]}
-        />
-      </SectionHeader>
+      />
 
       <ScrollView
         contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
@@ -109,7 +91,7 @@ export default function BudgetScreen() {
             title="Sin presupuesto este período"
             hint="Toca «Ajustar» arriba para fijar un monto por grupo."
           />
-        ) : tab === 'restante' ? (
+        ) : (
           <>
             <View className="items-center py-2">
               <Ring
@@ -129,18 +111,7 @@ export default function BudgetScreen() {
                 </Text>
               </Ring>
             </View>
-            {budget.data.groups.map((g) => (
-              <GroupCard
-                key={g.group ?? g.group_name}
-                group={g}
-                currency={currency}
-                from={budget.data!.period_start}
-                to={budget.data!.period_end}
-              />
-            ))}
-          </>
-        ) : (
-          <>
+
             <Card title="Total del período">
               <View className="flex-row justify-between">
                 <Labeled label="Presupuestado">
@@ -154,6 +125,7 @@ export default function BudgetScreen() {
                 </Labeled>
               </View>
             </Card>
+
             {budget.data.groups.map((g) => (
               <GroupCard
                 key={g.group ?? g.group_name}
@@ -161,7 +133,6 @@ export default function BudgetScreen() {
                 currency={currency}
                 from={budget.data!.period_start}
                 to={budget.data!.period_end}
-                showProvision
               />
             ))}
           </>
@@ -176,13 +147,11 @@ function GroupCard({
   currency,
   from,
   to,
-  showProvision = false,
 }: {
   group: BudgetGroup;
   currency: string;
   from: ISODate;
   to: ISODate;
-  showProvision?: boolean;
 }) {
   const spent = toNumber(group.spent);
   const budgeted = toNumber(group.budgeted);
@@ -203,7 +172,7 @@ function GroupCard({
       {group.rows.map((row, i) => (
         <View key={row.category}>
           {i > 0 ? <View className="h-px bg-border/30" /> : null}
-          <BudgetProgressRow row={row} currency={currency} showProvision={showProvision} from={from} to={to} />
+          <BudgetProgressRow row={row} currency={currency} from={from} to={to} />
         </View>
       ))}
     </Card>
