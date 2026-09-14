@@ -105,6 +105,10 @@ export interface TwoFactorVerifyResponse extends TokenPairResponse {
 // ---------------------------------------------------------------------------
 export type WorkspaceRole = 'owner' | 'member' | '';
 
+/** Cadencia de `CategoryBudget` -- una sola por workspace, no por categoría
+ * (ver `apps.common.periods` en el backend). */
+export type BudgetPeriod = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+
 export interface Workspace {
   id: UUID;
   name: string;
@@ -112,6 +116,8 @@ export interface Workspace {
   member_count: number;
   /** Moneda en la que se expresan los totales agregados (patrimonio, presupuesto, flujo). */
   base_currency: string;
+  /** Cadencia del presupuesto (diario/semanal/quincenal/mensual/anual). */
+  budget_period: BudgetPeriod;
   inbound_token: string;
   inbound_email: string;
   created_at: ISODateTime;
@@ -480,28 +486,31 @@ export interface CategoryBudget {
   id: UUID;
   category: UUID;
   amount: Money;
-  month: number;
-  year: number;
+  /** Inicio del período (ver `Workspace.budget_period`) -- cualquier fecha
+   * dentro del período deseado sirve al escribir, el backend la ajusta al
+   * inicio real (ver `CategoryBudgetInput`). */
+  period_start: ISODate;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 }
 
-/** Payload de alta/edición de presupuesto de categoría. */
+/** Payload de alta/edición de presupuesto de categoría. `period_start`
+ * puede ser cualquier fecha dentro del período deseado -- no hace falta
+ * calcular el inicio exacto, el backend la ajusta según `budget_period`. */
 export interface CategoryBudgetInput {
   category: UUID;
   amount: Money;
-  month: number;
-  year: number;
+  period_start: ISODate;
 }
 
-/** Input de `categoryBudgets.setForward`: fija el monto para ese mes y lo
- * propaga a los meses futuros hasta el primero que ya haya sido
+/** Input de `categoryBudgets.setForward`: fija el monto para ese período y
+ * lo propaga a los períodos futuros hasta el primero que ya haya sido
  * personalizado con otro valor (ver docstring del endpoint). */
 export type SetForwardBudgetInput = CategoryBudgetInput;
 
 export interface SetForwardBudgetResult extends CategoryBudget {
-  /** Cuántos meses (el editado + los propagados) quedaron con el nuevo monto. */
-  months_touched: number;
+  /** Cuántos períodos (el editado + los propagados) quedaron con el nuevo monto. */
+  periods_touched: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -804,8 +813,8 @@ export interface BudgetGroup {
 }
 
 export interface BudgetReport {
-  year: number;
-  month: number;
+  period_start: ISODate;
+  period_end: ISODate;
   base_currency: string;
   rows: BudgetRow[];
   groups: BudgetGroup[];
