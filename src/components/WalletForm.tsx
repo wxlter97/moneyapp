@@ -36,7 +36,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
 import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
-import { LoadingState } from '@/components/ui/states';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { muteColor } from '@/theme/accents';
@@ -362,6 +362,22 @@ export function WalletForm({ walletId }: WalletFormProps) {
   }
 
   if (editing && existing.isLoading) return <LoadingState />;
+  if (editing && existing.isError) {
+    return <ErrorState error={existing.error} onRetry={existing.refetch} />;
+  }
+  // `!prefilled`, aparte de `isLoading`: entre que la query resuelve y el
+  // `useEffect` de arriba corre `setKind`/`setPurpose`/etc. (los efectos
+  // corren después de pintar) hay un render de tránsito donde el formulario
+  // ya no está "cargando" pero todavía muestra los defaults de cartera
+  // nueva -- ahí es donde "Efectivo" se veía con Subtipo "Banco" (hallazgo
+  // de la auditoría de producto, §11: confirmado contra el modelo, no era
+  // un bug de datos -- `wallet.kind` llega bien, es una carrera de un solo
+  // frame entre el fetch y el efecto que lo copia a estado local). Se
+  // chequea después de `isError` a propósito: si la carga falla, `prefilled`
+  // nunca se vuelve `true` (el efecto se corta antes con `!existing.data`),
+  // así que este chequeo solo, sin el de arriba, dejaría el formulario
+  // pegado en "Cargando…" para siempre en vez de mostrar el error.
+  if (editing && !prefilled) return <LoadingState />;
 
   const amountLabel = isDebt
     ? debtOwedToUs

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 
 import type { NetWorthBreakdown } from '@/api/types';
 import { PURPOSE_LABEL, WALLET_PURPOSES } from '@/api/types';
@@ -26,13 +26,19 @@ interface Page {
 export function NetWorthPager({
   data,
   currency,
+  maxWidth = MAX_CONTENT_WIDTH,
 }: {
   data: NetWorthBreakdown;
   currency: string;
+  /** Ancho máximo de la columna que lo contiene -- por defecto el fijo de
+   * casi toda la app, pero una pantalla que se ensancha en desktop (ver
+   * `wallets.tsx`) tiene que pasar el mismo ancho acá, o esta card queda
+   * más angosta que el resto del contenido debajo. */
+  maxWidth?: number;
 }) {
   const colors = useColors();
   const { width } = useWindowDimensions();
-  const innerWidth = Math.min(width, MAX_CONTENT_WIDTH) - 32; // menos el px-4 de la pantalla
+  const innerWidth = Math.min(width, maxWidth) - 32; // menos el px-4 de la pantalla
   const [index, setIndex] = useState(0);
   const scroller = useRef<ScrollView>(null);
 
@@ -108,9 +114,22 @@ export function NetWorthPager({
 
       {pages.length > 1 ? (
         <View className="mt-2 flex-row justify-center gap-1.5">
+          {/* En touch (mobile) el swipe ya cambia de página -- el punto es
+              solo indicador. En web (mouse/teclado, sin swipe) es la única
+              forma de saltar a una página sin arrastrar, así que acá sí
+              necesita ser interactivo (hallazgo de la auditoría de
+              producto: "no responde a click en los dots ni a drag"). */}
           {pages.map((p, i) => (
-            <View
+            <Pressable
               key={p.key}
+              onPress={() => {
+                setIndex(i);
+                scroller.current?.scrollTo({ x: i * innerWidth, animated: true });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Ver ${p.title}`}
+              accessibilityState={{ selected: i === index }}
+              hitSlop={8}
               className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-primary' : 'bg-border'}`}
             />
           ))}

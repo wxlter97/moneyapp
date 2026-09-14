@@ -175,7 +175,7 @@ export default function BudgetEditScreen() {
   const isOwner = activeWorkspace?.role === 'owner';
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title={`Presupuesto · ${periodLabel(start, budgetPeriod)}`} />
       {isOwner ? (
         <BudgetPeriodRow workspaceId={activeWorkspace!.id} current={budgetPeriod} />

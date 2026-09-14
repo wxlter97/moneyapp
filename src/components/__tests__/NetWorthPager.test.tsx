@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { NetWorthBreakdown } from '@/api/types';
 import { NetWorthPager } from '@/components/NetWorthPager';
@@ -65,5 +65,24 @@ describe('NetWorthPager', () => {
     };
     await render(<NetWorthPager data={noDebt} currency="USD" />);
     expect(screen.queryByText('Carteras de deuda')).toBeNull();
+  });
+
+  // Hallazgo de la auditoría de producto: en desktop (mouse/teclado, sin
+  // swipe) los puntos de paginación no respondían a click -- eran `View`,
+  // no `Pressable`. Ahora son el único control operable sin arrastrar.
+  describe('puntos de paginación — operables sin swipe', () => {
+    it('cada punto es un botón accesible, marcado como seleccionado el de la página activa', async () => {
+      await render(<NetWorthPager data={breakdown} currency="USD" />);
+      const first = screen.getByLabelText('Ver Valor neto total');
+      expect(first.props.accessibilityState).toEqual({ selected: true });
+      const second = screen.getByLabelText('Ver Todas las carteras (bruto)');
+      expect(second.props.accessibilityState).toEqual({ selected: false });
+    });
+
+    it('tocar un punto que no es el activo dispara la navegación a esa página', async () => {
+      await render(<NetWorthPager data={breakdown} currency="USD" />);
+      const target = screen.getByLabelText('Ver Todas las carteras (bruto)');
+      expect(() => fireEvent.press(target)).not.toThrow();
+    });
   });
 });

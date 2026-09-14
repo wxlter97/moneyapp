@@ -1,17 +1,18 @@
 import { useMemo } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { useTransactions, useWallet } from '@/api/queries';
 import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
+import { DayHeader } from '@/components/DayHeader';
 import { TransactionRow } from '@/components/TransactionRow';
 import { Icon } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Screen } from '@/components/ui/Screen';
-import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { TransactionListSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState, ErrorState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
-import { formatDayHeader } from '@/lib/date';
 import { balanceAfterEach, groupByDay, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { toNumber } from '@/lib/money';
 import { useColors } from '@/theme';
@@ -98,7 +99,10 @@ export default function WalletTransactionsScreen() {
       />
       <ScrollView contentContainerClassName="gap-3 py-2" refreshControl={refresh}>
         {query.isLoading ? (
-          <LoadingState />
+          <>
+            <TransactionListSkeleton />
+            <TransactionListSkeleton rows={2} />
+          </>
         ) : query.isError ? (
           <ErrorState error={query.error} onRetry={query.refetch} />
         ) : items.length === 0 ? (
@@ -106,9 +110,7 @@ export default function WalletTransactionsScreen() {
         ) : (
           days.map((day) => (
             <View key={day.date}>
-              <Text className="text-text-muted pb-1 pt-3 text-xs font-semibold uppercase tracking-wide">
-                {formatDayHeader(day.date)}
-              </Text>
+              <DayHeader date={day.date} />
               <View className="overflow-hidden rounded-3xl border border-border/60 bg-surface/95 px-4">
                 {day.data.map((item, i) => (
                   <View key={item.id}>

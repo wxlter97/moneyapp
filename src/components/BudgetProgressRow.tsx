@@ -2,16 +2,14 @@ import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import type { BudgetRow, ISODate } from '@/api/types';
+import { BudgetMeter } from '@/components/ui/BudgetMeter';
 import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
-import { ProgressBar, type ProgressState } from '@/components/ui/ProgressBar';
+import { budgetState } from '@/lib/budgetState';
 import { haptics } from '@/lib/haptics';
 import { toNumber } from '@/lib/money';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
-
-/** A partir de qué fracción del presupuesto se avisa "cerca del límite". */
-const WARNING_THRESHOLD = 0.8;
 
 interface BudgetProgressRowProps {
   row: BudgetRow;
@@ -33,21 +31,16 @@ export function BudgetProgressRow({
   const budgeted = toNumber(row.budgeted);
   const spent = toNumber(row.spent);
   const provision = toNumber(row.provision);
-  // Gastar sin tener nada presupuestado (ej. "Miscelánea") es tan sobregiro
-  // como pasarse de un presupuesto que sí existe -- antes quedaba afuera
-  // porque `budgeted > 0` lo excluía del todo.
-  const noBudget = budgeted <= 0 && spent > 0;
-  // `>=` (no `>`): llegar exacto al 100% ya es "sin margen", no "todo bien".
-  const over = noBudget || (budgeted > 0 && spent >= budgeted);
-  const ratio = budgeted > 0 ? spent / budgeted : spent > 0 ? 1 : 0;
-  const warning = !over && ratio >= WARNING_THRESHOLD;
-  const state: ProgressState = over ? 'over' : warning ? 'warning' : 'ok';
-  const moneyTone = over ? 'expense' : warning ? 'warning' : 'muted';
+  const { state, noBudget } = budgetState(spent, budgeted);
+  const moneyTone = state === 'over' ? 'expense' : state === 'warning' ? 'warning' : 'muted';
 
   const content = (
     <View className="gap-1.5 py-3">
-      <View className="flex-row items-center justify-between">
-        <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }} numberOfLines={1}>
+      {/* `flex-wrap`, sin `numberOfLines`: un nombre de categoría largo se
+          envuelve a una segunda línea en vez de recortarse -- rediseño
+          mobile de la Fase 3, no una compresión del layout de desktop. */}
+      <View className="flex-row flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+        <Text className="text-text min-w-0 flex-1 text-sm" style={{ fontFamily: fonts.semibold }}>
           {row.category_name ?? 'Sin categoría'}
         </Text>
         <View className="flex-row items-center gap-1">
@@ -71,7 +64,7 @@ export function BudgetProgressRow({
         </View>
       </View>
 
-      <ProgressBar progress={over ? 1 : ratio} state={state} />
+      <BudgetMeter spent={spent} budgeted={budgeted} currency={currency} size="sm" />
 
       {provision > 0 ? (
         <Text className="text-income text-[11px]">

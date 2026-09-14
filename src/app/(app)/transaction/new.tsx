@@ -34,7 +34,7 @@ export default function NewTransactionScreen() {
       : undefined;
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title="Agregar transacción" />
       <TransactionForm duplicateFromId={params.duplicateFrom} prefill={prefill} />
     </Screen>

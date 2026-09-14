@@ -2,6 +2,7 @@ import {
   addMonths,
   formatShortDate,
   formatYearMonth,
+  isFutureDay,
   isSameOrAfter,
   monthRange,
 } from '../date';
@@ -39,5 +40,28 @@ describe('formatYearMonth / formatShortDate', () => {
   it('usa nombres de mes en español', () => {
     expect(formatYearMonth({ year: 2026, month: 8 })).toBe('Agosto 2026');
     expect(formatShortDate('2026-08-31')).toBe('31 ago');
+  });
+});
+
+// Auditoría de producto §11: una transacción real con fecha futura (creada
+// a mano) se mostraba en la lista sin distinguirse del historial -- "1 dic"
+// arriba de "ayer", mismo encabezado de día que cualquier otro.
+describe('isFutureDay', () => {
+  const now = new Date(2026, 8, 14); // 14 sep 2026
+
+  it('hoy no es futuro', () => {
+    expect(isFutureDay('2026-09-14', now)).toBe(false);
+  });
+
+  it('ayer no es futuro', () => {
+    expect(isFutureDay('2026-09-13', now)).toBe(false);
+  });
+
+  it('mañana sí es futuro', () => {
+    expect(isFutureDay('2026-09-15', now)).toBe(true);
+  });
+
+  it('una fecha de un mes más adelante es futuro', () => {
+    expect(isFutureDay('2026-12-01', now)).toBe(true);
   });
 });

@@ -24,6 +24,12 @@
 3. **Backend (P1-5, bootstrap ~12 requests):** en alcance. `budget-app-django` está disponible
    como directorio de trabajo adicional en esta sesión — se puede proponer el endpoint agregado
    o los cambios de ese lado cuando se llegue a Fase 4.
+4. **Fase 3, dirección final:** ni el "Ledger Brutalism" genérico del audit ni un reskin amarillo
+   encima de él — identidad personal **wxlter.** (Faro `#FFDB00` / Tinta `#111111` / Papel
+   `#F4F3EF`, Archivo Black/Archivo/JetBrains Mono), tomando de Ledger Brutalism sólo su
+   disciplina estructural. El amarillo es identidad, nunca semántica: verde/naranja/rojo siguen
+   siendo ingreso/aviso/problema, sin excepción. Explorado en 3 artifacts antes de tocar código,
+   implementado y verificado con tests — ver Fase 3 abajo.
 
 ---
 
@@ -43,7 +49,7 @@
 
 ---
 
-## Fase 1 — Foundations (bugs reales + accesibilidad + tokens)
+## Fase 1 — Foundations (bugs reales + accesibilidad + tokens) ✅ cerrada (14 sep 2026)
 
 ### P0 — Confirmado en código, corregir primero
 
@@ -57,8 +63,9 @@
   nuevo prop. Test de regresión con los dos casos exactos del audit (Servicios 6.00/6.00,
   Miscelánea 120.38/0.00) en `src/components/__tests__/BudgetProgressRow.test.tsx` — 4/4 ok,
   suite completo 161/161, typecheck limpio.
-  - Pendiente opcional: aplicar el mismo tratamiento de 3 estados al anillo de "restante"
-    si usa lógica propia — no se revisó `src/components/ui/Ring.tsx` en esta pasada.
+  - ~~Pendiente opcional: aplicar el mismo tratamiento de 3 estados al anillo de "restante"~~
+    — moot: `Ring.tsx` se borró en Fase 3 (reemplazado por `BudgetMeter.tsx`, que ya nace con
+    los 3 estados vía `budgetState` compartido).
 
 ### P1 — Accesibilidad (quick wins, revisar antes de asumir que faltan)
 
@@ -87,12 +94,17 @@
 
 ### Design tokens base (sin tocar composición visual todavía)
 
-- [ ] Revisar `src/theme/` — confirmar si ya existen tokens semánticos `positive/caution/danger`
-      o si todo pasa por `colors.expense`/`colors.income`/`colors.primary` sin un tercer estado
-      "cerca del límite". Esto es prerequisito directo del fix de P0-3.
-- [ ] Confirmar escala de radios/espaciado actual (`tailwind.config.js`, `theme/index.ts`) contra
-      la propuesta de tokens del audit (§4.1) antes de decidir si vale la pena formalizarla o si
-      ya es razonablemente consistente (varias pantallas leídas ya usan `rounded-3xl` consistente).
+- [x] Revisar `src/theme/` — **resuelto de hecho, no solo confirmado**: `income`/`expense`/
+      `warning` son los 3 tokens semánticos (`theme/index.ts`), fijos e independientes del
+      acento desde la identidad wxlter. de Fase 3 — exactamente el "tercer estado (cerca del
+      límite)" que este ítem pedía confirmar, ya en uso activo en `ProgressBar`/`BudgetMeter`/
+      `BudgetProgressRow`.
+- [x] Confirmar escala de radios/espaciado — **resuelto de hecho, en Fase 3**: `tailwind.config.js`
+      `borderRadius` se redefinió a propósito (radios chicos, disciplina Ledger) al implementar la
+      identidad wxlter., reemplazando la escala "esquinas suaves" que tenía antes.
+
+Fase 1 queda cerrada -- lo que faltaba lo resolvió el trabajo de fases posteriores, no hizo falta
+una pasada aparte.
 
 ---
 
@@ -186,61 +198,250 @@
 
 ---
 
-## Fase 3 — Visual identity ("Ledger Brutalism", si se decide seguir esa dirección)
+## Fase 3 — Visual identity ✅ dirección decidida e implementada (14 sep 2026)
 
-> Nota: no se decidió todavía si adoptar la propuesta de identidad del audit (§6) — es la más
-> grande en esfuerzo (P1, Effort L) y afecta a casi todos los componentes de UI. Vale la pena
-> confirmarla con Walter antes de empezar (ver pregunta abajo).
+**Decisión final: identidad personal wxlter.**, no la propuesta genérica "Ledger Brutalism" del
+audit (§6) ni un reskin amarillo encima de ella. De Ledger Brutalism se tomó únicamente la
+disciplina estructural (borde fino, radio chico, sin sombra); color y tipografía son enteramente
+de `assets/LEEME.txt`. Explorado primero en 3 artifacts (vidrio actual vs. Ledger Brutalism
+genérico vs. wxlter.) antes de tocar código — ver hilo de la sesión.
 
-- [ ] Bordes de 1px en vez de sombras difusas en `Card`, `TabBar`/`GlassSurface`, etc.
-- [ ] Tipografía tabular obligatoria en cifras de dinero (`Money.tsx`, `AmountInput.tsx`) —
-      confirmar si `theme/typography.ts` ya define una familia mono/tabular.
-- [ ] Reescribir `ProgressBar` con los 3 estados semánticos de Fase 1 como parte del mismo trabajo.
+Reglas que se mantuvieron desde la decisión hasta el código, sin excepciones:
+
+- **El amarillo (`Faro` `#FFDB00`) es identidad, nunca semántica** — vive en el acento
+  (`theme/accents.ts`, elegible en Herramientas → Apariencia, ahora por defecto), en foco/CTA y en
+  el pin de límite del medidor de presupuesto. `income`/`expense`/`warning` son verde/rojo/naranja
+  fijos, independientes del acento (`theme/index.ts`) — precisamente para que nunca dependan de
+  qué acento haya elegido la persona usuaria.
+- **3 roles tipográficos fijos** (`theme/typography.ts`): Archivo Black sólo en la cifra
+  protagonista de una pantalla (`Money hero`), Archivo en toda la UI (`fonts.*`, reemplaza a
+  Manrope), JetBrains Mono sólo en datos financieros (`Money` no-`hero`, siempre — es la única
+  responsabilidad del componente).
+
+Implementado:
+
+- [x] Tokens base (`theme/index.ts`, `global.css`): neutros Tinta/Papel, `income`/`expense`/
+      `warning` semánticos fijos.
+- [x] Acento `wxlter` (Faro `#FFDB00`) agregado a `theme/accents.ts` y puesto como
+      `DEFAULT_ACCENT` — la paleta "tierra" existente (Herramientas → Apariencia) se conserva
+      intacta como opciones alternativas, no se borró el selector.
+- [x] Tipografía: Archivo/Archivo Black/JetBrains Mono cargadas en `_layout.tsx`
+      (`@expo-google-fonts/archivo`, `-archivo-black`, `-jetbrains-mono`), Manrope removida.
+      `Money.tsx` usa JetBrains Mono siempre salvo `hero` (Archivo Black).
+- [x] Bordes de 1px + radios chicos en vez de sombra difusa (`Card.tsx`, `borderRadius` de
+      `tailwind.config.js`) en vez de los radios grandes que había.
+- [x] **El anillo circular de presupuesto se reconsideró de fondo, no se recoloreó** — nuevo
+      `BudgetMeter.tsx`: pista horizontal con un pin de límite en Faro (identidad) y relleno
+      verde/ámbar/rojo (semántica compartida con `BudgetProgressRow` vía `lib/budgetState.ts`,
+      extraída para que la regla de sobregiro de P0-3 no pueda vivir en un solo lugar); la porción
+      que excede el límite se dibuja con trama diagonal, no solo un cambio de color. Reemplaza
+      `Ring.tsx` (borrado, quedó sin otro uso) en `budgets.tsx` (medidor grande, con ticks) y
+      `ProgressBar` en `BudgetProgressRow` (medidor chico, mismo componente — antes eran dos
+      visualizaciones distintas para el mismo dato).
+- [x] Filas de presupuesto rediseñadas para mobile (no comprimidas): nombre de categoría envuelve
+      en vez de truncar (`numberOfLines={1}` sacado de `BudgetProgressRow`).
+- [x] Regresión real encontrada al implementar (no estaba en la maqueta): `ProgressBar` sin `tone`
+      explícito cae a `colors.primary` en estado `'ok'` — con Faro como acento por defecto, la
+      barra de uso de crédito de `WalletRow` iba a mostrar "vas bien" en amarillo, exactamente la
+      conflación identidad/semántica que esta fase existe para evitar. Fix: `tone="income"`
+      explícito en ese call site.
+- [x] Tests: `budgetState.test.ts` (nuevo, la lógica de 3 estados extraída), `BudgetMeter.test.tsx`
+      (nuevo, 7 casos), `BudgetProgressRow.test.tsx` sigue pasando sin cambios (misma semántica,
+      otra vista). 36 suites / 193 tests, `tsc --noEmit` limpio.
+
+Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
+
+- [ ] `WalletRow`'s barra de meta de ahorro (`tone="income"`) y el resto de las cards (`TabBar`,
+      `AddTransactionFab`, gráfico de patrimonio neto) no se tocaron más allá de heredar los
+      tokens/radios nuevos automáticamente — no se auditó cada sombra/radio a mano, solo el
+      cambio global de `tailwind.config.js`.
 - [ ] Iconografía propia de categoría en vez de emoji (`CategoryAvatar.tsx`, `CategoryGrid.tsx`) —
-      cambio grande, evaluar esfuerzo real primero.
+      cambio grande y no pedido en esta ronda, se mantiene emoji personalizable.
+- [x] **Verificado en el navegador** (14 sep 2026): backend Django local + `expo start --web`,
+      workspace real con los 6 casos de la maqueta (excedido justo al límite ×2, cerca del
+      límite, dentro, sin presupuesto, nombre largo sin truncar). Confirmado por DOM/CSS:
+      `ArchivoBlack_400Regular` en la cifra protagonista, `JetBrainsMono_*` en el resto de
+      `Money`, Faro `#FFDB00` sólo en el pin de límite/nav (nunca en un estado "ok"), Tinta de
+      fondo, `Card` con borde 1px + radio 10px + sombra casi nula. Selector de acento intacto,
+      `wxlter.` primero en la lista. Sin errores de consola.
+      Bug real encontrado, **no arreglado acá** (ver tarea aparte): `GoogleSignInButton.tsx`
+      llama a `Google.useIdTokenAuthRequest` antes del `if (!GOOGLE_CONFIGURED) return null`,
+      así que en web sin client IDs configurados el login entero crashea en vez de simplemente
+      no mostrar el botón — no tiene relación con la identidad visual, preexistente.
 
 ---
 
-## Fase 4 — Dashboard / información financiera
+## Fase 4 — Dashboard / información financiera ✅ cerrada (14 sep 2026)
 
-- [ ] Estado explícito de "aún no hay suficiente historial" en `NetWorthChart.tsx`/`NetWorthPager.tsx`
-      cuando hay <3 puntos — el código actual solo chequea `snapshots.length === 0`, no maneja el
-      caso de 1-2 puntos (parece confirmarse el hallazgo del audit, sin verificar el render exacto).
-- [ ] Resumen de deuda de tarjetas en el dashboard ("Debes en tarjetas: USD X").
-- [ ] **Corrección: sí existe onboarding** — `src/app/(app)/onboarding.tsx` (8 pasos: bienvenida,
-      presupuestos/workspaces, carteras, crear primera cartera, categorías, cómo cargar un
-      movimiento, "y hay más", listo). Es un tour operativo, no vende diferenciación todavía —
-      pendiente real: revisar si el copy engancha con "cuotas y recurrentes / multi-cartera y
-      moneda / presupuesto por categoría" como ganchos explícitos (lo que pedía el audit en
-      §1.1), no reescribirlo desde cero.
-- [ ] Bootstrap del dashboard: contar requests reales de red (Network tab) del dashboard actual
-      para ver si sigue el patrón de ~12 requests secuenciales del audit, antes de invertir en
-      agregación de backend (P1, Effort L, depende de `budget-api-*` en Cloud Run).
+- [x] **Estado explícito de "aún no hay suficiente historial"** (14 sep 2026) — confirmado el
+      hallazgo: el 0 ya lo resolvía `NetWorthHistoryScreen` con `EmptyState`, pero 1-2 puntos
+      pasaban directo a `NetWorthChart` sin aviso (un punto suelto o una línea de 2 se leían como
+      "el gráfico completo"). Fix en `NetWorthChart.tsx`: con 1-2 snapshots se sigue dibujando la
+      línea real (nunca se oculta el dato) + un aviso "Todavía es poca historia para ver una
+      tendencia clara — llevás N mes(es)." `NetWorthPager.tsx` no necesitó cambios (son totales
+      del momento actual, no una serie de tiempo). Verificado extremo a extremo con datos reales
+      (1, 2 y 3 snapshots vía API real, no solo mock) además de `NetWorthChart.test.tsx` (4 casos).
+      37 suites / 197 tests, `tsc --noEmit` limpio.
+- [x] **Resumen de deuda de tarjetas en el dashboard** (14 sep 2026) — tile nueva "Deuda en
+      tarjetas" en "De un vistazo" (`dashboard.tsx`, `ResumenTab`), solo visible cuando existe al
+      menos una cartera `kind === 'credit'`. Monto = `Σ max(0, -current_balance)` de las tarjetas
+      en la moneda base (mismo criterio de no mezclar monedas que el resto de los totales de esta
+      pantalla); el conteo de tarjetas sí cuenta todas, cualquier moneda. Sin endpoint nuevo — ya
+      estaba en `useWallets()`, que `ResumenTab` ya pedía. Ancho completo (`wide`, como "Gasto
+      principal") para no dejar una fila a medias cuando aparece. Verificado en el navegador con
+      una tarjeta real en deuda (`USD 430.50`): color/tipografía correctos (rojo semántico,
+      JetBrains Mono), patrimonio neto del header se actualiza en consecuencia. Sin test dedicado
+      (convención del proyecto: pantallas bajo `src/app/` no tienen tests).
+- [x] **Corrección: sí existe onboarding, y ya enganchaba mejor de lo que decía el audit** (14 sep
+      2026) — `src/app/(app)/onboarding.tsx` (8 pasos). §1.1 del audit original literalmente decía
+      "no hay onboarding observable" (falso — probablemente porque solo se ve una vez por cuenta,
+      `User.onboarding_completed`, y un crawl de audit con cuenta ya usada nunca lo dispara) y
+      pedía que el primer paso mostrara explícito "cuotas y recurrentes / múltiples carteras y
+      monedas / presupuestos por categoría" como ganchos concretos. Confirmado el hallazgo real:
+      esos 3 temas SÍ estaban, pero enterrados en el último paso ("Y hay más... no hace falta
+      memorizarlo ahora") — restándoles peso en vez de venderlos. Fix de copy únicamente (2 de los
+      8 pasos, sin tocar estructura ni agregar pasos): el paso de bienvenida ahora abre con los 3
+      ganchos explícitos ("efectivo, varias tarjetas y cuotas a la vez, en más de una cartera y
+      moneda... con presupuesto por categoría"); el paso "Carteras" suma media frase sobre
+      multi-moneda. Deliberadamente NO se hardcodeó "Centroamérica" (lo sugería el audit) — el
+      copy ya implica la región sin excluir a nadie fuera de ella. Verificado en el navegador
+      forzando `onboarding_completed=False`. `tsc`/`jest`/`expo lint` limpios.
+- [x] **Bootstrap del dashboard — medido, no solo contado** (14 sep 2026): sesión limpia (login
+      real, sin cache), `performance.getEntriesByType('resource')` contra el backend local. El
+      conteo del audit es correcto (~12: 1 login + `auth/me` + 2 en paralelo `workspaces`/
+      `push-devices` + 7 más en paralelo una vez resuelto el workspace: `notifications/
+      unread-count`, `wallets`, `reports/summary`, `reports/scheduled`, `reports/budget`,
+      `reports/net-worth`, `categories`) — pero "secuenciales" **no** es correcto: son 2 rondas
+      (`auth/me` sola, ~6ms; el resto -- 7 requests -- en paralelo, arrancan todas dentro de 1ms
+      entre sí, ~50ms). Total medido en local: ~105ms de red para todo el bootstrap, no una
+      cadena de 12 round-trips. **Conclusión: no se justifica invertir en agregación de backend
+      (P1, Effort L) como estaba planteado** — el problema que resolvería (latencia acumulada de
+      una cadena secuencial) no existe tal como se describió; si hay una optimización real es
+      mucho más chica (evitar que la 2ª ronda espere a `auth/me` cuando el workspace activo ya
+      está en `AsyncStorage` desde la sesión anterior). Se retira de la lista de trabajo activo;
+      si se quiere perseguir esa micro-optimización puntual, es un ítem nuevo y acotado, no el
+      proyecto de agregación original.
 
 ---
 
-## Fase 5 — Mobile / responsive
+## Fase 5 — Mobile / responsive ✅ cerrada (14 sep 2026)
 
-- [ ] Layout propio de tablet (2 columnas en Presupuesto/Carteras a ~768-1024px) — confirmar si
-      `useIsDesktop`/`useResponsive` (`src/lib/responsive`) ya tiene un breakpoint intermedio o
-      es binario mobile/desktop como describe el audit.
-- [ ] Formularios full-screen también en desktop — revisar `TransactionForm.tsx`, `WalletForm.tsx`
-      y si usan `Screen` full-bleed en desktop; evaluar variante `Drawer` (no existe hoy, confirmado
-      por grep).
-- [ ] Carrusel "De un vistazo" (`NetWorthPager.tsx`) sin soporte de mouse/click-en-dots en desktop.
+- [x] **Layout propio de tablet/desktop en Presupuesto y Carteras** (14 sep 2026) — confirmado:
+      `useIsDesktop` era binario (900px, sin intermedio) y el contenido quedaba fijo en 560px
+      siempre, dejando la mitad de una pantalla de escritorio vacía. Ojo con el rango del audit
+      (~768-1024px): por debajo de 900 sigue la barra de pestañas de mobile (ver `TabBar.tsx`), así
+      que una grilla de escritorio ahí se sentiría desacoplada de esa navegación compacta -- se
+      activa junto con el sidebar (mismo umbral), no en un tercer breakpoint nuevo.
+      - `budgets.tsx`: los grupos (Hogar, Variables…) pasan a 2 columnas cuando sobra ancho de
+        verdad — son cards independientes entre sí, sin jerarquía que romper.
+      - `wallets.tsx`: sólo se ensancha la columna (560→720px), sin pasar a grilla — la lista tiene
+        jerarquía padre/hijo (`node.depth`) y partirla a la mitad separaría una cartera de sus
+        sub-carteras en columnas distintas; una grilla de verdad ahí necesita agrupar por cartera
+        raíz primero, que es su propio rediseño, no este ajuste.
+      - **Bug real encontrado al implementar** (no estaba en la maqueta ni en el plan): `SideNav`
+        es `position: fixed` y vive en el margen vacío que dejaba el contenido de 560px (ver su
+        propio docstring) — no empuja nada. Un ancho fijo más grande sin más lo tapaba: el
+        sidebar quedaba ENCIMA de las cards en vez de al costado, a partir de ~1024px de viewport.
+        Fix: `useDesktopContentWidth(desiredMax)` nuevo en `lib/responsive.ts` — ancho responsivo
+        que nunca invade el margen reservado del sidebar (se queda en 560, como mobile, hasta que
+        el viewport realmente tiene lugar de sobra; recién ahí escala hacia `desiredMax`).
+        `NetWorthPager` recibe el mismo ancho por prop (`maxWidth`) para no quedar más angosto que
+        la lista de carteras debajo.
+      - Verificado en el navegador a 1024px (sin overlap, cae a 1 columna como antes — el fix
+        funciona) y 1280px (2 columnas en Presupuesto, sin overlap con el sidebar) y en mobile
+        (sin cambios). `tsc`/`expo lint`/`jest` limpios (37 suites / 199 tests, sin regresiones).
+- [x] **Formularios full-screen también en desktop** (14 sep 2026) — confirmado el hallazgo con
+      captura: "Agregar transacción" en 1280px abría a pantalla completa, el formulario pegado
+      arriba-izquierda con casi toda la pantalla vacía. Al investigar apareció más grande de lo
+      que sugería el ítem: `Screen.tsx` lo usan **54 rutas** (no sólo `TransactionForm`/
+      `WalletForm`) — login/register, todas las páginas de Herramientas, vistas de detalle largas
+      (estado de cuenta, historial). Se consultó el alcance antes de construir: **sólo los
+      formularios rápidos de alta/edición** pasan a `Drawer` (nueva `variant="drawer"` en
+      `Screen.tsx`, panel de 440px que entra desde la derecha en vez de tomar toda la pantalla,
+      sólo activo en desktop -- en mobile se comporta exactamente igual que antes, hoja completa).
+      Rutas: `transaction/new`, `transaction/[id]`, `wallet/new`, `wallet/[id]`, `category/new`,
+      `category/[id]`, `recurring/new`, `recurring/[id]`, `installment/new`, `installment/[id]`,
+      `split-transaction`, `budget-edit` (12). El resto (Herramientas, detalle, login/register)
+      se queda `variant="page"` (el default) a propósito -- no encajan en un panel chico o no
+      tienen una pantalla "detrás" con sentido.
+      - Se cierra con click en el backdrop, la X de `ModalHeader` (sin cambios) o Escape (nuevo,
+        sólo web). El backdrop es puntero-only, sin `accessibilityLabel` propio -- duplicar la
+        misma etiqueta "Cerrar" que ya usa la X sólo confundía qué botón es cuál.
+      - **Limitación real, documentada a propósito**: en web `expo-router` desmonta la ruta
+        anterior al navegar (a diferencia de un modal nativo en iOS, que la deja viva detrás) --
+        así que el panel no dimeriza la pantalla previa de verdad, es un backdrop propio. Sigue
+        resolviendo el problema real (el formulario ya no ocupa el ancho completo con casi todo
+        vacío), pero no es un modal-sobre-contenido-vivo -- lograr eso necesitaría no desmontar la
+        ruta anterior en web, cambio de arquitectura de navegación aparte, no este ajuste.
+      - Verificado en el navegador: medido por DOM (no sólo visual -- la captura del panel a
+        1280px se veía "centrado" por el letterboxing del propio panel del navegador al emular un
+        viewport más grande que el visible; `getBoundingClientRect()` confirmó el panel pegado al
+        borde derecho, ancho 440, sin invadir nada) y confirmado el cierre disparando el click
+        real por DOM. Mobile sin cambios (hoja completa con manija de arrastre, igual que
+        siempre). `tsc`/`expo lint`/`jest` limpios (37 suites / 199 tests).
+- [x] **Carrusel "De un vistazo" (`NetWorthPager.tsx`)** (14 sep 2026) — confirmado el hallazgo:
+      los puntos eran `View`, no `Pressable`, así que en desktop (sin swipe) no había forma de
+      saltar de página sin arrastrar. Ahora cada punto es un botón accesible
+      (`accessibilityLabel="Ver {título de la página}"`) que llama a `scroller.scrollTo(...)`.
+      El arrastre con mouse en sí ya funcionaba (`ScrollView horizontal` de RN Web lo soporta
+      nativo) -- no hacía falta tocarlo. Verificado en el navegador a ancho desktop: click en un
+      punto mueve el carrusel y lo resalta en Faro. 2 tests nuevos, 37 suites / 199 tests,
+      `tsc`/`expo lint` limpios.
 
 ---
 
-## Fase 6 — Polish
+## Fase 6 — Polish ✅ cerrada (14 sep 2026)
 
-- [ ] Skeletons de layout en vez de spinner — no existe ningún componente Skeleton hoy (confirmado
-      por grep). Empezar por dashboard y detalle de cartera.
-- [ ] Motion: números que cuentan al cambiar de mes/categoría; transición de color de `ProgressBar`
-      al cruzar 80%/100% (depende del fix de Fase 1).
-- [ ] Revisar `prefers-reduced-motion` en las animaciones de Reanimated existentes.
-- [ ] Casos límite de §11 del audit: orden de transacciones futuras/recurrentes vs. históricas en
-      listas; subtipo por defecto incorrecto al editar cartera "Efectivo" (bug de datos a confirmar
-      contra el modelo real, no contra la UI).
+- [x] **Skeletons de layout en vez de spinner** (14 sep 2026) — `Skeleton.tsx` nuevo (`ui/`): pulso
+      de opacidad con `withRepeat`, no un spinner centrado que deja la pantalla en blanco.
+      `TransactionRowSkeleton`/`TransactionListSkeleton` (forma real de `TransactionRow`: avatar +
+      2 líneas + monto) en el detalle de cartera (`wallet-transactions.tsx`); `ResumenSkeleton`
+      local en `dashboard.tsx` (triple de "Este mes" + card de "Programado" + grilla de "De un
+      vistazo"). Verificado en el navegador forzando `loading=true` a mano (con backend local no
+      hay latencia real que capturar en pantalla) — coincide con la forma real en ambos casos.
+- [x] **`prefers-reduced-motion`** (14 sep 2026) — auditado el uso real de Reanimated: sin
+      `withRepeat` previo a `Skeleton.tsx` (0 animaciones en loop, confirmado por grep) y ninguna
+      llamada fuerza `ReduceMotion.Never`, así que **ya estaba resuelto por default** —
+      Reanimated 4 usa `ReduceMotion.System` por default en `withTiming`/`withSpring`/`withRepeat`
+      (confirmado contra el código fuente de la librería, no solo la doc), que en web chequea
+      `matchMedia('(prefers-reduced-motion: reduce)')` de verdad. La única animación de la app que
+      NO pasa por Reanimated es `FadeInView.tsx` (usa el `Animated` del core de RN, sin ese
+      default) — ahí sí hacía falta código: ahora chequea `AccessibilityInfo.isReduceMotionEnabled()`
+      y salta directo al estado final si está activo.
+- [x] **Motion: números que cuentan + transición de color** (14 sep 2026) — `useCountingNumber.ts`
+      nuevo (`requestAnimationFrame` + estado de React, no Reanimated: el contenido de un `<Text>`
+      no es un estilo animable en el hilo de UI): `Money` gana un prop `animate` (default `false`,
+      opt-in por pantalla) que hace que la cifra cuente hasta el valor nuevo en vez de saltar de
+      golpe. Aplicado a `SummaryTriple` (Lista, cambia con `MonthSwitcher`) y a los totales de
+      Presupuesto (cambia con `PeriodSwitcher`) -- no a cada fila de categoría, para no volver la
+      pantalla "ruidosa". Respeta reducir movimiento (mismo criterio que `FadeInView`). Además,
+      `ProgressBar`/`BudgetMeter` ya no saltan de color de golpe al cruzar 80%/100%: un
+      `stateIndex` 0/1/2 interpolado con `interpolateColor` (compartido entre los dos componentes,
+      `PROGRESS_STATE_INDEX`). Verificado en el navegador cambiando de período en Presupuesto
+      (capturada la cuenta a mitad de camino, USD 55.88 → 11.60 → 0.00). 3 tests nuevos en
+      `useCountingNumber.test.ts` (mock de `requestAnimationFrame`, sin esperas reales).
+- [x] **Casos límite de §11** (14 sep 2026):
+      - **Transacciones futuras sin distinguir del historial** — confirmado el hallazgo exacto del
+        audit ("1 dic" arriba de "ayer"): una transacción real con fecha futura (alguien la carga
+        a mano de antemano) es indistinguible de una pasada en la lista. `DayHeader.tsx` nuevo
+        (compartido entre `ListaTab` y el detalle de cartera): agrega un rótulo "próximo" en Faro
+        cuando `date > hoy` (`isFutureDay` nuevo en `lib/date.ts`). No es un bug de orden (`-date`
+        ordenando "lo más nuevo arriba" es correcto tal cual) sino de falta de separación visual.
+        Verificado en el navegador con una transacción real fechada a futuro.
+      - **Subtipo "Banco" en vez de "Efectivo" al editar esa cartera** — confirmado contra el
+        modelo real, no era un bug de datos: `wallet.kind` llega bien desde el backend. Es una
+        carrera de un solo frame en `WalletForm.tsx`: el `useState` de `kind` arranca en `'bank'`
+        (default de cartera nueva) y sólo se corrige en un `useEffect` que corre *después* de
+        pintar -- entre que `existing.isLoading` pasa a `false` y ese efecto corre, hay un render
+        de tránsito donde el formulario ya se ve pero con los defaults viejos. Fix: la pantalla
+        espera también a `prefilled` (que el efecto prende al final, después de aplicar todos los
+        campos), no sólo a `isLoading` -- y de paso se agregó el `ErrorState` que le faltaba a esa
+        carga (si no, con la carrera cerrada por `prefilled`, una carga fallida hubiera dejado el
+        formulario pegado en "Cargando…" para siempre en vez de mostrar el error). Verificado en
+        el navegador con una cartera "Efectivo" real (`kind=cash`): Subtipo abre en "Efectivo".
+
+      `tsc`/`expo lint`/`jest` limpios en cada paso de esta fase — 39 suites / 210 tests, sin
+      regresiones.
 
 ---
 

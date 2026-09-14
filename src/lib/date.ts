@@ -81,6 +81,18 @@ export function formatDateTime(iso: ISODateTime): string {
 const WEEKDAYS_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
 /** "hoy" / "ayer" / "vie 29 ago" — encabezado de día en el historial. */
+/**
+ * Un movimiento con fecha posterior a hoy es real (no una proyección de
+ * `ScheduledItem`) pero igual conviene distinguirlo visualmente del
+ * historial -- quien creó a mano una transacción con fecha futura (ej.
+ * cargar un gasto ya sabido de antemano) puede confundirla con algo que ya
+ * pasó si el encabezado del día se ve igual que cualquier otro (hallazgo de
+ * la auditoría de producto, §11: "1 dic" arriba de "ayer" sin separación).
+ */
+export function isFutureDay(iso: ISODate, now = new Date()): boolean {
+  return iso > todayISO(now);
+}
+
 export function formatDayHeader(iso: ISODate, now = new Date()): string {
   if (iso === todayISO(now)) return 'hoy';
   const yesterday = new Date(now);

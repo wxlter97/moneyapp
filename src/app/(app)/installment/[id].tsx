@@ -8,7 +8,7 @@ export default function EditInstallmentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title="Editar compra a plazo" />
       <InstallmentForm installmentId={id} />
     </Screen>

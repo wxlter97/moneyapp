@@ -6,10 +6,12 @@
  * Para código dentro de React usa `useColors()` (reacciona al tema). El export
  * `colors` es el tema OSCURO, como fallback sincrónico donde no hay hook.
  *
- * Paleta neutra (gris frío, sin tinte cálido) con un solo acento tierra
- * (musgo por defecto, elegible en Herramientas → Apariencia, ver
- * `theme/accents.ts`): sin colores de sección — el énfasis visual lo dan
- * la tipografía y las cards "glass", no el color.
+ * Identidad wxlter. (Fase 3, sep 2026): neutros derivados de Tinta/Papel
+ * (`#111111`/`#F4F3EF`, ver `assets/LEEME.txt`), acento elegible en
+ * Herramientas → Apariencia (Faro `#FFDB00` por defecto, ver
+ * `theme/accents.ts`). income/expense/warning son semántica fija —
+ * independiente del acento a propósito: el acento es identidad, nunca
+ * significa "bien" o "mal" (ver `BudgetMeter`).
  */
 import { useColorScheme } from 'nativewind';
 
@@ -31,31 +33,31 @@ export interface ThemeColors {
 }
 
 export const darkColors: ThemeColors = {
-  bg: '#0A0B0D',
-  surface: '#17181C',
-  surface2: '#1F2126',
-  border: '#292B31',
-  text: '#F4F4F6',
-  textMuted: '#94969E',
-  primary: '#6B8A5A',
-  primaryFg: '#FFFFFF',
-  income: '#7C9A6B',
-  expense: '#C97B63',
-  warning: '#C9A15A',
+  bg: '#111111',
+  surface: '#171717',
+  surface2: '#202020',
+  border: '#2A2A2A',
+  text: '#F4F3EF',
+  textMuted: '#8C8C86',
+  primary: '#FFDB00',
+  primaryFg: '#111111',
+  income: '#4FC172',
+  expense: '#E5503B',
+  warning: '#E8873A',
 };
 
 export const lightColors: ThemeColors = {
-  bg: '#F6F6F8',
+  bg: '#F4F3EF',
   surface: '#FFFFFF',
-  surface2: '#F1F1F4',
-  border: '#E7E7EC',
-  text: '#16171A',
-  textMuted: '#8E8E96',
-  primary: '#516B45',
-  primaryFg: '#FFFFFF',
-  income: '#4F7047',
-  expense: '#B5573E',
-  warning: '#96742E',
+  surface2: '#EDEBE3',
+  border: '#DAD7CD',
+  text: '#111111',
+  textMuted: '#63625B',
+  primary: '#FFDB00',
+  primaryFg: '#111111',
+  income: '#1F7A40',
+  expense: '#C43D28',
+  warning: '#B4631A',
 };
 
 /** Fallback sincrónico (tema oscuro). Dentro de React preferí `useColors()`. */

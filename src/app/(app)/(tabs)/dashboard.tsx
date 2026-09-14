@@ -18,6 +18,7 @@ import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import type { ScheduledItem } from '@/api/types';
 import { AddTransactionFab } from '@/components/AddTransactionFab';
 import { CalendarGrid, type DayMarker } from '@/components/CalendarGrid';
+import { DayHeader } from '@/components/DayHeader';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SubTabs } from '@/components/SubTabs';
@@ -30,10 +31,11 @@ import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { SearchField } from '@/components/ui/SearchField';
 import { Segmented } from '@/components/ui/Segmented';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { currentYearMonth, formatDayHeader, formatShortDate, monthRange, todayISO } from '@/lib/date';
-import { formatMoney, formatSigned, toNumber } from '@/lib/money';
+import { formatMoney, toNumber } from '@/lib/money';
 import { groupByDay, summarizeByType, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
@@ -121,6 +123,16 @@ function ResumenTab({ currency }: { currency: string }) {
   const { map: categories } = useCategoryMap();
 
   const spendingWallets = (wallets.data ?? []).filter((w) => w.purpose === 'spending');
+  // Todas las tarjetas de crédito (cualquier moneda, para el conteo), pero
+  // el monto sumado se limita a la moneda base -- mismo criterio que el
+  // resto de los totales de esta pantalla (ver `ListaTab`), para no mezclar
+  // montos de distintas monedas en una sola cifra. `current_balance`
+  // negativo = lo que debes (ver `Wallet` en el backend); `Math.max(0, …)`
+  // por si alguna tarjeta quedó sobrepagada (saldo a favor).
+  const creditWallets = (wallets.data ?? []).filter((w) => w.kind === 'credit');
+  const cardDebt = creditWallets
+    .filter((w) => w.currency === currency)
+    .reduce((sum, w) => sum + Math.max(0, -toNumber(w.current_balance)), 0);
   const loading = summary.isLoading || wallets.isLoading || netWorth.isLoading;
   const refreshing =
     summary.isFetching || wallets.isFetching || budget.isFetching || scheduled.isFetching || netWorth.isFetching;
@@ -132,7 +144,13 @@ function ResumenTab({ currency }: { currency: string }) {
     netWorth.refetch();
   });
 
-  if (loading) return <LoadingState />;
+  if (loading) {
+    return (
+      <ScrollView contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4">
+        <ResumenSkeleton />
+      </ScrollView>
+    );
+  }
   if (summary.isError)
     return <ErrorState error={summary.error} onRetry={summary.refetch} />;
 
@@ -222,6 +240,20 @@ function ResumenTab({ currency }: { currency: string }) {
             )}
           </GlanceTile>
 
+          {creditWallets.length > 0 ? (
+            <GlanceTile
+              icon="card"
+              label="Deuda en tarjetas"
+              wide
+              onPress={() => router.push('/wallets')}
+            >
+              <Money value={cardDebt} currency={currency} tone="expense" className="text-lg font-bold" />
+              <Text className="text-text-muted text-[11px]" numberOfLines={1}>
+                {creditWallets.length === 1 ? '1 tarjeta' : `${creditWallets.length} tarjetas`}
+              </Text>
+            </GlanceTile>
+          ) : null}
+
           <GlanceTile
             icon="tag"
             label="Gasto principal"
@@ -256,6 +288,43 @@ function ResumenTab({ currency }: { currency: string }) {
         </View>
       </View>
     </ScrollView>
+  );
+}
+
+/** Estado de carga de Resumen -- misma forma que el contenido real (triple
+ * de "Este mes", card de "Programado", grilla de "De un vistazo") en vez de
+ * un spinner centrado que deja la pantalla en blanco hasta que llega el
+ * dato. El número de tiles de la grilla es aproximado (no se sabe todavía
+ * si va a haber tarjeta de crédito) -- una vez llega el dato real, el
+ * layout se acomoda solo; es lo esperable de un skeleton, no hace falta que
+ * sea pixel-perfect. */
+function ResumenSkeleton() {
+  return (
+    <>
+      <View className="gap-2">
+        <Skeleton width={70} height={11} radius={4} />
+        <View className="flex-row gap-3">
+          <Skeleton height={54} radius={16} className="flex-1" />
+          <Skeleton height={54} radius={16} className="flex-1" />
+          <Skeleton height={54} radius={16} className="flex-1" />
+        </View>
+      </View>
+      <Skeleton height={132} radius={14} />
+      <View className="gap-1.5">
+        <Skeleton width={90} height={11} radius={4} />
+        <View className="-m-1.5 flex-row flex-wrap">
+          <View className="w-1/2 p-1.5">
+            <Skeleton height={84} radius={26} />
+          </View>
+          <View className="w-1/2 p-1.5">
+            <Skeleton height={84} radius={26} />
+          </View>
+          <View className="w-full p-1.5">
+            <Skeleton height={72} radius={26} />
+          </View>
+        </View>
+      </View>
+    </>
   );
 }
 
@@ -698,17 +767,7 @@ function ListaTab({
           // pulido. Se muestra directo.
           return (
             <View key={day.date}>
-              <View className="flex-row items-baseline justify-between pb-1 pt-3">
-                <Text className="text-text-muted text-xs font-semibold uppercase tracking-wide">
-                  {formatDayHeader(day.date)}
-                </Text>
-                <Text
-                  className={dayNet >= 0 ? 'text-income text-xs' : 'text-expense text-xs'}
-                  style={{ fontFamily: fonts.semibold }}
-                >
-                  {formatSigned(dayNet, currency)}
-                </Text>
-              </View>
+              <DayHeader date={day.date} net={dayNet} currency={currency} />
               <View className="overflow-hidden rounded-3xl border border-border/60 bg-surface/95 px-4">
                 {day.data.map((item, i) => (
                   <View key={item.id}>

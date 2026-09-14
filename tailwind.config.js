@@ -5,7 +5,7 @@ module.exports = {
   darkMode: 'class',
   theme: {
     fontFamily: {
-      sans: ['Manrope_500Medium'],
+      sans: ['Archivo_500Medium'],
     },
     extend: {
       colors: {
@@ -24,13 +24,16 @@ module.exports = {
         expense: 'rgb(var(--color-expense) / <alpha-value>)',
         warning: 'rgb(var(--color-warning) / <alpha-value>)',
       },
-      // Esquinas más suaves en toda la app (un solo cambio en vez de tocar
-      // cada `rounded-xl`/`rounded-2xl`): menos "brusco", más orgánico.
+      // Identidad wxlter. (Fase 3): radios chicos en toda la app (un solo
+      // cambio en vez de tocar cada `rounded-xl`/`rounded-2xl`) -- la
+      // disciplina estructural que se toma de Ledger Brutalism, no sus
+      // colores. Antes eran más grandes ("esquinas suaves, más orgánico");
+      // ahora el borde fino + radio chico es parte de la identidad.
       borderRadius: {
-        lg: '14px',
-        xl: '18px',
-        '2xl': '26px',
-        '3xl': '32px',
+        lg: '6px',
+        xl: '8px',
+        '2xl': '10px',
+        '3xl': '14px',
       },
     },
   },

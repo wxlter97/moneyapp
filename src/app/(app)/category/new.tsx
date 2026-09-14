@@ -10,7 +10,7 @@ export default function NewCategoryScreen() {
   const initialType: CategoryType = type === 'income' ? 'income' : 'expense';
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title={parent ? 'Nueva subcategoría' : 'Nueva categoría'} />
       <CategoryForm initialType={initialType} initialParent={parent} />
     </Screen>

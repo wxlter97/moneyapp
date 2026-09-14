@@ -2,7 +2,8 @@ import { Text, type TextProps } from 'react-native';
 
 import type { Money as MoneyValue } from '@/api/types';
 import { formatMoney, formatParens, formatSigned, toNumber } from '@/lib/money';
-import { fonts } from '@/theme/typography';
+import { useCountingNumber } from '@/lib/useCountingNumber';
+import { black, mono } from '@/theme/typography';
 
 interface MoneyProps extends TextProps {
   value: MoneyValue | number | null | undefined;
@@ -13,9 +14,17 @@ interface MoneyProps extends TextProps {
   parens?: boolean;
   /** Fuerza un color semántico independientemente del signo. */
   tone?: 'income' | 'expense' | 'warning' | 'default' | 'muted';
-  /** Cifra protagonista (patrimonio neto, restante del mes…): peso extra y
-   * tracking negativo, como los números grandes de Cash App/Revolut. */
+  /** Cifra protagonista (patrimonio neto, restante del período…): Archivo
+   * Black + tracking negativo, en vez de JetBrains Mono como el resto de
+   * `Money` -- ver `theme/typography.ts`. */
   hero?: boolean;
+  /** El número cuenta hasta el valor nuevo en vez de saltar de golpe --
+   * para totales que cambian por una acción explícita (cambiar de mes,
+   * cambiar de filtro), no para cifras que se actualizan solas en segundo
+   * plano (ahí, contar constantemente distrae más de lo que aclara). Default
+   * `false` a propósito: opt-in por pantalla, no un cambio de comportamiento
+   * global de `Money`. Respeta "reducir movimiento" (ver `useCountingNumber`). */
+  animate?: boolean;
   className?: string;
 }
 
@@ -26,11 +35,18 @@ export function Money({
   parens = false,
   tone = 'default',
   hero = false,
+  animate = false,
   className = '',
   style,
   ...rest
 }: MoneyProps) {
-  const n = typeof value === 'number' ? value : toNumber(value);
+  const rawN = typeof value === 'number' ? value : toNumber(value);
+  // `enabled: animate` -- el hook se llama siempre (las reglas de hooks no
+  // admiten un `if` acá), pero con `animate=false` no programa ningún
+  // `requestAnimationFrame` de fondo: sin esto, cada `Money` sin animar de
+  // una lista larga arrastraría su propio loop de animación cada vez que
+  // llega un refetch, sin que nadie lo vea.
+  const n = useCountingNumber(rawN, undefined, animate);
   const text = parens
     ? formatParens(n, currency)
     : signed
@@ -45,16 +61,20 @@ export function Money({
   else if (signed && n > 0) color = 'text-income';
   else if (signed && n < 0) color = 'text-expense';
 
-  // RN no sintetiza pesos sobre una fuente custom de forma confiable en
-  // iOS: `font-bold`/`font-semibold` de Tailwind (sólo cambian `fontWeight`)
-  // no alcanzan para las cifras — acá resolvemos al archivo .ttf correcto.
+  // Identidad wxlter.: `Money` es siempre un dato financiero, así que
+  // siempre va en JetBrains Mono -- salvo `hero` (la cifra protagonista de
+  // una pantalla: patrimonio neto, restante del período…), que es
+  // exclusivamente Archivo Black (ver `theme/typography.ts`). RN no
+  // sintetiza pesos sobre una fuente custom de forma confiable en iOS:
+  // `font-bold`/`font-semibold` de Tailwind (sólo cambian `fontWeight`) no
+  // alcanzan para elegir el peso — acá resolvemos al archivo .ttf correcto.
   const fontFamily = hero
-    ? fonts.extrabold
+    ? black
     : className.includes('font-bold')
-      ? fonts.extrabold
+      ? mono.semibold
       : className.includes('font-semibold')
-        ? fonts.semibold
-        : undefined;
+        ? mono.medium
+        : mono.regular;
 
   return (
     <Text

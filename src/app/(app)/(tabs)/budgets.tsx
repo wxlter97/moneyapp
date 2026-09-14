@@ -7,19 +7,28 @@ import type { BudgetGroup, ISODate } from '@/api/types';
 import { BudgetProgressRow } from '@/components/BudgetProgressRow';
 import { PeriodSwitcher } from '@/components/PeriodSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
+import { BudgetMeter } from '@/components/ui/BudgetMeter';
 import { Card } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
-import { Ring } from '@/components/ui/Ring';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
-import { useColors } from '@/theme';
 import { todayISO } from '@/lib/date';
 import { periodStart } from '@/lib/periods';
 import { toNumber } from '@/lib/money';
+import { useDesktopContentWidth } from '@/lib/responsive';
 import { useWorkspaceStore } from '@/store/workspace';
 
+const DESKTOP_MAX_WIDTH = 900;
+
 export default function BudgetScreen() {
-  const colors = useColors();
+  // Ancho responsivo, no un booleano desktop/mobile: a un ancho de escritorio
+  // "justo" (~900-1000px) todavía no sobra espacio de verdad para 2 columnas
+  // -- `useDesktopContentWidth` ya lo deja en 560 (como mobile) en ese caso,
+  // sin invadir el margen donde vive `SideNav` (hallazgo real al implementar
+  // esto: un ancho fijo más grande hacía que el sidebar quedara ENCIMA de
+  // las cards, no al costado -- ver el propio docstring de `SideNav`).
+  const contentWidth = useDesktopContentWidth(DESKTOP_MAX_WIDTH);
+  const showGrid = contentWidth > 560;
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
   const budgetPeriod = activeWorkspace?.budget_period ?? 'monthly';
@@ -38,7 +47,6 @@ export default function BudgetScreen() {
   const spent = toNumber(totals?.spent);
   const remaining = toNumber(totals?.remaining);
   const over = remaining < 0;
-  const progress = budgeted > 0 ? spent / budgeted : 0;
 
   const openEditor = () => router.push(`/budget-edit?period_start=${start}`);
 
@@ -48,6 +56,7 @@ export default function BudgetScreen() {
     <View className="flex-1 bg-bg">
       <SectionHeader
         title="Presupuesto"
+        maxWidth={contentWidth}
         right={
           <Pressable
             onPress={openEditor}
@@ -59,25 +68,29 @@ export default function BudgetScreen() {
         }
         subtitle={
           <View>
-            {/* Tamaño "hero" (52px) reservado para el patrimonio neto en
-                Vista general -- acá va una escala secundaria: este mismo
-                número se repite, más grande, dentro del anillo de abajo, así
-                que este texto no necesita competir con él. */}
+            {/* Cifra protagonista de esta pantalla (Archivo Black, vía
+                `hero`) -- ya no se repite dentro del medidor de abajo: el
+                medidor no es un anillo con un centro que pedía duplicarla,
+                así que este número no compite con nada. */}
             <Money
+              hero
+              animate
               value={Math.abs(remaining)}
               currency={currency}
-              className="text-[34px] font-bold leading-[38px]"
+              tone={over ? 'expense' : 'default'}
+              className="text-[34px] leading-[38px]"
             />
             <Text className="text-text-muted text-sm">
               {over ? 'te pasaste' : 'te queda'} de{' '}
-              <Money value={budgeted} currency={currency} tone="muted" />
+              <Money animate value={budgeted} currency={currency} tone="muted" />
             </Text>
           </View>
         }
       />
 
       <ScrollView
-        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
+        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full gap-4"
+        contentContainerStyle={{ maxWidth: contentWidth }}
         refreshControl={refresh}
       >
         <PeriodSwitcher value={start} period={budgetPeriod} onChange={setOverride} />
@@ -93,48 +106,40 @@ export default function BudgetScreen() {
           />
         ) : (
           <>
-            <View className="items-center py-2">
-              <Ring
-                progress={progress}
-                color={over ? colors.expense : colors.income}
-              >
-                <Money
-                  value={Math.abs(remaining)}
-                  currency={currency}
-                  className="text-2xl font-bold text-text"
-                />
-                <Text className="text-text-muted mt-1 text-xs uppercase tracking-wide">
-                  {over ? 'excedido' : 'restante'}
-                </Text>
-                <Text className="text-text-muted mt-0.5 text-[11px]">
-                  de <Money value={budgeted} currency={currency} tone="muted" />
-                </Text>
-              </Ring>
+            <View className="py-1">
+              <BudgetMeter spent={spent} budgeted={budgeted} currency={currency} size="lg" showTicks />
             </View>
 
             <Card title="Total del período">
               <View className="flex-row justify-between">
                 <Labeled label="Presupuestado">
-                  <Money value={budgeted} currency={currency} />
+                  <Money animate value={budgeted} currency={currency} />
                 </Labeled>
                 <Labeled label="Gastado">
-                  <Money value={spent} currency={currency} tone="expense" />
+                  <Money animate value={spent} currency={currency} tone="expense" />
                 </Labeled>
                 <Labeled label="Disponible">
-                  <Money value={remaining} currency={currency} signed />
+                  <Money animate value={remaining} currency={currency} signed />
                 </Labeled>
               </View>
             </Card>
 
-            {budget.data.groups.map((g) => (
-              <GroupCard
-                key={g.group ?? g.group_name}
-                group={g}
-                currency={currency}
-                from={budget.data!.period_start}
-                to={budget.data!.period_end}
-              />
-            ))}
+            {/* Grupos en 2 columnas en desktop -- son cards independientes
+                entre sí (a diferencia de Carteras, sin jerarquía padre/hijo
+                que romper al partirlos en columnas), así que envolverlos en
+                una grilla es seguro. */}
+            <View className={showGrid ? 'flex-row flex-wrap gap-4' : 'gap-4'}>
+              {budget.data.groups.map((g) => (
+                <View key={g.group ?? g.group_name} className={showGrid ? 'w-[calc(50%-8px)]' : 'w-full'}>
+                  <GroupCard
+                    group={g}
+                    currency={currency}
+                    from={budget.data!.period_start}
+                    to={budget.data!.period_end}
+                  />
+                </View>
+              ))}
+            </View>
           </>
         )}
       </ScrollView>

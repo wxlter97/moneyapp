@@ -42,6 +42,25 @@ jest.mock('react-native-reanimated', () => {
     const t = (value - x0) / (x1 - x0);
     return y0 + t * (y1 - y0);
   };
+  // `interpolateColor` real soporta más de un espacio de color y más de 2
+  // paradas -- acá alcanza con RGB lineal entre los 2 tramos que rodean al
+  // valor (ProgressBar/BudgetMeter la usan con 3 paradas: ok/warning/over).
+  const hexToRgb = (hex) => {
+    const clean = hex.replace('#', '');
+    return [0, 2, 4].map((i) => parseInt(clean.slice(i, i + 2), 16));
+  };
+  const rgbToHex = ([r, g, b]) =>
+    '#' + [r, g, b].map((c) => Math.round(Math.min(255, Math.max(0, c))).toString(16).padStart(2, '0')).join('');
+  const interpolateColor = (value, input, output) => {
+    let i = 0;
+    while (i < input.length - 2 && value > input[i + 1]) i++;
+    const x0 = input[i];
+    const x1 = input[i + 1];
+    const t = x1 === x0 ? 0 : (value - x0) / (x1 - x0);
+    const c0 = hexToRgb(output[i]);
+    const c1 = hexToRgb(output[i + 1]);
+    return rgbToHex(c0.map((c, idx) => c + (c1[idx] - c) * Math.min(1, Math.max(0, t))));
+  };
   const passthrough = (fn) => fn;
   // `Easing.out(Easing.cubic)`, `Easing.in(Easing.cubic)`,
   // `Easing.out(Easing.back(1.2))`... como `withTiming` de este mock ya
@@ -81,6 +100,7 @@ jest.mock('react-native-reanimated', () => {
     withDelay: (_delay, animation) => animation,
     withSequence: (...animations) => animations[animations.length - 1],
     interpolate,
+    interpolateColor,
     Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
     runOnJS: passthrough,
     runOnUI: passthrough,

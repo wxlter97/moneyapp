@@ -9,22 +9,26 @@ interface SummaryTripleProps {
   currency?: string;
 }
 
-/** Bloque ingresos / gastos / neto usado en Historial y Dashboard. */
+/** Bloque ingresos / gastos / neto usado en Historial y Dashboard. `animate`
+ * (siempre encendido acá): este total cambia por una acción explícita --
+ * cambiar de mes (`MonthSwitcher`) -- así que las cifras cuentan hasta el
+ * valor nuevo en vez de saltar de golpe (pedido de la auditoría de producto,
+ * Fase 6). */
 export function SummaryTriple({ income, expenses, net, currency = 'USD' }: SummaryTripleProps) {
   const netValue = net ?? income - expenses;
 
   return (
     <View className="flex-row rounded-3xl border border-border/60 bg-surface/95">
       <Cell label="Ingresos">
-        <Money value={income} currency={currency} tone="income" className="text-base font-semibold" />
+        <Money animate value={income} currency={currency} tone="income" className="text-base font-semibold" />
       </Cell>
       <View className="w-px bg-border/60" />
       <Cell label="Gastos">
-        <Money value={expenses} currency={currency} tone="expense" className="text-base font-semibold" />
+        <Money animate value={expenses} currency={currency} tone="expense" className="text-base font-semibold" />
       </Cell>
       <View className="w-px bg-border/60" />
       <Cell label="Neto">
-        <Money value={netValue} currency={currency} signed className="text-base font-semibold" />
+        <Money animate value={netValue} currency={currency} signed className="text-base font-semibold" />
       </Cell>
     </View>
   );

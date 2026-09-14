@@ -4,7 +4,7 @@ import { Screen } from '@/components/ui/Screen';
 
 export default function NewWalletScreen() {
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title="Nueva cartera" />
       <WalletForm />
     </Screen>
