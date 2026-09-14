@@ -267,9 +267,15 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
 
 ## Fase 4 — Dashboard / información financiera
 
-- [ ] Estado explícito de "aún no hay suficiente historial" en `NetWorthChart.tsx`/`NetWorthPager.tsx`
-      cuando hay <3 puntos — el código actual solo chequea `snapshots.length === 0`, no maneja el
-      caso de 1-2 puntos (parece confirmarse el hallazgo del audit, sin verificar el render exacto).
+- [x] **Estado explícito de "aún no hay suficiente historial"** (14 sep 2026) — confirmado el
+      hallazgo: el 0 ya lo resolvía `NetWorthHistoryScreen` con `EmptyState`, pero 1-2 puntos
+      pasaban directo a `NetWorthChart` sin aviso (un punto suelto o una línea de 2 se leían como
+      "el gráfico completo"). Fix en `NetWorthChart.tsx`: con 1-2 snapshots se sigue dibujando la
+      línea real (nunca se oculta el dato) + un aviso "Todavía es poca historia para ver una
+      tendencia clara — llevás N mes(es)." `NetWorthPager.tsx` no necesitó cambios (son totales
+      del momento actual, no una serie de tiempo). Verificado extremo a extremo con datos reales
+      (1, 2 y 3 snapshots vía API real, no solo mock) además de `NetWorthChart.test.tsx` (4 casos).
+      37 suites / 197 tests, `tsc --noEmit` limpio.
 - [ ] Resumen de deuda de tarjetas en el dashboard ("Debes en tarjetas: USD X").
 - [ ] **Corrección: sí existe onboarding** — `src/app/(app)/onboarding.tsx` (8 pasos: bienvenida,
       presupuestos/workspaces, carteras, crear primera cartera, categorías, cómo cargar un
