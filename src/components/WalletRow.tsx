@@ -96,8 +96,12 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
             progress={
               1 - toNumber(wallet.available_credit) / toNumber(wallet.credit_limit)
             }
-            over={
+            state={
               toNumber(wallet.available_credit) / toNumber(wallet.credit_limit) < 0.1
+                ? 'over'
+                : toNumber(wallet.available_credit) / toNumber(wallet.credit_limit) < 0.25
+                  ? 'warning'
+                  : 'ok'
             }
           />
           <Text className="text-text-muted text-[11px]">

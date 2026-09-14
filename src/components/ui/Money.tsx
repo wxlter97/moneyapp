@@ -12,7 +12,7 @@ interface MoneyProps extends TextProps {
   /** Estilo Buddy: negativos entre paréntesis "($15.99)". */
   parens?: boolean;
   /** Fuerza un color semántico independientemente del signo. */
-  tone?: 'income' | 'expense' | 'default' | 'muted';
+  tone?: 'income' | 'expense' | 'warning' | 'default' | 'muted';
   /** Cifra protagonista (patrimonio neto, restante del mes…): peso extra y
    * tracking negativo, como los números grandes de Cash App/Revolut. */
   hero?: boolean;
@@ -41,6 +41,7 @@ export function Money({
   if (tone === 'muted') color = 'text-text-muted';
   else if (tone === 'income') color = 'text-income';
   else if (tone === 'expense') color = 'text-expense';
+  else if (tone === 'warning') color = 'text-warning';
   else if (signed && n > 0) color = 'text-income';
   else if (signed && n < 0) color = 'text-expense';
 
