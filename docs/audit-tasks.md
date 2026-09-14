@@ -46,15 +46,15 @@
 
 ### P1 — Accesibilidad (quick wins, revisar antes de asumir que faltan)
 
-- [ ] **Fila de transacción sin nombre accesible explícito**
-  `TransactionRow.tsx` — el `Pressable` principal (línea ~101-113) tiene `accessibilityRole`
-  pero no `accessibilityLabel`; solo el botón anidado "Eliminar movimiento" lo tiene. En web
-  probablemente hereda nombre del texto hijo, pero conviene un label explícito y descriptivo
-  (ej. `"Transferencia, Banco Agrícola a Fondo de emergencias, USD 150.00"`) para no depender
-  de heurística de accesibilidad del navegador.
-- [ ] **Selector de workspace sin `accessibilityLabel`**
-  `WorkspaceSwitcher.tsx` línea ~53-61 — el botón "Casa ⌄" no anuncia que es un selector
-  de presupuesto/workspace. Agregar `accessibilityLabel="Cambiar de presupuesto, actual: {nombre}"`.
+- [x] **Fila de transacción sin nombre accesible explícito**
+  ✅ Resuelto. `TransactionRow.tsx` arma un `accessibilityLabel` explícito en el `Pressable`
+  principal (solo cuando la fila es interactiva, `onPress` presente): tipo (Gasto/Ingreso/
+  Transferencia), categoría o descripción + cartera (u origen→destino en transferencias),
+  monto, y "fuera de presupuesto"/badge de origen al final. Tests en
+  `TransactionRow.test.tsx` (`describe('accessibilityLabel')`, 4 casos).
+- [x] **Selector de workspace sin `accessibilityLabel`**
+  ✅ Resuelto. `WorkspaceSwitcher.tsx` — `accessibilityLabel="Cambiar de presupuesto, actual: {nombre}"`
+  + `accessibilityState={{ expanded: open }}`. Test nuevo en `WorkspaceSwitcher.test.tsx`.
 - [ ] Auditar rápido el resto de `Pressable`/`TouchableOpacity` sin `accessibilityLabel` en
   componentes de alta superficie (`WalletRow`, `CategoryGrid`, `CalendarGrid`) — no se
   verificaron todos en esta pasada.

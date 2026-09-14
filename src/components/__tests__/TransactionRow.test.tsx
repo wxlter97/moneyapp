@@ -113,4 +113,43 @@ describe('TransactionRow', () => {
     expect(screen.queryByText('cuota')).toBeNull();
     expect(screen.queryByText('atajo')).toBeNull();
   });
+
+  // Regresión de la auditoría de accesibilidad: el botón principal de la
+  // fila no tenía `accessibilityLabel` -- un lector de pantalla lo anunciaba
+  // sin texto (solo el "Eliminar movimiento" anidado estaba etiquetado).
+  describe('accessibilityLabel', () => {
+    it('gasto: tipo, categoría/descripción, cartera y monto', async () => {
+      await render(<TransactionRow txn={baseTxn} category={super_} wallet={cuenta} onPress={jest.fn()} />);
+      expect(
+        screen.getByLabelText(`Gasto, Supermercado, Cuenta principal, ${formatMoney(45.5, 'USD')}`),
+      ).toBeTruthy();
+    });
+
+    it('transferencia: origen y destino, sin badge de origen', async () => {
+      const txn = {
+        ...baseTxn, type: 'transfer' as const, to_wallet: 'b', category: null, amount: '200.00',
+      };
+      await render(
+        <TransactionRow txn={txn} wallet={cuenta} toWallet={ahorro} onPress={jest.fn()} />,
+      );
+      expect(
+        screen.getByLabelText(`Transferencia, Cuenta principal a Ahorro, ${formatMoney(200, 'USD')}`),
+      ).toBeTruthy();
+    });
+
+    it('gasto fuera de presupuesto agrega "fuera de presupuesto" al final', async () => {
+      const txn = { ...baseTxn, counts_toward_budget: false };
+      await render(<TransactionRow txn={txn} category={super_} wallet={cuenta} onPress={jest.fn()} />);
+      expect(
+        screen.getByLabelText(
+          `Gasto, Supermercado, Cuenta principal, ${formatMoney(45.5, 'USD')}, fuera de presupuesto`,
+        ),
+      ).toBeTruthy();
+    });
+
+    it('sin onPress (fila no interactiva) no fuerza accessibilityLabel/role', async () => {
+      await render(<TransactionRow txn={baseTxn} category={super_} wallet={cuenta} />);
+      expect(screen.queryByLabelText(/Gasto, Supermercado/)).toBeNull();
+    });
+  });
 });

@@ -91,6 +91,20 @@ export function TransactionRow({
   // señales visibles por fila, no cuatro.
   const metaIcon = txn.split_group ? 'split' : txn.has_receipt ? 'camera' : null;
 
+  // Nombre accesible explícito: sin esto, un lector de pantalla anuncia el
+  // botón de la fila sin texto (ver auditoría de accesibilidad — cada fila
+  // sonaba igual, solo se distinguía el botón "Eliminar movimiento" anidado).
+  const amountLabel = formatMoney(Math.abs(signed), txn.currency);
+  const outOfBudget = txn.type === 'expense' && !txn.counts_toward_budget;
+  const a11yLabel = [
+    isTransfer ? 'Transferencia' : isIncome ? 'Ingreso' : 'Gasto',
+    isTransfer ? `${walletLabel(wallet)} a ${walletLabel(toWallet)}` : `${title}, ${walletLabel(wallet)}`,
+    amountLabel,
+    outOfBudget ? 'fuera de presupuesto' : badge,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   const row = (
     // `className` no se resuelve en `Animated.View` de reanimated: el fondo
     // (necesario para tapar la acción roja mientras no se desliza) va inline.
@@ -110,6 +124,7 @@ export function TransactionRow({
         }}
         className="flex-row items-center gap-3 py-3"
         accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={onPress ? a11yLabel : undefined}
       >
         <CategoryAvatar
           icon={glyph}
