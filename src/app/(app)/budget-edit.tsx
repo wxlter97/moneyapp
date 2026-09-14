@@ -7,22 +7,26 @@ import {
   useCategories,
   useCategoryBudgets,
   useDeleteCategoryBudget,
+  useSetBudgetPeriod,
   useSetForwardCategoryBudget,
 } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
-import type { Category } from '@/api/types';
+import type { BudgetPeriod, Category, ISODate } from '@/api/types';
 import { Button } from '@/components/ui/Button';
 import { CategoryAvatar } from '@/components/ui/CategoryAvatar';
 import { Icon } from '@/components/ui/Icon';
 import { dismissModal, ModalHeader } from '@/components/ui/ModalHeader';
 import { Money } from '@/components/ui/Money';
 import { Screen } from '@/components/ui/Screen';
+import { Select } from '@/components/ui/Select';
 import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
-import { currentYearMonth, formatYearMonth, type YearMonth } from '@/lib/date';
+import { todayISO } from '@/lib/date';
+import { BUDGET_PERIOD_OPTIONS, periodLabel, periodStart } from '@/lib/periods';
 import { toNumber } from '@/lib/money';
+import { useWorkspaceStore } from '@/store/workspace';
 
 function parseAmount(raw: string): number {
   const n = Number(raw.replace(/\s/g, '').replace(',', '.'));
@@ -30,16 +34,17 @@ function parseAmount(raw: string): number {
 }
 
 export default function BudgetEditScreen() {
-  const params = useLocalSearchParams<{ y?: string; m?: string }>();
-  const ym: YearMonth = useMemo(() => {
-    const y = Number(params.y);
-    const m = Number(params.m);
-    return y && m ? { year: y, month: m } : currentYearMonth();
-  }, [params.y, params.m]);
+  const params = useLocalSearchParams<{ period_start?: string }>();
+  const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
+  const budgetPeriod = activeWorkspace?.budget_period ?? 'monthly';
+  const start: ISODate = useMemo(
+    () => params.period_start || periodStart(todayISO(), budgetPeriod),
+    [params.period_start, budgetPeriod],
+  );
 
   const categoriesQ = useCategories();
-  const budgetsQ = useCategoryBudgets(ym);
-  const reportQ = useBudgetReport(ym);
+  const budgetsQ = useCategoryBudgets(start);
+  const reportQ = useBudgetReport(start);
   const setForward = useSetForwardCategoryBudget();
   const remove = useDeleteCategoryBudget();
 
@@ -154,8 +159,7 @@ export default function BudgetEditScreen() {
           setForward.mutateAsync({
             category: c.id,
             amount: next.toFixed(2),
-            month: ym.month,
-            year: ym.year,
+            period_start: start,
           }),
         );
       }
@@ -168,9 +172,14 @@ export default function BudgetEditScreen() {
     }
   }
 
+  const isOwner = activeWorkspace?.role === 'owner';
+
   return (
     <Screen edges={['top', 'bottom']}>
-      <ModalHeader title={`Presupuesto · ${formatYearMonth(ym)}`} />
+      <ModalHeader title={`Presupuesto · ${periodLabel(start, budgetPeriod)}`} />
+      {isOwner ? (
+        <BudgetPeriodRow workspaceId={activeWorkspace!.id} current={budgetPeriod} />
+      ) : null}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
@@ -189,9 +198,9 @@ export default function BudgetEditScreen() {
               keyboardShouldPersistTaps="handled"
             >
               <Text className="text-text-muted px-1 pb-2 text-xs">
-                Monto mensual por subcategoría (el grupo muestra la suma de las suyas, no se
-                presupuesta aparte). Se aplica también a los próximos meses, hasta que edites uno
-                distinto. Deja en blanco (o 0) para quitarlo de este mes.
+                Monto por subcategoría (el grupo muestra la suma de las suyas, no se presupuesta
+                aparte). Se aplica también a los próximos períodos, hasta que edites uno distinto.
+                Deja en blanco (o 0) para quitarlo de este período.
               </Text>
               {groups.map((g) => {
                 const shownSubcats = shownSubcatsByGroup.get(g.id) ?? [];
@@ -380,6 +389,33 @@ function AddSubcategoryRow({
           </ScrollView>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/** Cadencia del presupuesto (diario/semanal/quincenal/mensual/anual) --
+ * global al workspace, no por categoría. Solo el dueño la puede cambiar
+ * (ver `WorkspaceSerializer` en el backend). */
+function BudgetPeriodRow({ workspaceId, current }: { workspaceId: string; current: BudgetPeriod }) {
+  const setBudgetPeriod = useSetBudgetPeriod();
+  const [error, setError] = useState<string | null>(null);
+
+  async function onChange(next: string) {
+    if (next === current) return;
+    setError(null);
+    try {
+      await setBudgetPeriod.mutateAsync({ id: workspaceId, period: next as BudgetPeriod });
+      haptics.success();
+    } catch (err) {
+      haptics.error();
+      setError(errorMessage(err, 'No se pudo cambiar el período.'));
+    }
+  }
+
+  return (
+    <View className="gap-1.5 pb-2">
+      <Select label="Período" value={current} onChange={onChange} options={BUDGET_PERIOD_OPTIONS} />
+      {error ? <Text className="text-expense text-xs">{error}</Text> : null}
     </View>
   );
 }

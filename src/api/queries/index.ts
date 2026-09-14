@@ -12,10 +12,12 @@ import { fromByteArray as encodeBase64 } from 'base64-js';
 
 import * as res from '@/api/resources';
 import type {
+  BudgetPeriod,
   CategoryBudgetInput,
   CategoryInput,
   ConfirmEmailImportInput,
   EmailImportStatus,
+  ISODate,
   InstallmentPurchaseInput,
   MyPlan,
   NotificationPreferences,
@@ -26,7 +28,8 @@ import type {
   WalletInput,
   WorkspaceBackup,
 } from '@/api/types';
-import { currentYearMonth, type YearMonth } from '@/lib/date';
+import { todayISO } from '@/lib/date';
+import { periodStart } from '@/lib/periods';
 import { useWorkspaceStore } from '@/store/workspace';
 import { qk } from './keys';
 
@@ -49,6 +52,21 @@ function useInvalidateWorkspace() {
   return () => {
     void qc.invalidateQueries({ queryKey: ['ws', ws], type: 'all' });
   };
+}
+
+/** `budget_period` del workspace activo (default 'monthly' mientras no cargó
+ * la lista de workspaces todavía). */
+function useActiveBudgetPeriod(): BudgetPeriod {
+  return useWorkspaceStore(
+    (s) => s.workspaces.find((w) => w.id === s.activeId)?.budget_period ?? 'monthly',
+  );
+}
+
+/** El `period_start` "de hoy" para el workspace activo -- default de
+ * `useCategoryBudgets`/`useBudgetReport` cuando no se pasa uno explícito. */
+function useCurrentBudgetPeriodStart(): ISODate {
+  const budgetPeriod = useActiveBudgetPeriod();
+  return periodStart(todayISO(), budgetPeriod);
 }
 
 function useActiveWs() {
@@ -143,6 +161,22 @@ export function useSetBaseCurrency() {
       res.workspaces.setBaseCurrency(id, currency),
     onSuccess: async () => {
       invalidate(); // los reportes cacheados quedan en la moneda vieja
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+/** Cadencia del presupuesto (diario/semanal/quincenal/mensual/anual). Solo
+ * owner. Cambiarla no reescribe los presupuestos ya guardados -- ver
+ * docstring de `WorkspaceSerializer.update` en el backend. */
+export function useSetBudgetPeriod() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, period }: { id: string; period: BudgetPeriod }) =>
+      res.workspaces.setBudgetPeriod(id, period),
+    onSuccess: async () => {
+      invalidate(); // el reporte/lista de presupuesto cacheados quedan con la cadencia vieja
       await qc.invalidateQueries({ queryKey: qk.workspaces() });
     },
   });
@@ -774,11 +808,15 @@ export function useImportTransactionsXlsx() {
 }
 
 // --- presupuestos --------------------------------------------------
-export function useCategoryBudgets(ym: YearMonth = currentYearMonth()) {
+/** `periodStart` (default: el período actual del workspace activo, ver
+ * `budget_period`): el inicio exacto del período a listar. */
+export function useCategoryBudgets(periodStart?: ISODate) {
   const ws = useActiveWs();
+  const currentPeriodStart = useCurrentBudgetPeriodStart();
+  const start = periodStart ?? currentPeriodStart;
   return useQuery({
-    queryKey: qk.ws(ws).categoryBudgets(ym),
-    queryFn: () => res.categoryBudgets.list(ym),
+    queryKey: qk.ws(ws).categoryBudgets(start),
+    queryFn: () => res.categoryBudgets.list({ period_start: start }),
     enabled: !!ws,
   });
 }
@@ -997,11 +1035,14 @@ export function useDashboardSummary() {
   });
 }
 
-export function useBudgetReport(ym: YearMonth = currentYearMonth()) {
+/** `periodStart` (default: el período actual del workspace activo). */
+export function useBudgetReport(periodStart?: ISODate) {
   const ws = useActiveWs();
+  const currentPeriodStart = useCurrentBudgetPeriodStart();
+  const start = periodStart ?? currentPeriodStart;
   return useQuery({
-    queryKey: qk.ws(ws).reportBudget(ym),
-    queryFn: () => res.reports.budget(ym),
+    queryKey: qk.ws(ws).reportBudget(start),
+    queryFn: () => res.reports.budget({ period_start: start }),
     enabled: !!ws,
   });
 }

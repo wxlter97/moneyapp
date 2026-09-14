@@ -1,5 +1,5 @@
 import type { TransactionListParams, WalletListParams } from '@/api/resources';
-import type { YearMonth } from '@/lib/date';
+import type { ISODate } from '@/api/types';
 
 /**
  * Fábrica de query keys. Todo lo scoped por workspace lleva `ws` en la key para
@@ -46,8 +46,8 @@ export const qk = {
     transaction: (id: string) => ['ws', ws, 'transaction', id] as const,
     receiptImage: (id: string) => ['ws', ws, 'transaction', id, 'receipt'] as const,
 
-    categoryBudgets: (ym?: YearMonth) =>
-      ['ws', ws, 'category-budgets', ym ?? {}] as const,
+    categoryBudgets: (periodStart?: ISODate) =>
+      ['ws', ws, 'category-budgets', periodStart ?? null] as const,
 
     recurringExpenses: () => ['ws', ws, 'recurring-expenses'] as const,
     recurringExpense: (id: string) => ['ws', ws, 'recurring-expense', id] as const,
@@ -64,7 +64,8 @@ export const qk = {
 
     reportNetWorth: () => ['ws', ws, 'reports', 'net-worth'] as const,
     reportSummary: () => ['ws', ws, 'reports', 'summary'] as const,
-    reportBudget: (ym?: YearMonth) => ['ws', ws, 'reports', 'budget', ym ?? {}] as const,
+    reportBudget: (periodStart?: ISODate) =>
+      ['ws', ws, 'reports', 'budget', periodStart ?? null] as const,
     reportCashflow: (months: number) => ['ws', ws, 'reports', 'cashflow', months] as const,
     reportCategoryTrends: (months: number) =>
       ['ws', ws, 'reports', 'category-trends', months] as const,
