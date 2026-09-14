@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 
 import type { NetWorthBreakdown } from '@/api/types';
 import { PURPOSE_LABEL, WALLET_PURPOSES } from '@/api/types';
@@ -108,9 +108,22 @@ export function NetWorthPager({
 
       {pages.length > 1 ? (
         <View className="mt-2 flex-row justify-center gap-1.5">
+          {/* En touch (mobile) el swipe ya cambia de página -- el punto es
+              solo indicador. En web (mouse/teclado, sin swipe) es la única
+              forma de saltar a una página sin arrastrar, así que acá sí
+              necesita ser interactivo (hallazgo de la auditoría de
+              producto: "no responde a click en los dots ni a drag"). */}
           {pages.map((p, i) => (
-            <View
+            <Pressable
               key={p.key}
+              onPress={() => {
+                setIndex(i);
+                scroller.current?.scrollTo({ x: i * innerWidth, animated: true });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Ver ${p.title}`}
+              accessibilityState={{ selected: i === index }}
+              hitSlop={8}
               className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-primary' : 'bg-border'}`}
             />
           ))}

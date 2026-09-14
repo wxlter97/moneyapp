@@ -326,7 +326,14 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
 - [ ] Formularios full-screen también en desktop — revisar `TransactionForm.tsx`, `WalletForm.tsx`
       y si usan `Screen` full-bleed en desktop; evaluar variante `Drawer` (no existe hoy, confirmado
       por grep).
-- [ ] Carrusel "De un vistazo" (`NetWorthPager.tsx`) sin soporte de mouse/click-en-dots en desktop.
+- [x] **Carrusel "De un vistazo" (`NetWorthPager.tsx`)** (14 sep 2026) — confirmado el hallazgo:
+      los puntos eran `View`, no `Pressable`, así que en desktop (sin swipe) no había forma de
+      saltar de página sin arrastrar. Ahora cada punto es un botón accesible
+      (`accessibilityLabel="Ver {título de la página}"`) que llama a `scroller.scrollTo(...)`.
+      El arrastre con mouse en sí ya funcionaba (`ScrollView horizontal` de RN Web lo soporta
+      nativo) -- no hacía falta tocarlo. Verificado en el navegador a ancho desktop: click en un
+      punto mueve el carrusel y lo resalta en Faro. 2 tests nuevos, 37 suites / 199 tests,
+      `tsc`/`expo lint` limpios.
 
 ---
 
