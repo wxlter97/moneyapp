@@ -55,9 +55,19 @@
 - [x] **Selector de workspace sin `accessibilityLabel`**
   ✅ Resuelto. `WorkspaceSwitcher.tsx` — `accessibilityLabel="Cambiar de presupuesto, actual: {nombre}"`
   + `accessibilityState={{ expanded: open }}`. Test nuevo en `WorkspaceSwitcher.test.tsx`.
-- [ ] Auditar rápido el resto de `Pressable`/`TouchableOpacity` sin `accessibilityLabel` en
-  componentes de alta superficie (`WalletRow`, `CategoryGrid`, `CalendarGrid`) — no se
-  verificaron todos en esta pasada.
+- [x] **Auditoría de `WalletRow`, `CategoryGrid`, `CalendarGrid`** ✅ Resuelto.
+  - `WalletRow.tsx` no tiene `Pressable` propio (es solo contenido); el botón que lo envuelve
+    vive en `(tabs)/wallets.tsx` y tampoco tenía label. Se agregó `walletRowLabel(wallet,
+    hasChildren)` exportado desde `WalletRow.tsx` (reusa el mismo cálculo de saldo que se
+    muestra) y se aplicó en `wallets.tsx`.
+  - `CategoryGrid.tsx` tenía 4 `Pressable` sin label (el tile de categoría, el encabezado de
+    grupo editable — que ni siquiera tenía `accessibilityRole`—, "+ Subcategoría", y el toggle
+    de `CategoryPickerField`) más el ítem "Sin categoría". Los 5 quedaron etiquetados.
+  - `CalendarGrid.tsx` ya tenía label, pero decía `"{día} de {mes}"` con el mes en número (ej.
+    "13 de 8") y no comunicaba los puntos de ingreso/gasto/programado. Ahora usa el mes en
+    palabras + año, y anuncia "hoy"/"con gastos"/"con ingresos"/"con movimientos programados".
+  - Tests nuevos: `WalletRow.test.tsx`, `CategoryGrid.test.tsx`, caso agregado en
+    `CalendarGrid.test.tsx`. Suite completo 175/175, typecheck limpio.
 
 ### Design tokens base (sin tocar composición visual todavía)
 

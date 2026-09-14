@@ -34,4 +34,20 @@ describe('CalendarGrid', () => {
     await fireEvent.press(screen.getByText('13'));
     expect(onSelectDay).toHaveBeenCalledWith('2026-08-13');
   });
+
+  // Regresión de la auditoría de accesibilidad: el label decía "{día} de
+  // {mes}" con el mes en número (ej. "13 de 8"), sin nombre de mes ni qué
+  // tenía ese día (los puntos de ingreso/gasto/programado se veían, pero no
+  // se anunciaban).
+  it('el label del día usa el mes en palabras y anuncia sus marcadores', async () => {
+    await render(
+      <CalendarGrid
+        month={{ year: 2026, month: 8 }}
+        selected="2026-08-01"
+        markers={{ '2026-08-13': { income: false, expense: true, scheduled: false } }}
+        onSelectDay={jest.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('13 de agosto de 2026, con gastos')).toBeTruthy();
+  });
 });

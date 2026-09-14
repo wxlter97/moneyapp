@@ -58,6 +58,7 @@ function Tile({
       }}
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      accessibilityLabel={category.name}
       className="w-1/4 items-center gap-1 px-1 py-2 active:opacity-60"
     >
       <CategoryAvatar icon={category.icon} color={category.color} size={56} selected={selected} />
@@ -126,6 +127,8 @@ export function CategoryGrid({
               <Pressable
                 onPress={() => onEditCategory?.(group)}
                 disabled={!onEditCategory}
+                accessibilityRole={onEditCategory ? 'button' : undefined}
+                accessibilityLabel={onEditCategory ? `Editar categoría ${group.name}` : undefined}
                 className="flex-row items-center gap-2 px-1 pb-1 active:opacity-60"
               >
                 {group.icon ? <Text className="text-xs">{group.icon}</Text> : null}
@@ -153,6 +156,7 @@ export function CategoryGrid({
                 onPress={() => onAddSub(group.id)}
                 className="px-1 py-1 active:opacity-60"
                 accessibilityRole="button"
+                accessibilityLabel={`Agregar subcategoría a ${group.name}`}
               >
                 <Text className="text-primary text-xs font-semibold">+ Subcategoría</Text>
               </Pressable>
@@ -205,6 +209,10 @@ export function CategoryPickerField({
           onToggle();
         }}
         accessibilityRole="button"
+        accessibilityLabel={`${label}: ${
+          loading ? 'cargando' : (selected?.name ?? (allowClear ? 'sin categoría' : 'sin elegir'))
+        }`}
+        accessibilityState={{ expanded: open }}
         className={`h-12 flex-row items-center justify-between border-b px-1 ${
           error ? 'border-expense' : 'border-border/60'
         } active:opacity-70`}
@@ -240,6 +248,7 @@ export function CategoryPickerField({
                     onChange('');
                   }}
                   accessibilityRole="button"
+                  accessibilityLabel="Sin categoría"
                   className="mb-2 flex-row items-center gap-2 px-1 py-1.5 active:opacity-60"
                 >
                   <View className="h-6 w-6 items-center justify-center rounded-full bg-surface-2">

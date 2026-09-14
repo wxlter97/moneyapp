@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useNetWorth, useReorderWallets, useWallets } from '@/api/queries';
 import { NetWorthPager } from '@/components/NetWorthPager';
 import { SectionHeader } from '@/components/SectionHeader';
-import { WalletRow } from '@/components/WalletRow';
+import { WalletRow, walletRowLabel } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
 import { DragList } from '@/components/ui/DragList';
 import { Icon } from '@/components/ui/Icon';
@@ -135,6 +135,7 @@ export default function WalletsScreen() {
                     onPress={() => router.push(`/wallet-transactions?wallet=${node.wallet.id}`)}
                     className="active:opacity-70"
                     accessibilityRole="button"
+                    accessibilityLabel={walletRowLabel(node.wallet, node.hasChildren)}
                   >
                     <WalletRow
                       wallet={node.wallet}
