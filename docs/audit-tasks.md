@@ -9,6 +9,22 @@
 >
 > Formato: `[ ]` pendiente, `[x]` hecho. Referencias de archivo entre backticks son reales (leídas del repo).
 
+## Decisiones (14 sep 2026)
+
+1. **Orden de fases:** Fases 1-2 (bugs + accesibilidad + UX) primero. "Ledger Brutalism" (Fase 3)
+   se arranca después, no en paralelo — Fase 1 ya está cerrada, sigue Fase 2.
+2. **Vigencia del audit:** producción (`money.wxlter.dev`) está al día con `main`. Dicho esto, ya
+   se confirmó código en mano que varias secciones del audit **no describen el estado actual**
+   (ver Fase 0 — FAB/bottom-nav, bug de monto, empty states, jerarquía de Herramientas, etc. ya
+   resueltos) y que "Restante"/"Información" en Presupuesto **no son tan idénticas** como dice el
+   audit (§1.2) — "Información" ya suma una card "Total del período" + línea de provisión que
+   "Restante" no tiene (ver nota en Fase 2 abajo). Conclusión práctica: seguimos verificando
+   contra código antes de ejecutar cada ítem, no asumimos el audit al pie de la letra aunque
+   esté "vigente" en términos de deploy.
+3. **Backend (P1-5, bootstrap ~12 requests):** en alcance. `budget-app-django` está disponible
+   como directorio de trabajo adicional en esta sesión — se puede proponer el endpoint agregado
+   o los cambios de ese lado cuando se llegue a Fase 4.
+
 ---
 
 ## Fase 0 — Ya resuelto (no hacer, solo confirmar que sigue así)
@@ -82,8 +98,14 @@
 
 ## Fase 2 — Core UX
 
-- [ ] Fusionar tabs "Restante"/"Información" del Presupuesto en un solo toggle sobre el mismo
-      número (verificar si `budgets.tsx` todavía tiene esta duplicación).
+- [ ] **Corrección: no son tan idénticas como dice el audit.** Confirmado en `(tabs)/budgets.tsx`:
+      "Restante" muestra el `Ring` grande + la lista de grupos; "Información" reemplaza el ring
+      por una card "Total del período" (presupuestado/gastado/disponible) y le agrega
+      `showProvision` a cada `GroupCard` (línea de provisión acumulada, ausente en "Restante").
+      La lista de categorías de abajo sí se repite igual entre ambas. Pendiente real, más acotado
+      que "fusionar en un toggle": decidir si esa diferencia (ring visual vs. desglose numérico +
+      provisión) amerita 2 tabs o si cabe todo en una sola vista — no es un bug, es una decisión
+      de producto.
 - [ ] Confirmación consistente para acciones destructivas ("Eliminar transacción") — verificar
       el flujo real de borrado (no se probó en el audit para no tocar datos reales).
 - [ ] Vista unificada "Próximos pagos" cruzando Recurrentes + Compras a plazo — confirmar si
@@ -152,13 +174,6 @@
 
 ---
 
-## Preguntas abiertas antes de arrancar
+## Preguntas abiertas
 
-1. **¿Seguimos con "Ledger Brutalism" (Fase 3) o priorizamos primero cerrar Fases 1-2** (bugs +
-   accesibilidad + UX), dejando la identidad visual para después? Es la pieza de mayor esfuerzo
-   del documento y toca casi todos los componentes.
-2. ¿La auditoría se hizo contra `money.wxlter.dev` (producción) — sabes si ese deploy corresponde
-   a `main` actual o está más atrás? Cambia cuánto del resto del documento (secciones no
-   verificadas acá: Trends, Categorías, Tendencias, Carteras) sigue vigente.
-3. Fase 4 (bootstrap ~12 requests, P1-5) requiere cambios de backend (`budget-api-*.run.app`,
-   repo `budget-app-django`) — ¿esa parte la trabajamos en este repo o coordinamos aparte?
+Resueltas — ver "Decisiones (14 sep 2026)" al principio del documento.
