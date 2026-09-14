@@ -21,7 +21,12 @@ const STEPS: Step[] = [
   {
     icon: 'gift',
     title: 'Bienvenido a Budget',
-    body: 'Un presupuesto personal (o compartido) para llevar tus cuentas al día, sin hojas de cálculo. Este tour rápido te muestra lo esencial — lo podés saltar cuando quieras.',
+    // Antes era genérico ("presupuesto personal, sin hojas de cálculo") --
+    // no decía en qué se diferencia de cualquier otra app. Estos 3 ganchos
+    // (cuotas/recurrentes, varias carteras y monedas, presupuesto por
+    // categoría) son justamente lo que pedía la auditoría de producto §1.1
+    // que apareciera explícito desde el primer paso, no enterrado al final.
+    body: 'Para cómo se paga de verdad: efectivo, varias tarjetas y cuotas a la vez, en más de una cartera y moneda si hace falta — con presupuesto por categoría, no una hoja de cálculo genérica. Este tour rápido te muestra lo esencial — lo podés saltar cuando quieras.',
   },
   {
     icon: 'users',
@@ -31,7 +36,7 @@ const STEPS: Step[] = [
   {
     icon: 'card',
     title: 'Carteras',
-    body: 'Una cartera es cada cuenta, tarjeta, efectivo o meta de ahorro que tenés. Todo lo que registrás pertenece a una.',
+    body: 'Una cartera es cada cuenta, tarjeta, efectivo o meta de ahorro que tenés -- cada una en su propia moneda si hace falta. Todo lo que registrás pertenece a una.',
   },
   {
     icon: 'card',

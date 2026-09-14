@@ -265,7 +265,7 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
 
 ---
 
-## Fase 4 — Dashboard / información financiera
+## Fase 4 — Dashboard / información financiera ✅ cerrada (14 sep 2026)
 
 - [x] **Estado explícito de "aún no hay suficiente historial"** (14 sep 2026) — confirmado el
       hallazgo: el 0 ya lo resolvía `NetWorthHistoryScreen` con `EmptyState`, pero 1-2 puntos
@@ -286,15 +286,35 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
       una tarjeta real en deuda (`USD 430.50`): color/tipografía correctos (rojo semántico,
       JetBrains Mono), patrimonio neto del header se actualiza en consecuencia. Sin test dedicado
       (convención del proyecto: pantallas bajo `src/app/` no tienen tests).
-- [ ] **Corrección: sí existe onboarding** — `src/app/(app)/onboarding.tsx` (8 pasos: bienvenida,
-      presupuestos/workspaces, carteras, crear primera cartera, categorías, cómo cargar un
-      movimiento, "y hay más", listo). Es un tour operativo, no vende diferenciación todavía —
-      pendiente real: revisar si el copy engancha con "cuotas y recurrentes / multi-cartera y
-      moneda / presupuesto por categoría" como ganchos explícitos (lo que pedía el audit en
-      §1.1), no reescribirlo desde cero.
-- [ ] Bootstrap del dashboard: contar requests reales de red (Network tab) del dashboard actual
-      para ver si sigue el patrón de ~12 requests secuenciales del audit, antes de invertir en
-      agregación de backend (P1, Effort L, depende de `budget-api-*` en Cloud Run).
+- [x] **Corrección: sí existe onboarding, y ya enganchaba mejor de lo que decía el audit** (14 sep
+      2026) — `src/app/(app)/onboarding.tsx` (8 pasos). §1.1 del audit original literalmente decía
+      "no hay onboarding observable" (falso — probablemente porque solo se ve una vez por cuenta,
+      `User.onboarding_completed`, y un crawl de audit con cuenta ya usada nunca lo dispara) y
+      pedía que el primer paso mostrara explícito "cuotas y recurrentes / múltiples carteras y
+      monedas / presupuestos por categoría" como ganchos concretos. Confirmado el hallazgo real:
+      esos 3 temas SÍ estaban, pero enterrados en el último paso ("Y hay más... no hace falta
+      memorizarlo ahora") — restándoles peso en vez de venderlos. Fix de copy únicamente (2 de los
+      8 pasos, sin tocar estructura ni agregar pasos): el paso de bienvenida ahora abre con los 3
+      ganchos explícitos ("efectivo, varias tarjetas y cuotas a la vez, en más de una cartera y
+      moneda... con presupuesto por categoría"); el paso "Carteras" suma media frase sobre
+      multi-moneda. Deliberadamente NO se hardcodeó "Centroamérica" (lo sugería el audit) — el
+      copy ya implica la región sin excluir a nadie fuera de ella. Verificado en el navegador
+      forzando `onboarding_completed=False`. `tsc`/`jest`/`expo lint` limpios.
+- [x] **Bootstrap del dashboard — medido, no solo contado** (14 sep 2026): sesión limpia (login
+      real, sin cache), `performance.getEntriesByType('resource')` contra el backend local. El
+      conteo del audit es correcto (~12: 1 login + `auth/me` + 2 en paralelo `workspaces`/
+      `push-devices` + 7 más en paralelo una vez resuelto el workspace: `notifications/
+      unread-count`, `wallets`, `reports/summary`, `reports/scheduled`, `reports/budget`,
+      `reports/net-worth`, `categories`) — pero "secuenciales" **no** es correcto: son 2 rondas
+      (`auth/me` sola, ~6ms; el resto -- 7 requests -- en paralelo, arrancan todas dentro de 1ms
+      entre sí, ~50ms). Total medido en local: ~105ms de red para todo el bootstrap, no una
+      cadena de 12 round-trips. **Conclusión: no se justifica invertir en agregación de backend
+      (P1, Effort L) como estaba planteado** — el problema que resolvería (latencia acumulada de
+      una cadena secuencial) no existe tal como se describió; si hay una optimización real es
+      mucho más chica (evitar que la 2ª ronda espere a `auth/me` cuando el workspace activo ya
+      está en `AsyncStorage` desde la sesión anterior). Se retira de la lista de trabajo activo;
+      si se quiere perseguir esa micro-optimización puntual, es un ítem nuevo y acotado, no el
+      proyecto de agregación original.
 
 ---
 
