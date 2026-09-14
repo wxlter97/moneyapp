@@ -49,7 +49,7 @@
 
 ---
 
-## Fase 1 — Foundations (bugs reales + accesibilidad + tokens)
+## Fase 1 — Foundations (bugs reales + accesibilidad + tokens) ✅ cerrada (14 sep 2026)
 
 ### P0 — Confirmado en código, corregir primero
 
@@ -63,8 +63,9 @@
   nuevo prop. Test de regresión con los dos casos exactos del audit (Servicios 6.00/6.00,
   Miscelánea 120.38/0.00) en `src/components/__tests__/BudgetProgressRow.test.tsx` — 4/4 ok,
   suite completo 161/161, typecheck limpio.
-  - Pendiente opcional: aplicar el mismo tratamiento de 3 estados al anillo de "restante"
-    si usa lógica propia — no se revisó `src/components/ui/Ring.tsx` en esta pasada.
+  - ~~Pendiente opcional: aplicar el mismo tratamiento de 3 estados al anillo de "restante"~~
+    — moot: `Ring.tsx` se borró en Fase 3 (reemplazado por `BudgetMeter.tsx`, que ya nace con
+    los 3 estados vía `budgetState` compartido).
 
 ### P1 — Accesibilidad (quick wins, revisar antes de asumir que faltan)
 
@@ -93,12 +94,17 @@
 
 ### Design tokens base (sin tocar composición visual todavía)
 
-- [ ] Revisar `src/theme/` — confirmar si ya existen tokens semánticos `positive/caution/danger`
-      o si todo pasa por `colors.expense`/`colors.income`/`colors.primary` sin un tercer estado
-      "cerca del límite". Esto es prerequisito directo del fix de P0-3.
-- [ ] Confirmar escala de radios/espaciado actual (`tailwind.config.js`, `theme/index.ts`) contra
-      la propuesta de tokens del audit (§4.1) antes de decidir si vale la pena formalizarla o si
-      ya es razonablemente consistente (varias pantallas leídas ya usan `rounded-3xl` consistente).
+- [x] Revisar `src/theme/` — **resuelto de hecho, no solo confirmado**: `income`/`expense`/
+      `warning` son los 3 tokens semánticos (`theme/index.ts`), fijos e independientes del
+      acento desde la identidad wxlter. de Fase 3 — exactamente el "tercer estado (cerca del
+      límite)" que este ítem pedía confirmar, ya en uso activo en `ProgressBar`/`BudgetMeter`/
+      `BudgetProgressRow`.
+- [x] Confirmar escala de radios/espaciado — **resuelto de hecho, en Fase 3**: `tailwind.config.js`
+      `borderRadius` se redefinió a propósito (radios chicos, disciplina Ledger) al implementar la
+      identidad wxlter., reemplazando la escala "esquinas suaves" que tenía antes.
+
+Fase 1 queda cerrada -- lo que faltaba lo resolvió el trabajo de fases posteriores, no hizo falta
+una pasada aparte.
 
 ---
 
