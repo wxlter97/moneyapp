@@ -165,6 +165,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
         onPress: () => router.push('/backup'),
       },
       {
+        icon: 'archive',
+        label: 'Cuentas ocultas',
+        hint: 'Ver y mostrar de nuevo las carteras que archivaste',
+        onPress: () => router.push('/hidden-wallets'),
+      },
+      {
         icon: 'reset',
         label: 'Restablecer',
         hint: 'Borrar datos del presupuesto',
