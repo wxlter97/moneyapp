@@ -1,69 +1,21 @@
-import { useState } from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import { lazy, Suspense } from 'react';
 
-import { useTransactions } from '@/api/queries';
-import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
-import { Button } from '@/components/ui/Button';
 import { ModalHeader } from '@/components/ui/ModalHeader';
-import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { Screen } from '@/components/ui/Screen';
-import { ErrorState, LoadingState } from '@/components/ui/states';
-import { downloadTextFile, transactionsToCsv } from '@/lib/export';
-import { todayISO } from '@/lib/date';
+import { LoadingState } from '@/components/ui/states';
 
-export default function ExportScreen() {
-  const txQuery = useTransactions();
-  const { map: categories } = useCategoryMap();
-  const { map: wallets } = useWalletMap();
-  const [done, setDone] = useState<string | null>(null);
+// Ver el comentario en `src/screens/ExportScreen.tsx`: cuerpo cargado bajo
+// demanda (pantalla Pro de uso ocasional), aparte de `src/app/` para que
+// Expo Router no la registre también como su propia ruta.
+const ExportScreen = lazy(() => import('@/screens/ExportScreen'));
 
-  const items = txQuery.data ?? [];
-
-  function onDownload() {
-    const csv = transactionsToCsv(items, categories, wallets);
-    const name = `budget-transacciones-${todayISO()}.csv`;
-    const ok = downloadTextFile(name, csv);
-    setDone(ok ? name : 'error');
-  }
-
+export default function Export() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Exportar datos" />
-      <ProFeatureGate feature="export">
-      <ScrollView contentContainerClassName="gap-4 py-3">
-        {txQuery.isLoading ? (
-          <LoadingState />
-        ) : txQuery.isError ? (
-          <ErrorState error={txQuery.error} onRetry={txQuery.refetch} />
-        ) : (
-          <>
-            <Text className="text-text-muted text-sm">
-              Descarga todas tus transacciones ({items.length}) en un archivo CSV, con
-              fecha, tipo, categoría, cartera, monto y nota.
-            </Text>
-
-            {Platform.OS !== 'web' ? (
-              <Text className="text-warning text-sm">
-                La descarga de archivos solo está disponible en la versión web.
-              </Text>
-            ) : (
-              <Button
-                label={`Descargar CSV (${items.length})`}
-                disabled={items.length === 0}
-                onPress={onDownload}
-              />
-            )}
-
-            {done && done !== 'error' ? (
-              <Text className="text-income text-sm">Descargado: {done}</Text>
-            ) : null}
-            {done === 'error' ? (
-              <Text className="text-expense text-sm">No se pudo generar la descarga.</Text>
-            ) : null}
-          </>
-        )}
-      </ScrollView>
-      </ProFeatureGate>
+      <Suspense fallback={<LoadingState />}>
+        <ExportScreen />
+      </Suspense>
     </Screen>
   );
 }
