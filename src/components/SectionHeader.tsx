@@ -6,7 +6,7 @@ import { GlassSurface } from './ui/GlassSurface';
 import { ScreenHeader } from './ScreenHeader';
 
 interface SectionHeaderProps {
-  /** Etiqueta pequeña sobre el contenido principal ("Vista general", "Carteras"…). */
+  /** Etiqueta pequeña sobre el contenido principal ("Inicio", "Carteras"…). */
   title?: string;
   /** Contenido principal: normalmente una cifra grande (`<Money className="text-hero" />`). */
   subtitle?: ReactNode;

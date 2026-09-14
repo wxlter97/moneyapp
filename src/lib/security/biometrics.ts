@@ -26,7 +26,7 @@ export async function isBiometricAvailable(): Promise<boolean> {
 export async function authenticateWithBiometrics(): Promise<boolean> {
   try {
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Desbloqueá Budget',
+      promptMessage: 'Desbloqueá Porsupuesto',
       cancelLabel: 'Usar PIN',
       disableDeviceFallback: true,
     });

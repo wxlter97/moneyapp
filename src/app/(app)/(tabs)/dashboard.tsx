@@ -56,7 +56,7 @@ export default function OverviewScreen() {
   return (
     <View className="flex-1 bg-bg">
       <SectionHeader
-        title="Vista general"
+        title="Inicio"
         right={
           <Pressable
             onPress={() => {

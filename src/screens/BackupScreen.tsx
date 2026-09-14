@@ -94,7 +94,7 @@ export default function BackupScreen() {
       return;
     }
     if (!isBackup(data)) {
-      setPickError('Ese archivo no es un respaldo válido de Budget.');
+      setPickError('Ese archivo no es un respaldo válido de Porsupuesto.');
       return;
     }
     setPicked(data);

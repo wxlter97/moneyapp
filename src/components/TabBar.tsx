@@ -1,7 +1,12 @@
-import { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import type { EdgeInsets } from 'react-native-safe-area-context';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { SideNav } from './SideNav';
 import { TAB_SCREENS } from './tabBarConfig';
@@ -30,25 +35,31 @@ interface TabBarProps {
   insets: EdgeInsets;
 }
 
-const BAR_HEIGHT = 68;
+const BAR_HEIGHT = 60;
 const H_MARGIN = 16;
 // Mismo radio que el resto de los "containers" grandes de la app (`Card`,
 // `rounded-3xl` = 32px) — antes era la mitad de la altura (una píldora
 // completa), lo que no coincidía con el radio de las demás superficies.
-const BAR_RADIUS = 32;
-// Radio de la píldora de la pestaña activa: concéntrico con el radio de la
-// barra (32) descontando el inset que la separa de ese borde (~9px entre el
-// padding de la fila y el del botón) — si no, se ve más cuadrada que el
-// contenedor que la rodea.
-const TAB_PILL_RADIUS = BAR_RADIUS - 9;
+const BAR_RADIUS = 30;
+// La píldora del botón activo es más chica que la barra que la contiene
+// (altura del botón, no de la barra completa) -- coherente con que ahora
+// sólo el botón activo tiene forma de píldora "real": los inactivos son un
+// círculo de ícono solo.
+const PILL_RADIUS = 22;
 
 /**
- * Barra de pestañas flotante, estilo "liquid glass": vidrio + degradado del
- * tema, esquinas redondeadas (mismo radio que el resto de las cards) y
- * separada del borde. Misma apariencia en iOS/Android/Web (usa
- * `GlassSurface`, no APIs exclusivas). Etiqueta siempre visible bajo el
- * ícono; la pestaña activa se distingue con una píldora sólida del color de
- * acento (no un tinte de 10% como antes).
+ * Barra de pestañas flotante, estilo "liquid glass": vidrio + esquinas
+ * redondeadas (mismo radio que el resto de las cards), separada del borde.
+ * Misma apariencia en iOS/Android/Web (usa `GlassSurface`, no APIs
+ * exclusivas).
+ *
+ * Sólo la pestaña activa muestra texto junto al ícono, dentro de una
+ * píldora sólida en Faro (identidad, ver Fase 3) -- las demás son un
+ * círculo de ícono solo. Antes las 4 mostraban ícono + etiqueta apiladas
+ * siempre: se veía más cargado que el resto de la app, que ya usa el color
+ * de acento como la única señal de "esto está seleccionado" en todos lados
+ * (Herramientas → Apariencia, filtros, segmented controls...) — acá no
+ * hacía excepción, sólo le faltaba dejar de repetir el texto 4 veces.
  */
 export function TabBar({ state, navigation, insets }: TabBarProps) {
   const colors = useColors();
@@ -100,7 +111,15 @@ export function TabBar({ state, navigation, insets }: TabBarProps) {
         }}
       >
         <GlassSurface radius={BAR_RADIUS}>
-          <View style={{ flexDirection: 'row', height: BAR_HEIGHT, paddingHorizontal: 6 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              height: BAR_HEIGHT,
+              paddingHorizontal: 10,
+            }}
+          >
             {state.routes.map((route, index) => {
               const cfg = TAB_SCREENS.find((s) => s.name === route.name);
               if (!cfg) return null;
@@ -147,21 +166,7 @@ function TabBarButton({
   onPress: () => void;
 }) {
   const press = useSharedValue(1);
-  const lift = useSharedValue(focused ? 1 : 0);
-
-  useEffect(() => {
-    lift.value = withSpring(focused ? 1 : 0, { damping: 14, stiffness: 200 });
-  }, [focused, lift]);
-
-  const bubbleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: press.value }],
-  }));
-  // Aparece con un fundido + leve "pop" de escala en vez de saltar de golpe.
-  const pillStyle = useAnimatedStyle(() => ({
-    opacity: lift.value,
-    transform: [{ scale: 0.9 + lift.value * 0.1 }],
-  }));
-
+  const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
   const fg = focused ? colors.primaryFg : colors.textMuted;
 
   return (
@@ -176,30 +181,37 @@ function TabBarButton({
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}
       accessibilityLabel={label}
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}
     >
-      <Animated.View style={[{ borderRadius: TAB_PILL_RADIUS, alignSelf: 'stretch' }, bubbleStyle]}>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            { borderRadius: TAB_PILL_RADIUS, backgroundColor: colors.primary },
-            pillStyle,
-          ]}
-        />
-        <View style={{ paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center', gap: 2 }}>
+      {/* `layout`: cuando el ancho cambia (el texto entra/sale al cambiar de
+          pestaña) el resto de la fila se acomoda con una transición en vez
+          de saltar de golpe. */}
+      <Animated.View layout={LinearTransition.springify().damping(16).stiffness(220)} style={scaleStyle}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 7,
+            height: 42,
+            paddingHorizontal: focused ? 15 : 11,
+            borderRadius: PILL_RADIUS,
+            backgroundColor: focused ? colors.primary : 'transparent',
+          }}
+        >
           <TabBarIcon name={icon} color={fg} focused={focused} />
-          <Text
-            numberOfLines={1}
-            style={{
-              color: fg,
-              fontSize: 10.5,
-              fontFamily: focused ? fonts.semibold : fonts.medium,
-              maxWidth: 72,
-            }}
-          >
-            {label}
-          </Text>
+          {focused ? (
+            <Animated.Text
+              entering={FadeIn.duration(140)}
+              numberOfLines={1}
+              style={{
+                color: fg,
+                fontSize: 13.5,
+                fontFamily: fonts.semibold,
+                maxWidth: 92,
+              }}
+            >
+              {label}
+            </Animated.Text>
+          ) : null}
         </View>
       </Animated.View>
     </Pressable>
