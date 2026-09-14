@@ -1,6 +1,8 @@
+import { Linking } from 'react-native';
 import { router } from 'expo-router';
 
 import type { IconName } from '@/components/ui/Icon';
+import { MONEY_CALC_URL } from '@/lib/moneyCalc';
 
 export interface Tool {
   icon: IconName;
@@ -131,6 +133,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: 'Estado de cuenta',
         hint: 'Cuánto debes en tus tarjetas',
         onPress: () => router.push('/statements'),
+      },
+      {
+        icon: 'calculator',
+        label: 'Calculadoras',
+        hint: 'Préstamo, ahorro, interés compuesto y más (money-calc)',
+        onPress: () => Linking.openURL(MONEY_CALC_URL),
       },
     ],
   },

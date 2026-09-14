@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -43,6 +44,7 @@ import { fonts } from '@/theme/typography';
 import { CURRENCIES } from '@/lib/currency';
 import { formatYearMonth } from '@/lib/date';
 import { formatMoney, toNumber } from '@/lib/money';
+import { moneyCalcUrl, type MoneyCalcSlug } from '@/lib/moneyCalc';
 import { WALLET_COLORS } from '@/lib/wallets';
 
 interface WalletFormProps {
@@ -562,7 +564,10 @@ export function WalletForm({ walletId }: WalletFormProps) {
             {/* Proyección contra el historial REAL guardado -- no contra lo que
                 se esté tipeando ahora mismo sin guardar todavía. */}
             {editing && existing.data?.purpose === 'savings' && existing.data?.goal_amount ? (
-              <GoalProjectionCard walletId={walletId!} currency={existing.data.currency} />
+              <>
+                <GoalProjectionCard walletId={walletId!} currency={existing.data.currency} />
+                <CalculatorLink slug="ahorro-mensual" label="Ahorro mensual" />
+              </>
             ) : null}
           </>
         ) : null}
@@ -589,7 +594,13 @@ export function WalletForm({ walletId }: WalletFormProps) {
             {/* Proyección contra el historial REAL guardado -- no contra lo
                 que se esté tipeando ahora mismo sin guardar todavía. */}
             {editing && existing.data?.purpose === 'debt' && existing.data?.goal_amount ? (
-              <GoalProjectionCard walletId={walletId!} currency={existing.data.currency} debt />
+              <>
+                <GoalProjectionCard walletId={walletId!} currency={existing.data.currency} debt />
+                <CalculatorLink
+                  slug={kind === 'credit' ? 'pago-tarjeta' : 'prestamo'}
+                  label={kind === 'credit' ? 'Pago de tarjeta de crédito' : 'Préstamo'}
+                />
+              </>
             ) : null}
           </>
         ) : null}
@@ -815,6 +826,28 @@ export function WalletForm({ walletId }: WalletFormProps) {
         ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+/** Enlace a la calculadora de `money-calc` (repo aparte, sin API -- ver
+ * `lib/moneyCalc.ts`) que corresponde a esta cartera. Sólo abre una URL, no
+ * precarga montos todavía. */
+function CalculatorLink({ slug, label }: { slug: MoneyCalcSlug; label: string }) {
+  const colors = useColors();
+  return (
+    <Pressable
+      onPress={() => {
+        haptics.tap();
+        Linking.openURL(moneyCalcUrl(slug));
+      }}
+      className="flex-row items-center gap-1.5 self-start py-1 active:opacity-60"
+      accessibilityRole="button"
+    >
+      <Icon name="calculator" size={13} color={colors.primary} />
+      <Text className="text-primary text-xs" style={{ fontFamily: fonts.semibold }}>
+        Calculadora: {label}
+      </Text>
+    </Pressable>
   );
 }
 
