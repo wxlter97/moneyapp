@@ -96,7 +96,7 @@
 
 ---
 
-## Fase 2 — Core UX
+## Fase 2 — Core UX ✅ cerrada (14 sep 2026)
 
 - [x] **Fusionadas "Restante"/"Información" en una sola vista.** ✅ Resuelto en
       `(tabs)/budgets.tsx`. Se decidió con una maqueta comparativa (mismos tokens/componentes
@@ -166,8 +166,23 @@
       `accessibilityLabel`/`accessibilityRole` que le faltaba a la fila (mismo hallazgo de
       accesibilidad del resto de la sesión). Typecheck limpio, suite completo 180/180 (sin test
       nuevo: ninguna pantalla de `src/app` tiene test en este repo, convención existente).
-- [ ] Revisar si "Historial" (header) y Herramientas → Análisis → Patrimonio siguen siendo dos
-      entradas a la misma pantalla `/net-worth-history`.
+- [x] **Verificado: sigue siendo la misma pantalla, y está bien así — no es un bug.**
+      Confirmado en código: el botón "Historial" del header de Vista general
+      (`(tabs)/dashboard.tsx:62`) y el tile "Patrimonio" de Herramientas → Análisis
+      (`lib/toolGroups.ts:117`) llevan los dos a `/net-worth-history`. Pero no es la misma
+      situación que "Restante"/"Información" (ahí sí había 2 implementaciones parecidas de la
+      misma pantalla) — acá hay **una sola pantalla** con dos accesos deliberados:
+  - El botón del header es un atajo chico a propósito, con su propia historia ya documentada en
+    el código (comentario en `dashboard.tsx:71-76`): antes todo el número de patrimonio neto
+    (el elemento más grande de la pantalla) era tocable y llevaba a Historial, generando toques
+    accidentales al buscar el switch de mes debajo — se extrajo a un botón chico y explícito
+    para dejar de romper eso.
+  - El tile de Herramientas sirve a quien navega el menú completo de Análisis sin recordar que
+    también está en el dashboard.
+  - Es exactamente la alternativa que el propio audit daba por buena en §1.2 ("...o convertirlo
+    en atajo explícito al mismo lugar") — ya es así. Dos entradas a una pantalla no es
+    duplicación de UI, es una IA normal (como cualquier ajuste con más de un camino para
+    llegar). No se tocó código.
 
 ---
 
