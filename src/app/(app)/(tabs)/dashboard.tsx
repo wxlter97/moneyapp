@@ -18,6 +18,7 @@ import {
 import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import type { ScheduledItem } from '@/api/types';
 import { AddTransactionFab } from '@/components/AddTransactionFab';
+import { CalendarGrid, type DayMarker } from '@/components/CalendarGrid';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SubTabs } from '@/components/SubTabs';
@@ -32,7 +33,7 @@ import { SearchField } from '@/components/ui/SearchField';
 import { Segmented } from '@/components/ui/Segmented';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
-import { currentYearMonth, formatDayHeader, formatShortDate, monthRange } from '@/lib/date';
+import { currentYearMonth, formatDayHeader, formatShortDate, monthRange, todayISO } from '@/lib/date';
 import { formatSigned, toNumber } from '@/lib/money';
 import { groupByDay, summarizeByType } from '@/lib/transactions';
 import { useSnackbarStore } from '@/store/snackbar';
@@ -91,14 +92,17 @@ export default function OverviewScreen() {
           options={[
             { value: 'resumen', label: 'Resumen' },
             { value: 'lista', label: 'Lista' },
+            { value: 'calendario', label: 'Calendario' },
           ]}
         />
       </SectionHeader>
 
       {tab === 'resumen' ? (
         <ResumenTab currency={currency} />
-      ) : (
+      ) : tab === 'lista' ? (
         <ListaTab month={month} onMonth={setMonth} currency={currency} />
+      ) : (
+        <CalendarTab currency={currency} />
       )}
 
       <AddTransactionFab />
@@ -295,6 +299,62 @@ function GlanceTile({
   );
 }
 
+/** Sufijo para distinguir el tipo de ítem programado -- 'recurring' no
+ * necesita uno (es el caso "normal": categoría + cartera solas ya lo dicen). */
+function scheduledKindSuffix(kind: ScheduledItem['kind']): string {
+  switch (kind) {
+    case 'installment':
+      return ' · cuota';
+    case 'card_payment':
+      return ' · pago de tarjeta';
+    case 'debt_due':
+      return ' · vencimiento';
+    default:
+      return '';
+  }
+}
+
+/** Una fila de "Programado" -- la usan tanto la tarjeta de Resumen como el
+ * detalle del día en Calendario. `showDate=false` la omite cuando el día ya
+ * está implícito (el usuario lo acaba de tocar en la grilla). */
+function ScheduledRow({
+  item,
+  currency,
+  showDate = true,
+  first = false,
+}: {
+  item: ScheduledItem;
+  currency: string;
+  showDate?: boolean;
+  first?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        haptics.tap();
+        openScheduledItem(item);
+      }}
+      className={`flex-row items-center gap-3 py-2.5 active:opacity-60 ${first ? '' : 'border-t border-border/60'}`}
+    >
+      {showDate ? (
+        <View className="w-12">
+          <Text className="text-text-muted text-xs">{formatShortDate(item.date)}</Text>
+        </View>
+      ) : null}
+      <View className="flex-1">
+        <Text className="text-text text-sm" numberOfLines={1}>
+          {item.description || item.category_name || 'Programado'}
+        </Text>
+        <Text className="text-text-muted text-xs" numberOfLines={1}>
+          {item.wallet_name}
+          {scheduledKindSuffix(item.kind)}
+        </Text>
+      </View>
+      <Money value={-toNumber(item.amount)} currency={currency} parens tone="muted" className="text-sm" />
+    </Pressable>
+  );
+}
+
 function ScheduledCard({
   items,
   loading,
@@ -310,34 +370,7 @@ function ScheduledCard({
   return (
     <Card title="Programado">
       {items.map((it, i) => (
-        <Pressable
-          key={`${it.kind}-${it.source_id}-${it.date}`}
-          onPress={() => {
-            haptics.tap();
-            openScheduledItem(it);
-          }}
-          className={`flex-row items-center gap-3 py-2.5 active:opacity-60 ${i > 0 ? 'border-t border-border/60' : ''}`}
-        >
-          <View className="w-12">
-            <Text className="text-text-muted text-xs">{formatShortDate(it.date)}</Text>
-          </View>
-          <View className="flex-1">
-            <Text className="text-text text-sm" numberOfLines={1}>
-              {it.description || it.category_name || 'Programado'}
-            </Text>
-            <Text className="text-text-muted text-xs" numberOfLines={1}>
-              {it.wallet_name}
-              {it.kind === 'installment' ? ' · cuota' : ''}
-            </Text>
-          </View>
-          <Money
-            value={-toNumber(it.amount)}
-            currency={currency}
-            parens
-            tone="muted"
-            className="text-sm"
-          />
-        </Pressable>
+        <ScheduledRow key={`${it.kind}-${it.source_id}-${it.date}`} item={it} currency={currency} first={i === 0} />
       ))}
     </Card>
   );
@@ -348,6 +381,16 @@ function ScheduledCard({
  * registrarlo a mano. Un recurrente tipo transferencia (aporte automático a
  * una meta) abre como transferencia; el resto, como gasto. */
 function openScheduledItem(it: ScheduledItem) {
+  // Pago de tarjeta o vencimiento de deuda: no hay forma de adivinar bien
+  // "expense o transfer, desde qué cartera" (a diferencia de un recurrente,
+  // que ya trae las dos carteras si es un aporte automático) -- se manda a
+  // la cartera misma, con su saldo y su link a la calculadora correspondiente
+  // (ver WalletForm), y ahí el usuario registra el pago como prefiera.
+  if (it.kind === 'card_payment' || it.kind === 'debt_due') {
+    router.push(`/wallet/${it.source_id}`);
+    return;
+  }
+
   const params: Record<string, string> = {
     prefillType: it.to_wallet ? 'transfer' : 'expense',
     prefillWallet: it.wallet,
@@ -730,5 +773,120 @@ function FilterChip({
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Calendario: grilla de mes -- días pasados/hoy = transacciones reales ya
+// registradas, días futuros = lo programado (recurrentes, cuotas, pago de
+// tarjeta, vencimientos) sin registrar todavía. Sin modelo nuevo: sólo junta
+// dos fuentes que ya existían cada una por su lado (Lista y "Programado").
+// ---------------------------------------------------------------------------
+function CalendarTab({ currency }: { currency: string }) {
+  const [month, setMonth] = useState(currentYearMonth);
+  const [selected, setSelected] = useState(todayISO);
+  const today = todayISO();
+
+  const range = useMemo(() => monthRange(month), [month]);
+  const txQuery = useTransactions({ date_after: range.from, date_before: range.to });
+  // Nunca antes de hoy (lo pasado ya es transacción real, no "programado").
+  // Si el mes visible ya terminó por completo esto queda since > until -- el
+  // backend simplemente no devuelve nada, no hace falta un caso aparte.
+  const scheduledSince = range.from > today ? range.from : today;
+  const scheduledQuery = useScheduled({ since: scheduledSince, until: range.to });
+
+  const { map: categories } = useCategoryMap();
+  const { map: wallets } = useWalletMap();
+
+  // `useMemo` (no un `?? []` suelto) para que la referencia sea estable
+  // entre renders y no invalide los `useMemo` de abajo en cada uno.
+  const transactions = useMemo(() => txQuery.data ?? [], [txQuery.data]);
+  const scheduled = useMemo(() => scheduledQuery.data ?? [], [scheduledQuery.data]);
+
+  const markers = useMemo(() => {
+    const map: Record<string, DayMarker> = {};
+    const at = (date: string) => (map[date] ??= { income: false, expense: false, scheduled: false });
+    for (const t of transactions) {
+      if (t.type === 'income') at(t.date).income = true;
+      else if (t.type === 'expense') at(t.date).expense = true;
+      // las transferencias no marcan punto: no son ni ingreso ni gasto
+    }
+    for (const s of scheduled) at(s.date).scheduled = true;
+    return map;
+  }, [transactions, scheduled]);
+
+  const dayTransactions = useMemo(
+    () => transactions.filter((t) => t.date === selected),
+    [transactions, selected],
+  );
+  const dayScheduled = useMemo(() => scheduled.filter((s) => s.date === selected), [scheduled, selected]);
+
+  const loading = txQuery.isLoading || scheduledQuery.isLoading;
+  const refresh = usePullRefresh(
+    (txQuery.isFetching || scheduledQuery.isFetching) && !loading,
+    () => {
+      txQuery.refetch();
+      scheduledQuery.refetch();
+    },
+  );
+
+  function onMonth(next: ReturnType<typeof currentYearMonth>) {
+    setMonth(next);
+    // Si el día elegido no cae en el mes nuevo (p. ej. estabas en el 31 y el
+    // mes nuevo no lo tiene), la selección salta a hoy (si el mes nuevo lo
+    // contiene) o si no al 1°.
+    const nextRange = monthRange(next);
+    setSelected(nextRange.from <= today && today <= nextRange.to ? today : nextRange.from);
+  }
+
+  return (
+    <ScrollView
+      contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
+      refreshControl={refresh}
+    >
+      <MonthSwitcher value={month} onChange={onMonth} />
+
+      {loading ? (
+        <LoadingState />
+      ) : txQuery.isError ? (
+        <ErrorState error={txQuery.error} onRetry={txQuery.refetch} />
+      ) : (
+        <>
+          <Card>
+            <CalendarGrid month={month} selected={selected} markers={markers} onSelectDay={setSelected} />
+          </Card>
+
+          <View className="gap-1">
+            <Text className="text-text-muted text-xs font-semibold uppercase tracking-wide">
+              {formatDayHeader(selected)}
+            </Text>
+            {dayTransactions.length === 0 && dayScheduled.length === 0 ? (
+              <Text className="text-text-muted py-6 text-center text-sm">Sin movimientos este día.</Text>
+            ) : (
+              <View className="overflow-hidden rounded-3xl border border-border/60 bg-surface/95 px-4">
+                {dayTransactions.map((item, i) => (
+                  <View key={item.id}>
+                    {i > 0 ? <View className="h-px bg-border/30" /> : null}
+                    <TransactionRow
+                      txn={item}
+                      category={item.category ? categories.get(item.category) : undefined}
+                      wallet={wallets.get(item.wallet)}
+                      toWallet={item.to_wallet ? wallets.get(item.to_wallet) : undefined}
+                      onPress={() => router.push(`/transaction/${item.id}`)}
+                    />
+                  </View>
+                ))}
+                {dayScheduled.map((it, i) => (
+                  <View key={`${it.kind}-${it.source_id}`}>
+                    {dayTransactions.length > 0 || i > 0 ? <View className="h-px bg-border/30" /> : null}
+                    <ScheduledRow item={it} currency={currency} showDate={false} first />
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </>
+      )}
+    </ScrollView>
   );
 }

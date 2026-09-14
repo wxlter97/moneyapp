@@ -1065,7 +1065,9 @@ export function useCategoryTrends(months = 6) {
   });
 }
 
-/** Recurrentes + cuotas próximas (default: hoy → fin de mes). */
+/** Recurrentes, cuotas, pago de tarjeta y vencimiento de deuda próximos
+ * (default: hoy → fin de mes; acepta cualquier rango, no sólo hacia
+ * adelante -- lo usa también el calendario financiero). */
 export function useScheduled(range?: { since?: string; until?: string }) {
   const ws = useActiveWs();
   return useQuery({
