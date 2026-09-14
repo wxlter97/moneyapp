@@ -9,7 +9,6 @@ import type {
   AppNotification,
   Bank,
   BankEmailSchema,
-  BudgetPeriod,
   BudgetReport,
   CardProduct,
   CashflowPoint,
@@ -107,11 +106,6 @@ export const workspaces = {
   setBaseCurrency: (id: string, base_currency: string) =>
     api
       .patch<Workspace>(`/workspaces/${id}/`, { base_currency }, { skipWorkspace: true })
-      .then((r) => r.data),
-  /** Cadencia del presupuesto (diario/semanal/quincenal/mensual/anual). Solo owner. */
-  setBudgetPeriod: (id: string, budget_period: BudgetPeriod) =>
-    api
-      .patch<Workspace>(`/workspaces/${id}/`, { budget_period }, { skipWorkspace: true })
       .then((r) => r.data),
   /** Renombra el presupuesto. Solo owner. */
   rename: (id: string, name: string) =>
@@ -383,14 +377,14 @@ export const tags = {
 };
 
 export const categoryBudgets = {
-  list: (params?: { period_start?: string }) =>
+  list: (params?: { year?: number; month?: number }) =>
     fetchAll<CategoryBudget>('/category-budgets/', params),
   create: (input: CategoryBudgetInput) =>
     api.post<CategoryBudget>('/category-budgets/', input).then((r) => r.data),
   update: (id: string, input: Partial<CategoryBudgetInput>) =>
     api.patch<CategoryBudget>(`/category-budgets/${id}/`, input).then((r) => r.data),
   remove: (id: string) => api.delete(`/category-budgets/${id}/`).then(() => undefined),
-  /** Fija el monto de un período y lo propaga hacia adelante (ver tipo). */
+  /** Fija el monto de un mes y lo propaga hacia adelante (ver tipo). */
   setForward: (input: SetForwardBudgetInput) =>
     api
       .post<SetForwardBudgetResult>('/category-budgets/set-forward/', input)
@@ -552,7 +546,7 @@ export const reports = {
 
   summary: () => api.get<DashboardSummary>('/reports/summary/').then((r) => r.data),
 
-  budget: (params?: { period_start?: string }) =>
+  budget: (params?: { year?: number; month?: number }) =>
     api.get<BudgetReport>('/reports/budget/', { params }).then((r) => r.data),
 
   cashflow: (months = 6) =>

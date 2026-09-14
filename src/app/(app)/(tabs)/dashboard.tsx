@@ -224,11 +224,11 @@ function ResumenTab({ currency }: { currency: string }) {
             icon="tag"
             label="Gasto principal"
             wide
-            onPress={() => {
-              if (!topCategory) return router.push('/budgets');
-              const { from, to } = monthRange(month);
-              return router.push(`/category-transactions?category=${topCategory.category}&from=${from}&to=${to}`);
-            }}
+            onPress={() =>
+              topCategory
+                ? router.push(`/category-transactions?category=${topCategory.category}&y=${month.year}&m=${month.month}`)
+                : router.push('/budgets')
+            }
           >
             {!topCategory ? (
               <Text className="text-text-muted text-sm">Sin gastos categorizados este mes</Text>

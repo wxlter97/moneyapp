@@ -1,10 +1,11 @@
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import type { BudgetRow, ISODate } from '@/api/types';
+import type { BudgetRow } from '@/api/types';
 import { Money } from '@/components/ui/Money';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { haptics } from '@/lib/haptics';
+import type { YearMonth } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 import { fonts } from '@/theme/typography';
 
@@ -13,19 +14,16 @@ interface BudgetProgressRowProps {
   currency?: string;
   /** Muestra la línea de provisión acumulada (pantalla de Presupuestos). */
   showProvision?: boolean;
-  /** Rango del período del reporte (`period_start`/`period_end`): si se
-   * pasan, tocar la fila lleva a los movimientos de esa categoría en ese
-   * rango (con opción de ver todo el histórico). */
-  from?: ISODate;
-  to?: ISODate;
+  /** Mes del reporte: si se pasa, tocar la fila lleva a los movimientos de
+   * esa categoría en ese mes (con opción de ver todo el período). */
+  month?: YearMonth;
 }
 
 export function BudgetProgressRow({
   row,
   currency = 'USD',
   showProvision = false,
-  from,
-  to,
+  month,
 }: BudgetProgressRowProps) {
   const budgeted = toNumber(row.budgeted);
   const spent = toNumber(row.spent);
@@ -55,13 +53,13 @@ export function BudgetProgressRow({
     </View>
   );
 
-  if (!from || !to) return content;
+  if (!month) return content;
 
   return (
     <Pressable
       onPress={() => {
         haptics.tap();
-        router.push(`/category-transactions?category=${row.category}&from=${from}&to=${to}`);
+        router.push(`/category-transactions?category=${row.category}&y=${month.year}&m=${month.month}`);
       }}
       accessibilityRole="button"
       className="active:opacity-60"

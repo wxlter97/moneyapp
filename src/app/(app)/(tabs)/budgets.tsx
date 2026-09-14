@@ -3,9 +3,9 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useBudgetReport } from '@/api/queries';
-import type { BudgetGroup, ISODate } from '@/api/types';
+import type { BudgetGroup } from '@/api/types';
 import { BudgetProgressRow } from '@/components/BudgetProgressRow';
-import { PeriodSwitcher } from '@/components/PeriodSwitcher';
+import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SubTabs } from '@/components/SubTabs';
 import { Card } from '@/components/ui/Card';
@@ -14,8 +14,7 @@ import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Ring } from '@/components/ui/Ring';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { useColors } from '@/theme';
-import { todayISO } from '@/lib/date';
-import { periodStart } from '@/lib/periods';
+import { currentYearMonth, type YearMonth } from '@/lib/date';
 import { toNumber } from '@/lib/money';
 import { useWorkspaceStore } from '@/store/workspace';
 
@@ -24,18 +23,10 @@ type Tab = 'restante' | 'informacion';
 export default function BudgetScreen() {
   const colors = useColors();
   const [tab, setTab] = useState<Tab>('restante');
+  const [month, setMonth] = useState(currentYearMonth);
+  const budget = useBudgetReport(month);
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
-  const budgetPeriod = activeWorkspace?.budget_period ?? 'monthly';
-
-  // `override`: el período al que el usuario navegó a mano con el switcher.
-  // `null` mientras tanto -- así, si `budgetPeriod` todavía no cargó del
-  // workspace (llega async) y cambia de 'monthly' (el default local) a lo
-  // que sea real, `start` lo sigue en vez de quedar congelado en un límite
-  // de período que ya no corresponde.
-  const [override, setOverride] = useState<ISODate | null>(null);
-  const start = override ?? periodStart(todayISO(), budgetPeriod);
-  const budget = useBudgetReport(start);
 
   const totals = budget.data?.totals;
   const budgeted = toNumber(totals?.budgeted);
@@ -44,7 +35,8 @@ export default function BudgetScreen() {
   const over = remaining < 0;
   const progress = budgeted > 0 ? spent / budgeted : 0;
 
-  const openEditor = () => router.push(`/budget-edit?period_start=${start}`);
+  const openEditor = () =>
+    router.push(`/budget-edit?y=${month.year}&m=${month.month}`);
 
   const refresh = usePullRefresh(budget.isFetching && !budget.isLoading, () => budget.refetch());
 
@@ -98,7 +90,7 @@ export default function BudgetScreen() {
         contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
         refreshControl={refresh}
       >
-        <PeriodSwitcher value={start} period={budgetPeriod} onChange={setOverride} />
+        <MonthSwitcher value={month} onChange={setMonth} />
 
         {budget.isLoading ? (
           <LoadingState />
@@ -106,8 +98,8 @@ export default function BudgetScreen() {
           <ErrorState error={budget.error} onRetry={budget.refetch} />
         ) : budget.data.rows.length === 0 ? (
           <EmptyState
-            title="Sin presupuesto este período"
-            hint="Toca «Ajustar» arriba para fijar un monto por grupo."
+            title="Sin presupuesto este mes"
+            hint="Toca «Ajustar» arriba para fijar un monto mensual por grupo."
           />
         ) : tab === 'restante' ? (
           <>
@@ -134,14 +126,13 @@ export default function BudgetScreen() {
                 key={g.group ?? g.group_name}
                 group={g}
                 currency={currency}
-                from={budget.data!.period_start}
-                to={budget.data!.period_end}
+                month={month}
               />
             ))}
           </>
         ) : (
           <>
-            <Card title="Total del período">
+            <Card title="Total del mes">
               <View className="flex-row justify-between">
                 <Labeled label="Presupuestado">
                   <Money value={budgeted} currency={currency} />
@@ -159,8 +150,7 @@ export default function BudgetScreen() {
                 key={g.group ?? g.group_name}
                 group={g}
                 currency={currency}
-                from={budget.data!.period_start}
-                to={budget.data!.period_end}
+                month={month}
                 showProvision
               />
             ))}
@@ -174,14 +164,12 @@ export default function BudgetScreen() {
 function GroupCard({
   group,
   currency,
-  from,
-  to,
+  month,
   showProvision = false,
 }: {
   group: BudgetGroup;
   currency: string;
-  from: ISODate;
-  to: ISODate;
+  month: YearMonth;
   showProvision?: boolean;
 }) {
   const spent = toNumber(group.spent);
@@ -203,7 +191,7 @@ function GroupCard({
       {group.rows.map((row, i) => (
         <View key={row.category}>
           {i > 0 ? <View className="h-px bg-border/30" /> : null}
-          <BudgetProgressRow row={row} currency={currency} showProvision={showProvision} from={from} to={to} />
+          <BudgetProgressRow row={row} currency={currency} showProvision={showProvision} month={month} />
         </View>
       ))}
     </Card>

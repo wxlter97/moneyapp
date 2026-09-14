@@ -11,27 +11,32 @@ import { Screen } from '@/components/ui/Screen';
 import { Segmented } from '@/components/ui/Segmented';
 import { SummaryTriple } from '@/components/SummaryTriple';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
-import { formatDayHeader, formatShortDate } from '@/lib/date';
+import { formatDayHeader, formatYearMonth, monthRange } from '@/lib/date';
 import { groupByDay, summarizeByType } from '@/lib/transactions';
 import { useWorkspaceStore } from '@/store/workspace';
 
-type Scope = 'range' | 'all';
+type Scope = 'month' | 'all';
 
 /**
  * Movimientos de una categoría: se llega acá tocando su fila en el
- * Presupuesto (u otro origen que ya sepa el rango, como el top-gasto del
- * dashboard). Por defecto sólo `from`-`to` (con el que se abrió), con un
+ * Presupuesto. Por defecto sólo el mes marcado (con el que se abrió), con un
  * toggle para ver el histórico completo de la categoría sin límite de fecha.
  */
 export default function CategoryTransactionsScreen() {
-  const { category, from, to } = useLocalSearchParams<{ category: string; from: string; to: string }>();
-  const [scope, setScope] = useState<Scope>('range');
+  const { category, y, m } = useLocalSearchParams<{ category: string; y: string; m: string }>();
+  const [scope, setScope] = useState<Scope>('month');
 
-  const hasRange = !!from && !!to;
+  const year = Number(y);
+  const month = Number(m);
+  const hasMonth = Number.isFinite(year) && Number.isFinite(month) && year > 0 && month > 0;
+  const range = useMemo(
+    () => (hasMonth ? monthRange({ year, month }) : null),
+    [hasMonth, year, month],
+  );
 
   const query = useTransactions(
-    scope === 'range' && hasRange
-      ? { category, date_after: from, date_before: to }
+    scope === 'month' && range
+      ? { category, date_after: range.from, date_before: range.to }
       : { category },
   );
   const { map: categories } = useCategoryMap();
@@ -67,15 +72,12 @@ export default function CategoryTransactionsScreen() {
       <ScrollView contentContainerClassName="gap-3 py-2" refreshControl={refresh}>
         <SummaryTriple income={totals.income} expenses={totals.expenses} currency={currency} />
 
-        {hasRange ? (
+        {hasMonth ? (
           <Segmented
             value={scope}
             onChange={setScope}
             options={[
-              {
-                value: 'range',
-                label: from === to ? formatShortDate(from) : `${formatShortDate(from)} – ${formatShortDate(to)}`,
-              },
+              { value: 'month', label: formatYearMonth({ year, month }) },
               { value: 'all', label: 'Todo el período' },
             ]}
           />
@@ -87,9 +89,9 @@ export default function CategoryTransactionsScreen() {
           <ErrorState error={query.error} onRetry={query.refetch} />
         ) : items.length === 0 ? (
           <EmptyState
-            title={scope === 'range' ? 'Sin movimientos en este rango' : 'Sin movimientos'}
+            title={scope === 'month' ? 'Sin movimientos este mes' : 'Sin movimientos'}
             hint={
-              scope === 'range' && hasRange
+              scope === 'month' && hasMonth
                 ? 'Probá con «Todo el período» para ver el histórico completo.'
                 : undefined
             }
