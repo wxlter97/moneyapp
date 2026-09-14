@@ -822,14 +822,16 @@ export interface BudgetReport {
 }
 
 // ---------------------------------------------------------------------------
-// Programado (recurrentes + cuotas próximas, sin materializar)
+// Programado (recurrentes, cuotas, pago de tarjeta y vencimiento de deuda
+// próximos, sin materializar)
 // ---------------------------------------------------------------------------
-export type ScheduledKind = 'recurring' | 'installment';
+export type ScheduledKind = 'recurring' | 'installment' | 'card_payment' | 'debt_due';
 
 export interface ScheduledItem {
   date: ISODate;
   kind: ScheduledKind;
-  /** id del RecurringExpense o InstallmentPurchase de origen. */
+  /** id del RecurringExpense/InstallmentPurchase/Wallet de origen (para
+   * card_payment y debt_due, la cartera misma). */
   source_id: UUID;
   description: string;
   amount: Money;

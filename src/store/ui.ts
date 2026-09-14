@@ -1,13 +1,13 @@
 /**
  * Preferencias de interfaz que sobreviven al recargar: la última subpestaña
- * elegida en "Vista general" (Resumen / Lista), etc.
+ * elegida en "Vista general" (Resumen / Lista / Calendario), etc.
  */
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { asyncKVStorage } from './kvStorage';
 
-export type OverviewTab = 'resumen' | 'lista';
+export type OverviewTab = 'resumen' | 'lista' | 'calendario';
 
 interface UIState {
   overviewTab: OverviewTab;
