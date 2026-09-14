@@ -1,4 +1,9 @@
+import { useRef, useState } from 'react';
+
+import { useDeleteTransaction } from '@/api/queries';
 import type { ISODate, Transaction } from '@/api/types';
+import { useSnackbarStore } from '@/store/snackbar';
+import { haptics } from './haptics';
 import { toNumber } from './money';
 
 export interface TypeTotals {
@@ -78,4 +83,60 @@ export function balanceAfterEach(
     running -= signedAmount(t, perspectiveWalletId);
   }
   return result;
+}
+
+/**
+ * Borrado optimista con "Deshacer" para deslizar una `TransactionRow`: la
+ * fila desaparece al instante (`pendingDeleteIds`, para filtrar la lista que
+ * se muestra) y se dispara un snackbar de unos segundos -- el DELETE real
+ * sólo se manda si nadie lo deshace a tiempo (`onTimeout`).
+ *
+ * El snackbar es global y de un solo mensaje a la vez (ver `store/snackbar.ts`):
+ * mostrar uno nuevo reemplaza al anterior SIN avisarle. Si se desliza un
+ * segundo borrado mientras el primero todavía esperaba su "Deshacer", ese
+ * primero se compromete (se borra de verdad) acá en vez de quedar oculto
+ * para siempre en la lista sin llegar a borrarse.
+ */
+export function useSwipeDeleteTransactions() {
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+  const pendingRef = useRef<string | null>(null);
+  const deleteTxn = useDeleteTransaction();
+  const showSnackbar = useSnackbarStore((s) => s.show);
+
+  function clear(id: string) {
+    setPendingDeleteIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  async function commit(id: string) {
+    if (pendingRef.current === id) pendingRef.current = null;
+    try {
+      await deleteTxn.mutateAsync(id);
+    } catch {
+      haptics.error();
+      clear(id);
+    }
+  }
+
+  function onSwipeDelete(id: string) {
+    if (pendingRef.current && pendingRef.current !== id) commit(pendingRef.current);
+
+    pendingRef.current = id;
+    setPendingDeleteIds((prev) => new Set(prev).add(id));
+    showSnackbar({
+      message: 'Movimiento eliminado.',
+      actionLabel: 'Deshacer',
+      onAction: () => {
+        if (pendingRef.current === id) pendingRef.current = null;
+        haptics.selection();
+        clear(id);
+      },
+      onTimeout: () => commit(id),
+    });
+  }
+
+  return { pendingDeleteIds, onSwipeDelete };
 }

@@ -12,7 +12,7 @@ import { Segmented } from '@/components/ui/Segmented';
 import { SummaryTriple } from '@/components/SummaryTriple';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { formatDayHeader, formatShortDate } from '@/lib/date';
-import { groupByDay, summarizeByType } from '@/lib/transactions';
+import { groupByDay, summarizeByType, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { useWorkspaceStore } from '@/store/workspace';
 
 type Scope = 'range' | 'all';
@@ -37,6 +37,7 @@ export default function CategoryTransactionsScreen() {
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
   const cat = categories.get(category);
+  const { pendingDeleteIds, onSwipeDelete } = useSwipeDeleteTransactions();
 
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
@@ -45,10 +46,11 @@ export default function CategoryTransactionsScreen() {
   // excluyen las transacciones marcadas "S/PRES." (no cuentan para el
   // presupuesto) de raíz, lista y total incluidos. Si no, se siguen viendo
   // acá gastos que Presupuesto ya ignora, y el total tampoco coincide con
-  // el que se ve ahí (ver `budget_vs_actual` en el backend).
+  // el que se ve ahí (ver `budget_vs_actual` en el backend). También se
+  // ocultan las que se acaban de deslizar-borrar (ver `useSwipeDeleteTransactions`).
   const items = useMemo(
-    () => (query.data ?? []).filter((t) => t.counts_toward_budget),
-    [query.data],
+    () => (query.data ?? []).filter((t) => t.counts_toward_budget && !pendingDeleteIds.has(t.id)),
+    [query.data, pendingDeleteIds],
   );
   // El total de arriba se suma sin convertir (no hay tasas acá) -- se
   // limita a la moneda base para no mezclar montos de otras carteras; cada
@@ -110,6 +112,7 @@ export default function CategoryTransactionsScreen() {
                       wallet={wallets.get(item.wallet)}
                       toWallet={item.to_wallet ? wallets.get(item.to_wallet) : undefined}
                       onPress={() => router.push(`/transaction/${item.id}`)}
+                      onSwipeDelete={() => onSwipeDelete(item.id)}
                     />
                   </View>
                 ))}

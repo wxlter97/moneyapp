@@ -1,5 +1,25 @@
+import { act, renderHook } from '@testing-library/react-native';
+
 import type { Transaction, TransactionType } from '@/api/types';
-import { balanceAfterEach, groupByDay, signedAmount, summarizeByType } from '../transactions';
+import {
+  balanceAfterEach,
+  groupByDay,
+  signedAmount,
+  summarizeByType,
+  useSwipeDeleteTransactions,
+} from '../transactions';
+
+const mockMutateAsync = jest.fn(async (_id: string) => ({}));
+const mockShow = jest.fn();
+
+jest.mock('@/api/queries', () => ({
+  useDeleteTransaction: () => ({ mutateAsync: mockMutateAsync }),
+}));
+
+jest.mock('@/store/snackbar', () => ({
+  useSnackbarStore: (selector: (s: { show: typeof mockShow }) => unknown) =>
+    selector({ show: mockShow }),
+}));
 
 const txn = (
   id: string,
@@ -101,5 +121,76 @@ describe('balanceAfterEach', () => {
 
   it('lista vacía => mapa vacío', () => {
     expect(balanceAfterEach([], 100, 'a').size).toBe(0);
+  });
+});
+
+// Extiende el swipe-to-delete (antes solo en el dashboard) a
+// wallet-transactions/category-transactions/tag-transactions vía este hook
+// compartido. Regresión de paso: el snackbar es global y de un solo mensaje
+// a la vez (`store/snackbar.ts`) -- un segundo swipe-delete mientras el
+// primero seguía sin confirmar reemplazaba su snackbar en silencio, y ese
+// primer borrado nunca se comprometía (quedaba oculto de la lista para
+// siempre sin borrarse de verdad hasta reiniciar la app).
+describe('useSwipeDeleteTransactions', () => {
+  beforeEach(() => {
+    mockMutateAsync.mockClear();
+    mockShow.mockClear();
+  });
+
+  function lastSnackbarOptions() {
+    return mockShow.mock.calls[mockShow.mock.calls.length - 1][0] as {
+      onAction: () => void;
+      onTimeout: () => void;
+    };
+  }
+
+  it('oculta la fila al instante y muestra el snackbar con "Deshacer", sin borrar todavía', async () => {
+    const { result } = await renderHook(() => useSwipeDeleteTransactions());
+    await act(async () => result.current.onSwipeDelete('t1'));
+
+    expect(result.current.pendingDeleteIds.has('t1')).toBe(true);
+    expect(mockShow).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Movimiento eliminado.', actionLabel: 'Deshacer' }),
+    );
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('"Deshacer" restaura la fila sin llamar al DELETE', async () => {
+    const { result } = await renderHook(() => useSwipeDeleteTransactions());
+    await act(async () => result.current.onSwipeDelete('t1'));
+    await act(async () => lastSnackbarOptions().onAction());
+
+    expect(result.current.pendingDeleteIds.has('t1')).toBe(false);
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('si nadie deshace (onTimeout), se llama al DELETE real', async () => {
+    const { result } = await renderHook(() => useSwipeDeleteTransactions());
+    await act(async () => result.current.onSwipeDelete('t1'));
+    await act(async () => lastSnackbarOptions().onTimeout());
+
+    expect(mockMutateAsync).toHaveBeenCalledWith('t1');
+  });
+
+  it('si el DELETE falla, restaura la fila en vez de perderla en silencio', async () => {
+    mockMutateAsync.mockRejectedValueOnce(new Error('network'));
+    const { result } = await renderHook(() => useSwipeDeleteTransactions());
+    await act(async () => result.current.onSwipeDelete('t1'));
+    await act(async () => lastSnackbarOptions().onTimeout());
+
+    expect(result.current.pendingDeleteIds.has('t1')).toBe(false);
+  });
+
+  it('un segundo swipe-delete compromete el anterior (que ya no tiene snackbar propio) en vez de perderlo', async () => {
+    const { result } = await renderHook(() => useSwipeDeleteTransactions());
+    await act(async () => result.current.onSwipeDelete('t1')); // snackbar #1, todavía sin resolver
+    await act(async () => result.current.onSwipeDelete('t2')); // reemplaza el snackbar -- t1 se compromete acá
+
+    expect(mockMutateAsync).toHaveBeenCalledWith('t1');
+    expect(mockMutateAsync).not.toHaveBeenCalledWith('t2');
+    // Ambas siguen ocultas: t1 porque ya se borró de verdad, t2 porque
+    // todavía espera su propio "Deshacer".
+    expect(result.current.pendingDeleteIds.has('t1')).toBe(true);
+    expect(result.current.pendingDeleteIds.has('t2')).toBe(true);
   });
 });

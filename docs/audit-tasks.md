@@ -116,13 +116,22 @@
   - Botón "Eliminar transacción" en la pantalla de edición (`TransactionForm.tsx:667-687`):
     confirmación inline de 2 pasos ("¿Eliminar esta transacción? No se puede deshacer." +
     Cancelar/Eliminar), con estado de carga y manejo de error (`onDelete`, línea 338).
-  - **Inconsistencia real encontrada (no estaba en el audit):** el swipe-to-delete solo está
-    cableado en `dashboard.tsx`. `wallet-transactions.tsx`, `category-transactions.tsx` y
-    `tag-transactions.tsx` también usan `TransactionRow` pero **no** pasan `onSwipeDelete` —
-    ahí solo se puede borrar entrando al detalle. No es un bug, pero es inconsistente entre
-    pantallas que muestran la misma fila. Pendiente de decisión: ¿extender el swipe+undo a las
-    3 listas restantes, o dejarlo solo en el dashboard?
-  - Sin tests nuevos — no se tocó código, solo se verificó el flujo existente.
+  - **Inconsistencia encontrada (no estaba en el audit) → ✅ resuelta.** El swipe-to-delete solo
+    estaba cableado en `dashboard.tsx`; `wallet-transactions.tsx`, `category-transactions.tsx` y
+    `tag-transactions.tsx` usaban la misma `TransactionRow` sin `onSwipeDelete`. Se extrajo la
+    lógica a un hook compartido `useSwipeDeleteTransactions` (`src/lib/transactions.ts`) y se
+    cableó en las 3 pantallas + se refactorizó `dashboard.tsx` para usar el mismo hook (antes
+    tenía su propia copia inline).
+    - De paso se corrigió un bug real que ya tenía la versión de `dashboard.tsx`: el Snackbar es
+      global y de un solo mensaje a la vez (`store/snackbar.ts`) — deslizar un segundo borrado
+      mientras el primero seguía sin confirmar reemplazaba su snackbar en silencio, y ese primer
+      borrado nunca se comprometía (quedaba oculto de la lista para siempre sin borrarse de
+      verdad). El hook ahora compromete el borrado anterior cuando llega uno nuevo.
+    - En `wallet-transactions.tsx` el saldo por fila (`balanceAfterEach`) se calcula contra el
+      historial COMPLETO sin filtrar (necesita el efecto de todos los movimientos, incluidos los
+      pendientes de confirmar) y recién después se ocultan las filas en borrado optimista.
+    - Tests nuevos en `lib/__tests__/transactions.test.ts` (`describe('useSwipeDeleteTransactions')`,
+      5 casos, incluyendo el caso de doble-swipe). Suite completo 180/180, typecheck limpio.
 - [ ] Vista unificada "Próximos pagos" cruzando Recurrentes + Compras a plazo — confirmar si
       ya existe algo parcial dado que el repo ya tiene `installment/` y `recurring/` como rutas
       separadas (`src/app/(app)/installment`, `src/app/(app)/recurring`).

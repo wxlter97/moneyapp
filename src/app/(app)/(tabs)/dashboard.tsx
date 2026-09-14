@@ -8,7 +8,6 @@ import { useUIStore } from '@/store/ui';
 import {
   useBudgetReport,
   useDashboardSummary,
-  useDeleteTransaction,
   useNetWorth,
   useScheduled,
   useTags,
@@ -35,8 +34,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { currentYearMonth, formatDayHeader, formatShortDate, monthRange, todayISO } from '@/lib/date';
 import { formatSigned, toNumber } from '@/lib/money';
-import { groupByDay, summarizeByType } from '@/lib/transactions';
-import { useSnackbarStore } from '@/store/snackbar';
+import { groupByDay, summarizeByType, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -446,8 +444,7 @@ function ListaTab({
   const tagsQuery = useTags();
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
-  const deleteTxn = useDeleteTransaction();
-  const showSnackbar = useSnackbarStore((s) => s.show);
+  const { pendingDeleteIds, onSwipeDelete } = useSwipeDeleteTransactions();
 
   // El aviso de "busca en todo, no sólo el mes" se ve unos segundos la
   // primera vez que alguien busca, y nunca más (ver `store/ui.ts`).
@@ -466,9 +463,6 @@ function ListaTab({
   const [amountMin, setAmountMin] = useState('0.00');
   const [amountMax, setAmountMax] = useState('0.00');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  // Ocultas de inmediato al deslizar-borrar; el borrado real llega con el
-  // timeout del snackbar si nadie toca "Deshacer" antes.
-  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
 
   // Cuántos filtros avanzados (aparte del texto, que ya se ve en su propio
   // campo) están activos -- para el numerito sobre el ícono. El tipo ahora
@@ -530,34 +524,6 @@ function ListaTab({
   const days = useMemo(() => groupByDay(items), [items]);
 
   const refresh = usePullRefresh(txQuery.isFetching && !txQuery.isLoading, () => txQuery.refetch());
-
-  function onSwipeDelete(id: string) {
-    setPendingDeleteIds((prev) => new Set(prev).add(id));
-    showSnackbar({
-      message: 'Movimiento eliminado.',
-      actionLabel: 'Deshacer',
-      onAction: () => {
-        haptics.selection();
-        setPendingDeleteIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      },
-      onTimeout: async () => {
-        try {
-          await deleteTxn.mutateAsync(id);
-        } catch {
-          haptics.error();
-          setPendingDeleteIds((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-          });
-        }
-      },
-    });
-  }
 
   return (
     <ScrollView
