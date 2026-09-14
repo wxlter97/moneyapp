@@ -29,7 +29,7 @@ describe('OnboardingScreen', () => {
 
   it('arranca en el primer paso, sin botón de "Atrás"', async () => {
     await render(<OnboardingScreen />);
-    expect(screen.getByText('Bienvenido a Budget')).toBeTruthy();
+    expect(screen.getByText('Bienvenido a Porsupuesto')).toBeTruthy();
     expect(screen.queryByText('Atrás')).toBeNull();
   });
 

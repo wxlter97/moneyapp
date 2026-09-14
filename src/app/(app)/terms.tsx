@@ -34,8 +34,8 @@ export default function TermsScreen() {
           <Text className="text-text-muted text-xs">Última actualización: {LAST_UPDATED}</Text>
         </Card>
 
-        <Section title="Qué es Budget">
-          Budget es una aplicación personal de presupuesto: registro de transacciones,
+        <Section title="Qué es Porsupuesto">
+          Porsupuesto es una aplicación personal de presupuesto: registro de transacciones,
           carteras, categorías, presupuestos y reportes. No es un banco, no mueve dinero
           real entre cuentas y no ofrece asesoría financiera, legal ni fiscal -- las
           decisiones que tomes con la información que ves acá son tu responsabilidad.
@@ -44,7 +44,7 @@ export default function TermsScreen() {
         <Section title="Tu cuenta">
           Sos responsable de mantener segura tu contraseña y de toda actividad que ocurra
           bajo tu cuenta. Tenés que darnos datos verdaderos al registrarte (correo,
-          nombre de usuario) y ser mayor de 18 años para usar Budget, sobre todo si vas a
+          nombre de usuario) y ser mayor de 18 años para usar Porsupuesto, sobre todo si vas a
           contratar el plan Pro.
         </Section>
 
@@ -72,7 +72,7 @@ export default function TermsScreen() {
         </Section>
 
         <Section title="Qué no podés hacer">
-          Usar Budget para actividad ilegal, intentar acceder a cuentas de otras personas,
+          Usar Porsupuesto para actividad ilegal, intentar acceder a cuentas de otras personas,
           revender el servicio, o forzar/automatizar el acceso a la API por fuera de lo que
           la app ofrece (Atajos de Apple Shortcuts, con tu propio token, sí está permitido).
         </Section>
@@ -85,7 +85,7 @@ export default function TermsScreen() {
 
         <Section title="Cambios a estos términos">
           Si cambiamos algo importante, te avisamos dentro de la app (centro de
-          notificaciones) antes de que entre en vigencia. Seguir usando Budget después de
+          notificaciones) antes de que entre en vigencia. Seguir usando Porsupuesto después de
           ese aviso implica que aceptás los términos actualizados.
         </Section>
 

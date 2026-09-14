@@ -30,7 +30,7 @@ export default function AboutScreen() {
             <BrandMark size={64} />
             <View className="items-center">
               <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
-                Budget
+                Porsupuesto
               </Text>
               <Text className="text-text-muted text-xs">Versión {version}</Text>
             </View>

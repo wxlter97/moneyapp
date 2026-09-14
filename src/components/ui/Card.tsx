@@ -13,7 +13,7 @@ interface CardProps {
 
 // Tenía una entrada animada opcional (`animated`/`index`, fundido + desli-
 // zamiento escalonado) para listas de cards -- se sacó: esas listas viven en
-// pestañas que se revisitan todo el tiempo (Presupuesto, Vista general), así
+// pestañas que se revisitan todo el tiempo (Presupuesto, Inicio), así
 // que el goteo se repetía en cada visita en vez de verse una sola vez.
 //
 // Identidad wxlter. (Fase 3): borde fino + radio chico en vez de sombra +
