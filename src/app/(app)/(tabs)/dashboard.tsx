@@ -121,6 +121,16 @@ function ResumenTab({ currency }: { currency: string }) {
   const { map: categories } = useCategoryMap();
 
   const spendingWallets = (wallets.data ?? []).filter((w) => w.purpose === 'spending');
+  // Todas las tarjetas de crédito (cualquier moneda, para el conteo), pero
+  // el monto sumado se limita a la moneda base -- mismo criterio que el
+  // resto de los totales de esta pantalla (ver `ListaTab`), para no mezclar
+  // montos de distintas monedas en una sola cifra. `current_balance`
+  // negativo = lo que debes (ver `Wallet` en el backend); `Math.max(0, …)`
+  // por si alguna tarjeta quedó sobrepagada (saldo a favor).
+  const creditWallets = (wallets.data ?? []).filter((w) => w.kind === 'credit');
+  const cardDebt = creditWallets
+    .filter((w) => w.currency === currency)
+    .reduce((sum, w) => sum + Math.max(0, -toNumber(w.current_balance)), 0);
   const loading = summary.isLoading || wallets.isLoading || netWorth.isLoading;
   const refreshing =
     summary.isFetching || wallets.isFetching || budget.isFetching || scheduled.isFetching || netWorth.isFetching;
@@ -221,6 +231,20 @@ function ResumenTab({ currency }: { currency: string }) {
               </>
             )}
           </GlanceTile>
+
+          {creditWallets.length > 0 ? (
+            <GlanceTile
+              icon="card"
+              label="Deuda en tarjetas"
+              wide
+              onPress={() => router.push('/wallets')}
+            >
+              <Money value={cardDebt} currency={currency} tone="expense" className="text-lg font-bold" />
+              <Text className="text-text-muted text-[11px]" numberOfLines={1}>
+                {creditWallets.length === 1 ? '1 tarjeta' : `${creditWallets.length} tarjetas`}
+              </Text>
+            </GlanceTile>
+          ) : null}
 
           <GlanceTile
             icon="tag"

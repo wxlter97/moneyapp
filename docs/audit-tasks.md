@@ -276,7 +276,16 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
       del momento actual, no una serie de tiempo). Verificado extremo a extremo con datos reales
       (1, 2 y 3 snapshots vía API real, no solo mock) además de `NetWorthChart.test.tsx` (4 casos).
       37 suites / 197 tests, `tsc --noEmit` limpio.
-- [ ] Resumen de deuda de tarjetas en el dashboard ("Debes en tarjetas: USD X").
+- [x] **Resumen de deuda de tarjetas en el dashboard** (14 sep 2026) — tile nueva "Deuda en
+      tarjetas" en "De un vistazo" (`dashboard.tsx`, `ResumenTab`), solo visible cuando existe al
+      menos una cartera `kind === 'credit'`. Monto = `Σ max(0, -current_balance)` de las tarjetas
+      en la moneda base (mismo criterio de no mezclar monedas que el resto de los totales de esta
+      pantalla); el conteo de tarjetas sí cuenta todas, cualquier moneda. Sin endpoint nuevo — ya
+      estaba en `useWallets()`, que `ResumenTab` ya pedía. Ancho completo (`wide`, como "Gasto
+      principal") para no dejar una fila a medias cuando aparece. Verificado en el navegador con
+      una tarjeta real en deuda (`USD 430.50`): color/tipografía correctos (rojo semántico,
+      JetBrains Mono), patrimonio neto del header se actualiza en consecuencia. Sin test dedicado
+      (convención del proyecto: pantallas bajo `src/app/` no tienen tests).
 - [ ] **Corrección: sí existe onboarding** — `src/app/(app)/onboarding.tsx` (8 pasos: bienvenida,
       presupuestos/workspaces, carteras, crear primera cartera, categorías, cómo cargar un
       movimiento, "y hay más", listo). Es un tour operativo, no vende diferenciación todavía —
