@@ -251,8 +251,17 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
       cambio global de `tailwind.config.js`.
 - [ ] Iconografía propia de categoría en vez de emoji (`CategoryAvatar.tsx`, `CategoryGrid.tsx`) —
       cambio grande y no pedido en esta ronda, se mantiene emoji personalizable.
-- [ ] No se verificó en el navegador (requiere login + backend corriendo) — verificado con
-      `jest`/`tsc`/`expo lint` únicamente, más las 3 rondas de artifact antes de tocar código.
+- [x] **Verificado en el navegador** (14 sep 2026): backend Django local + `expo start --web`,
+      workspace real con los 6 casos de la maqueta (excedido justo al límite ×2, cerca del
+      límite, dentro, sin presupuesto, nombre largo sin truncar). Confirmado por DOM/CSS:
+      `ArchivoBlack_400Regular` en la cifra protagonista, `JetBrainsMono_*` en el resto de
+      `Money`, Faro `#FFDB00` sólo en el pin de límite/nav (nunca en un estado "ok"), Tinta de
+      fondo, `Card` con borde 1px + radio 10px + sombra casi nula. Selector de acento intacto,
+      `wxlter.` primero en la lista. Sin errores de consola.
+      Bug real encontrado, **no arreglado acá** (ver tarea aparte): `GoogleSignInButton.tsx`
+      llama a `Google.useIdTokenAuthRequest` antes del `if (!GOOGLE_CONFIGURED) return null`,
+      así que en web sin client IDs configurados el login entero crashea en vez de simplemente
+      no mostrar el botón — no tiene relación con la identidad visual, preexistente.
 
 ---
 
