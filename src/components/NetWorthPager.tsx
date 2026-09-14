@@ -26,13 +26,19 @@ interface Page {
 export function NetWorthPager({
   data,
   currency,
+  maxWidth = MAX_CONTENT_WIDTH,
 }: {
   data: NetWorthBreakdown;
   currency: string;
+  /** Ancho máximo de la columna que lo contiene -- por defecto el fijo de
+   * casi toda la app, pero una pantalla que se ensancha en desktop (ver
+   * `wallets.tsx`) tiene que pasar el mismo ancho acá, o esta card queda
+   * más angosta que el resto del contenido debajo. */
+  maxWidth?: number;
 }) {
   const colors = useColors();
   const { width } = useWindowDimensions();
-  const innerWidth = Math.min(width, MAX_CONTENT_WIDTH) - 32; // menos el px-4 de la pantalla
+  const innerWidth = Math.min(width, maxWidth) - 32; // menos el px-4 de la pantalla
   const [index, setIndex] = useState(0);
   const scroller = useRef<ScrollView>(null);
 

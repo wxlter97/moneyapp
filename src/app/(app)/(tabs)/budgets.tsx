@@ -15,9 +15,20 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { todayISO } from '@/lib/date';
 import { periodStart } from '@/lib/periods';
 import { toNumber } from '@/lib/money';
+import { useDesktopContentWidth } from '@/lib/responsive';
 import { useWorkspaceStore } from '@/store/workspace';
 
+const DESKTOP_MAX_WIDTH = 900;
+
 export default function BudgetScreen() {
+  // Ancho responsivo, no un booleano desktop/mobile: a un ancho de escritorio
+  // "justo" (~900-1000px) todavía no sobra espacio de verdad para 2 columnas
+  // -- `useDesktopContentWidth` ya lo deja en 560 (como mobile) en ese caso,
+  // sin invadir el margen donde vive `SideNav` (hallazgo real al implementar
+  // esto: un ancho fijo más grande hacía que el sidebar quedara ENCIMA de
+  // las cards, no al costado -- ver el propio docstring de `SideNav`).
+  const contentWidth = useDesktopContentWidth(DESKTOP_MAX_WIDTH);
+  const showGrid = contentWidth > 560;
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
   const budgetPeriod = activeWorkspace?.budget_period ?? 'monthly';
@@ -45,6 +56,7 @@ export default function BudgetScreen() {
     <View className="flex-1 bg-bg">
       <SectionHeader
         title="Presupuesto"
+        maxWidth={contentWidth}
         right={
           <Pressable
             onPress={openEditor}
@@ -76,7 +88,8 @@ export default function BudgetScreen() {
       />
 
       <ScrollView
-        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
+        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full gap-4"
+        contentContainerStyle={{ maxWidth: contentWidth }}
         refreshControl={refresh}
       >
         <PeriodSwitcher value={start} period={budgetPeriod} onChange={setOverride} />
@@ -110,15 +123,22 @@ export default function BudgetScreen() {
               </View>
             </Card>
 
-            {budget.data.groups.map((g) => (
-              <GroupCard
-                key={g.group ?? g.group_name}
-                group={g}
-                currency={currency}
-                from={budget.data!.period_start}
-                to={budget.data!.period_end}
-              />
-            ))}
+            {/* Grupos en 2 columnas en desktop -- son cards independientes
+                entre sí (a diferencia de Carteras, sin jerarquía padre/hijo
+                que romper al partirlos en columnas), así que envolverlos en
+                una grilla es seguro. */}
+            <View className={showGrid ? 'flex-row flex-wrap gap-4' : 'gap-4'}>
+              {budget.data.groups.map((g) => (
+                <View key={g.group ?? g.group_name} className={showGrid ? 'w-[calc(50%-8px)]' : 'w-full'}>
+                  <GroupCard
+                    group={g}
+                    currency={currency}
+                    from={budget.data!.period_start}
+                    to={budget.data!.period_end}
+                  />
+                </View>
+              ))}
+            </View>
           </>
         )}
       </ScrollView>

@@ -320,9 +320,30 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
 
 ## Fase 5 — Mobile / responsive
 
-- [ ] Layout propio de tablet (2 columnas en Presupuesto/Carteras a ~768-1024px) — confirmar si
-      `useIsDesktop`/`useResponsive` (`src/lib/responsive`) ya tiene un breakpoint intermedio o
-      es binario mobile/desktop como describe el audit.
+- [x] **Layout propio de tablet/desktop en Presupuesto y Carteras** (14 sep 2026) — confirmado:
+      `useIsDesktop` era binario (900px, sin intermedio) y el contenido quedaba fijo en 560px
+      siempre, dejando la mitad de una pantalla de escritorio vacía. Ojo con el rango del audit
+      (~768-1024px): por debajo de 900 sigue la barra de pestañas de mobile (ver `TabBar.tsx`), así
+      que una grilla de escritorio ahí se sentiría desacoplada de esa navegación compacta -- se
+      activa junto con el sidebar (mismo umbral), no en un tercer breakpoint nuevo.
+      - `budgets.tsx`: los grupos (Hogar, Variables…) pasan a 2 columnas cuando sobra ancho de
+        verdad — son cards independientes entre sí, sin jerarquía que romper.
+      - `wallets.tsx`: sólo se ensancha la columna (560→720px), sin pasar a grilla — la lista tiene
+        jerarquía padre/hijo (`node.depth`) y partirla a la mitad separaría una cartera de sus
+        sub-carteras en columnas distintas; una grilla de verdad ahí necesita agrupar por cartera
+        raíz primero, que es su propio rediseño, no este ajuste.
+      - **Bug real encontrado al implementar** (no estaba en la maqueta ni en el plan): `SideNav`
+        es `position: fixed` y vive en el margen vacío que dejaba el contenido de 560px (ver su
+        propio docstring) — no empuja nada. Un ancho fijo más grande sin más lo tapaba: el
+        sidebar quedaba ENCIMA de las cards en vez de al costado, a partir de ~1024px de viewport.
+        Fix: `useDesktopContentWidth(desiredMax)` nuevo en `lib/responsive.ts` — ancho responsivo
+        que nunca invade el margen reservado del sidebar (se queda en 560, como mobile, hasta que
+        el viewport realmente tiene lugar de sobra; recién ahí escala hacia `desiredMax`).
+        `NetWorthPager` recibe el mismo ancho por prop (`maxWidth`) para no quedar más angosto que
+        la lista de carteras debajo.
+      - Verificado en el navegador a 1024px (sin overlap, cae a 1 columna como antes — el fix
+        funciona) y 1280px (2 columnas en Presupuesto, sin overlap con el sidebar) y en mobile
+        (sin cambios). `tsc`/`expo lint`/`jest` limpios (37 suites / 199 tests, sin regresiones).
 - [ ] Formularios full-screen también en desktop — revisar `TransactionForm.tsx`, `WalletForm.tsx`
       y si usan `Screen` full-bleed en desktop; evaluar variante `Drawer` (no existe hoy, confirmado
       por grep).

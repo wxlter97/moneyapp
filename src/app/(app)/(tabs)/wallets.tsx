@@ -14,12 +14,26 @@ import { Segmented } from '@/components/ui/Segmented';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { useColors } from '@/theme';
 import { flattenTree } from '@/lib/wallets';
+import { useDesktopContentWidth } from '@/lib/responsive';
 import { useWorkspaceStore } from '@/store/workspace';
+
+const DESKTOP_MAX_WIDTH = 720;
 
 type NetFilter = 'all' | 'net' | 'excluded';
 
 export default function WalletsScreen() {
   const colors = useColors();
+  // A diferencia de Presupuesto (grupos independientes, ver budgets.tsx),
+  // acá NO se pasa a 2 columnas: la lista tiene jerarquía padre/hijo
+  // (`node.depth`/`hasChildren`) y partirla a la mitad separaría una
+  // cartera de sus sub-carteras en columnas distintas. Se ensancha nomás
+  // el contenido -- ya reduce el espacio vacío sin arriesgar esa relación
+  // visual; una grilla de verdad acá necesita agrupar por cartera raíz
+  // primero, que es un rediseño propio, no este ajuste. `useDesktopContentWidth`
+  // (no un booleano) porque el ancho fijo simple invadía el margen de
+  // `SideNav` a anchos de escritorio "justos" -- ver el mismo fix en
+  // budgets.tsx.
+  const contentWidth = useDesktopContentWidth(DESKTOP_MAX_WIDTH);
   const netWorth = useNetWorth();
   const wallets = useWallets();
   const reorder = useReorderWallets();
@@ -47,6 +61,7 @@ export default function WalletsScreen() {
     <View className="flex-1 bg-bg">
       <SectionHeader
         title="Carteras"
+        maxWidth={contentWidth}
         right={
           <View className="flex-row gap-2">
             {allNodes.length > 1 ? (
@@ -75,7 +90,8 @@ export default function WalletsScreen() {
       />
 
       <ScrollView
-        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-4"
+        contentContainerClassName="px-4 pb-36 pt-4 self-center w-full gap-4"
+        contentContainerStyle={{ maxWidth: contentWidth }}
         refreshControl={refresh}
       >
         {loading ? (
@@ -90,7 +106,9 @@ export default function WalletsScreen() {
           />
         ) : (
           <>
-            {!reordering ? <NetWorthPager data={netWorth.data} currency={currency} /> : null}
+            {!reordering ? (
+              <NetWorthPager data={netWorth.data} currency={currency} maxWidth={contentWidth} />
+            ) : null}
 
             {!reordering && allNodes.length > 0 ? (
               <Segmented

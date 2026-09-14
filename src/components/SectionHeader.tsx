@@ -14,6 +14,10 @@ interface SectionHeaderProps {
   right?: ReactNode;
   /** Subtabs u otro contenido al pie. */
   children?: ReactNode;
+  /** Ancho máximo del panel (default 560, el de casi toda la app) -- para
+   * que la cabecera no quede más angosta que el cuerpo de la pantalla
+   * cuando ese cuerpo se ensancha en desktop (ver `budgets.tsx`/`wallets.tsx`). */
+  maxWidth?: number;
 }
 
 /**
@@ -28,14 +32,14 @@ interface SectionHeaderProps {
  * (p. ej. Carteras, Herramientas) la fila de título quedaba pegada a esa
  * línea, sin aire.
  */
-export function SectionHeader({ title, subtitle, right, children }: SectionHeaderProps) {
+export function SectionHeader({ title, subtitle, right, children, maxWidth = 560 }: SectionHeaderProps) {
   const insets = useSafeAreaInsets();
 
   return (
     <GlassSurface radius={0} border={false} className="border-b border-border/50">
       <View
-        className="w-full max-w-[560px] self-center px-4 pb-3"
-        style={{ paddingTop: insets.top + 8 }}
+        className="w-full self-center px-4 pb-3"
+        style={{ paddingTop: insets.top + 8, maxWidth }}
       >
         <ScreenHeader />
         {/* Antes entraba con un fundido (`FadeInView`) -- es la cabecera de
