@@ -106,8 +106,23 @@
       que "fusionar en un toggle": decidir si esa diferencia (ring visual vs. desglose numérico +
       provisión) amerita 2 tabs o si cabe todo en una sola vista — no es un bug, es una decisión
       de producto.
-- [ ] Confirmación consistente para acciones destructivas ("Eliminar transacción") — verificar
-      el flujo real de borrado (no se probó en el audit para no tocar datos reales).
+- [x] **Corrección: el borrado ya tiene confirmación/undo en los dos puntos de entrada — no hay
+      bug.** El audit no lo probó "para no tocar datos reales"; en código ya está bien resuelto:
+  - Swipe-to-delete en la lista del dashboard (`(tabs)/dashboard.tsx:534`, `onSwipeDelete`):
+    oculta la fila al instante (optimista, `pendingDeleteIds`) y muestra un Snackbar
+    "Movimiento eliminado. Deshacer" por 4s (`store/snackbar.ts`) — solo llama al DELETE real
+    si nadie deshace a tiempo. Es exactamente el patrón que pide el audit en §14 ("un toast con
+    Deshacer... en vez de un diálogo bloqueante").
+  - Botón "Eliminar transacción" en la pantalla de edición (`TransactionForm.tsx:667-687`):
+    confirmación inline de 2 pasos ("¿Eliminar esta transacción? No se puede deshacer." +
+    Cancelar/Eliminar), con estado de carga y manejo de error (`onDelete`, línea 338).
+  - **Inconsistencia real encontrada (no estaba en el audit):** el swipe-to-delete solo está
+    cableado en `dashboard.tsx`. `wallet-transactions.tsx`, `category-transactions.tsx` y
+    `tag-transactions.tsx` también usan `TransactionRow` pero **no** pasan `onSwipeDelete` —
+    ahí solo se puede borrar entrando al detalle. No es un bug, pero es inconsistente entre
+    pantallas que muestran la misma fila. Pendiente de decisión: ¿extender el swipe+undo a las
+    3 listas restantes, o dejarlo solo en el dashboard?
+  - Sin tests nuevos — no se tocó código, solo se verificó el flujo existente.
 - [ ] Vista unificada "Próximos pagos" cruzando Recurrentes + Compras a plazo — confirmar si
       ya existe algo parcial dado que el repo ya tiene `installment/` y `recurring/` como rutas
       separadas (`src/app/(app)/installment`, `src/app/(app)/recurring`).
