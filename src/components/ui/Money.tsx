@@ -2,7 +2,7 @@ import { Text, type TextProps } from 'react-native';
 
 import type { Money as MoneyValue } from '@/api/types';
 import { formatMoney, formatParens, formatSigned, toNumber } from '@/lib/money';
-import { fonts } from '@/theme/typography';
+import { black, mono } from '@/theme/typography';
 
 interface MoneyProps extends TextProps {
   value: MoneyValue | number | null | undefined;
@@ -13,8 +13,9 @@ interface MoneyProps extends TextProps {
   parens?: boolean;
   /** Fuerza un color semántico independientemente del signo. */
   tone?: 'income' | 'expense' | 'warning' | 'default' | 'muted';
-  /** Cifra protagonista (patrimonio neto, restante del mes…): peso extra y
-   * tracking negativo, como los números grandes de Cash App/Revolut. */
+  /** Cifra protagonista (patrimonio neto, restante del período…): Archivo
+   * Black + tracking negativo, en vez de JetBrains Mono como el resto de
+   * `Money` -- ver `theme/typography.ts`. */
   hero?: boolean;
   className?: string;
 }
@@ -45,16 +46,20 @@ export function Money({
   else if (signed && n > 0) color = 'text-income';
   else if (signed && n < 0) color = 'text-expense';
 
-  // RN no sintetiza pesos sobre una fuente custom de forma confiable en
-  // iOS: `font-bold`/`font-semibold` de Tailwind (sólo cambian `fontWeight`)
-  // no alcanzan para las cifras — acá resolvemos al archivo .ttf correcto.
+  // Identidad wxlter.: `Money` es siempre un dato financiero, así que
+  // siempre va en JetBrains Mono -- salvo `hero` (la cifra protagonista de
+  // una pantalla: patrimonio neto, restante del período…), que es
+  // exclusivamente Archivo Black (ver `theme/typography.ts`). RN no
+  // sintetiza pesos sobre una fuente custom de forma confiable en iOS:
+  // `font-bold`/`font-semibold` de Tailwind (sólo cambian `fontWeight`) no
+  // alcanzan para elegir el peso — acá resolvemos al archivo .ttf correcto.
   const fontFamily = hero
-    ? fonts.extrabold
+    ? black
     : className.includes('font-bold')
-      ? fonts.extrabold
+      ? mono.semibold
       : className.includes('font-semibold')
-        ? fonts.semibold
-        : undefined;
+        ? mono.medium
+        : mono.regular;
 
   return (
     <Text

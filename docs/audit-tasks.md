@@ -24,6 +24,12 @@
 3. **Backend (P1-5, bootstrap ~12 requests):** en alcance. `budget-app-django` está disponible
    como directorio de trabajo adicional en esta sesión — se puede proponer el endpoint agregado
    o los cambios de ese lado cuando se llegue a Fase 4.
+4. **Fase 3, dirección final:** ni el "Ledger Brutalism" genérico del audit ni un reskin amarillo
+   encima de él — identidad personal **wxlter.** (Faro `#FFDB00` / Tinta `#111111` / Papel
+   `#F4F3EF`, Archivo Black/Archivo/JetBrains Mono), tomando de Ledger Brutalism sólo su
+   disciplina estructural. El amarillo es identidad, nunca semántica: verde/naranja/rojo siguen
+   siendo ingreso/aviso/problema, sin excepción. Explorado en 3 artifacts antes de tocar código,
+   implementado y verificado con tests — ver Fase 3 abajo.
 
 ---
 
@@ -186,18 +192,67 @@
 
 ---
 
-## Fase 3 — Visual identity ("Ledger Brutalism", si se decide seguir esa dirección)
+## Fase 3 — Visual identity ✅ dirección decidida e implementada (14 sep 2026)
 
-> Nota: no se decidió todavía si adoptar la propuesta de identidad del audit (§6) — es la más
-> grande en esfuerzo (P1, Effort L) y afecta a casi todos los componentes de UI. Vale la pena
-> confirmarla con Walter antes de empezar (ver pregunta abajo).
+**Decisión final: identidad personal wxlter.**, no la propuesta genérica "Ledger Brutalism" del
+audit (§6) ni un reskin amarillo encima de ella. De Ledger Brutalism se tomó únicamente la
+disciplina estructural (borde fino, radio chico, sin sombra); color y tipografía son enteramente
+de `assets/LEEME.txt`. Explorado primero en 3 artifacts (vidrio actual vs. Ledger Brutalism
+genérico vs. wxlter.) antes de tocar código — ver hilo de la sesión.
 
-- [ ] Bordes de 1px en vez de sombras difusas en `Card`, `TabBar`/`GlassSurface`, etc.
-- [ ] Tipografía tabular obligatoria en cifras de dinero (`Money.tsx`, `AmountInput.tsx`) —
-      confirmar si `theme/typography.ts` ya define una familia mono/tabular.
-- [ ] Reescribir `ProgressBar` con los 3 estados semánticos de Fase 1 como parte del mismo trabajo.
+Reglas que se mantuvieron desde la decisión hasta el código, sin excepciones:
+
+- **El amarillo (`Faro` `#FFDB00`) es identidad, nunca semántica** — vive en el acento
+  (`theme/accents.ts`, elegible en Herramientas → Apariencia, ahora por defecto), en foco/CTA y en
+  el pin de límite del medidor de presupuesto. `income`/`expense`/`warning` son verde/rojo/naranja
+  fijos, independientes del acento (`theme/index.ts`) — precisamente para que nunca dependan de
+  qué acento haya elegido la persona usuaria.
+- **3 roles tipográficos fijos** (`theme/typography.ts`): Archivo Black sólo en la cifra
+  protagonista de una pantalla (`Money hero`), Archivo en toda la UI (`fonts.*`, reemplaza a
+  Manrope), JetBrains Mono sólo en datos financieros (`Money` no-`hero`, siempre — es la única
+  responsabilidad del componente).
+
+Implementado:
+
+- [x] Tokens base (`theme/index.ts`, `global.css`): neutros Tinta/Papel, `income`/`expense`/
+      `warning` semánticos fijos.
+- [x] Acento `wxlter` (Faro `#FFDB00`) agregado a `theme/accents.ts` y puesto como
+      `DEFAULT_ACCENT` — la paleta "tierra" existente (Herramientas → Apariencia) se conserva
+      intacta como opciones alternativas, no se borró el selector.
+- [x] Tipografía: Archivo/Archivo Black/JetBrains Mono cargadas en `_layout.tsx`
+      (`@expo-google-fonts/archivo`, `-archivo-black`, `-jetbrains-mono`), Manrope removida.
+      `Money.tsx` usa JetBrains Mono siempre salvo `hero` (Archivo Black).
+- [x] Bordes de 1px + radios chicos en vez de sombra difusa (`Card.tsx`, `borderRadius` de
+      `tailwind.config.js`) en vez de los radios grandes que había.
+- [x] **El anillo circular de presupuesto se reconsideró de fondo, no se recoloreó** — nuevo
+      `BudgetMeter.tsx`: pista horizontal con un pin de límite en Faro (identidad) y relleno
+      verde/ámbar/rojo (semántica compartida con `BudgetProgressRow` vía `lib/budgetState.ts`,
+      extraída para que la regla de sobregiro de P0-3 no pueda vivir en un solo lugar); la porción
+      que excede el límite se dibuja con trama diagonal, no solo un cambio de color. Reemplaza
+      `Ring.tsx` (borrado, quedó sin otro uso) en `budgets.tsx` (medidor grande, con ticks) y
+      `ProgressBar` en `BudgetProgressRow` (medidor chico, mismo componente — antes eran dos
+      visualizaciones distintas para el mismo dato).
+- [x] Filas de presupuesto rediseñadas para mobile (no comprimidas): nombre de categoría envuelve
+      en vez de truncar (`numberOfLines={1}` sacado de `BudgetProgressRow`).
+- [x] Regresión real encontrada al implementar (no estaba en la maqueta): `ProgressBar` sin `tone`
+      explícito cae a `colors.primary` en estado `'ok'` — con Faro como acento por defecto, la
+      barra de uso de crédito de `WalletRow` iba a mostrar "vas bien" en amarillo, exactamente la
+      conflación identidad/semántica que esta fase existe para evitar. Fix: `tone="income"`
+      explícito en ese call site.
+- [x] Tests: `budgetState.test.ts` (nuevo, la lógica de 3 estados extraída), `BudgetMeter.test.tsx`
+      (nuevo, 7 casos), `BudgetProgressRow.test.tsx` sigue pasando sin cambios (misma semántica,
+      otra vista). 36 suites / 193 tests, `tsc --noEmit` limpio.
+
+Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
+
+- [ ] `WalletRow`'s barra de meta de ahorro (`tone="income"`) y el resto de las cards (`TabBar`,
+      `AddTransactionFab`, gráfico de patrimonio neto) no se tocaron más allá de heredar los
+      tokens/radios nuevos automáticamente — no se auditó cada sombra/radio a mano, solo el
+      cambio global de `tailwind.config.js`.
 - [ ] Iconografía propia de categoría en vez de emoji (`CategoryAvatar.tsx`, `CategoryGrid.tsx`) —
-      cambio grande, evaluar esfuerzo real primero.
+      cambio grande y no pedido en esta ronda, se mantiene emoji personalizable.
+- [ ] No se verificó en el navegador (requiere login + backend corriendo) — verificado con
+      `jest`/`tsc`/`expo lint` únicamente, más las 3 rondas de artifact antes de tocar código.
 
 ---
 

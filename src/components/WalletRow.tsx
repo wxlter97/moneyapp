@@ -106,7 +106,13 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
 
       {hasCredit ? (
         <View className="mt-2 gap-1 pl-[18px]">
+          {/* `tone="income"` explícito: sin él, "uso sano" cae al color de
+              acento (`primary`) -- con Faro amarillo como acento por
+              defecto (Fase 3), eso volvería a hacer que el amarillo
+              signifique "bien", justo lo que la identidad wxlter. evita a
+              propósito (ver `theme/index.ts`). */}
           <ProgressBar
+            tone="income"
             progress={
               1 - toNumber(wallet.available_credit) / toNumber(wallet.credit_limit)
             }

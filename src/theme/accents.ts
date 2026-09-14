@@ -9,6 +9,7 @@
  * premium y monocromático con acentos discretos, no vivos.
  */
 export type AccentId =
+  | 'wxlter'
   | 'moss'
   | 'clay'
   | 'stone'
@@ -31,6 +32,17 @@ export interface Accent {
 }
 
 export const ACCENTS: Accent[] = [
+  {
+    id: 'wxlter',
+    label: 'wxlter.',
+    // Faro #FFDB00 -- identidad de marca, no un acento "tierra" más: por
+    // eso rompe el patrón de par claro/oscuro de abajo (es lo bastante
+    // brillante para leerse igual de bien sobre Papel que sobre Tinta, sin
+    // necesitar un tono distinto por esquema). primaryFg siempre casi-negro:
+    // blanco sobre este amarillo no pasa contraste.
+    light: { primary: '#FFDB00', primaryFg: '#111111' },
+    dark: { primary: '#FFDB00', primaryFg: '#111111' },
+  },
   {
     id: 'moss',
     label: 'Musgo',
@@ -80,11 +92,11 @@ export const ACCENTS: Accent[] = [
   },
 ];
 
-export const DEFAULT_ACCENT: AccentId = 'moss';
+export const DEFAULT_ACCENT: AccentId = 'wxlter';
 
 /** Punto de partida del color picker la primera vez que se abre (mismo tono
- * que "Musgo", el acento por defecto -- así no arranca en un color al azar). */
-export const DEFAULT_CUSTOM_HEX = '#516B45';
+ * que "wxlter.", el acento por defecto -- así no arranca en un color al azar). */
+export const DEFAULT_CUSTOM_HEX = '#FFDB00';
 
 export function getAccent(id: AccentId): Accent {
   return ACCENTS.find((a) => a.id === id) ?? ACCENTS[0];

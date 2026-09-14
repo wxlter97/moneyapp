@@ -15,16 +15,23 @@ interface CardProps {
 // zamiento escalonado) para listas de cards -- se sacó: esas listas viven en
 // pestañas que se revisitan todo el tiempo (Presupuesto, Vista general), así
 // que el goteo se repetía en cada visita en vez de verse una sola vez.
+//
+// Identidad wxlter. (Fase 3): borde fino + radio chico en vez de sombra +
+// radio grande -- la disciplina de Ledger Brutalism (ver docs/audit-tasks.md)
+// sin sus colores. La sombra no desaparece del todo (`elevation`/
+// `shadowOpacity` bajos): sigue separando la card del fondo en superficies
+// que no son planas (ej. la propia página en web), sólo deja de ser lo que
+// hace el trabajo -- eso ahora es el borde.
 export function Card({ children, title, action, className = '' }: CardProps) {
   return (
     <View
-      className={`rounded-3xl bg-surface/95 p-4 ${className}`}
+      className={`rounded-2xl border border-border bg-surface/95 p-4 ${className}`}
       style={{
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.06,
-        shadowRadius: 24,
-        elevation: 1,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 10,
+        elevation: 0,
       }}
     >
       {(title || action) && (

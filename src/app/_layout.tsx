@@ -94,16 +94,22 @@ export default function RootLayout() {
   );
 
   // Requires directos a cada archivo en vez de importar las constantes desde
-  // el barrel `@expo-google-fonts/manrope`: ese paquete hace un `require()`
-  // de las 7 variantes (incluyendo ExtraLight/Light, que no usamos) en el
-  // cuerpo de su `index.js`, así que solo importar el nombre que querés no
-  // evita que Metro empaquete las otras dos como asset muerto.
+  // los barrels `@expo-google-fonts/*`: esos paquetes hacen un `require()` de
+  // todas sus variantes (incluyendo pesos que no usamos) en el cuerpo de su
+  // `index.js`, así que solo importar el nombre que querés no evita que
+  // Metro empaquete el resto como asset muerto. 3 roles (ver
+  // `theme/typography.ts`): Archivo (UI), Archivo Black (cifra
+  // protagonista, un solo peso), JetBrains Mono (datos financieros).
   const [fontsLoaded] = useFonts({
-    Manrope_400Regular: require('@expo-google-fonts/manrope/400Regular/Manrope_400Regular.ttf'),
-    Manrope_500Medium: require('@expo-google-fonts/manrope/500Medium/Manrope_500Medium.ttf'),
-    Manrope_600SemiBold: require('@expo-google-fonts/manrope/600SemiBold/Manrope_600SemiBold.ttf'),
-    Manrope_700Bold: require('@expo-google-fonts/manrope/700Bold/Manrope_700Bold.ttf'),
-    Manrope_800ExtraBold: require('@expo-google-fonts/manrope/800ExtraBold/Manrope_800ExtraBold.ttf'),
+    Archivo_400Regular: require('@expo-google-fonts/archivo/400Regular/Archivo_400Regular.ttf'),
+    Archivo_500Medium: require('@expo-google-fonts/archivo/500Medium/Archivo_500Medium.ttf'),
+    Archivo_600SemiBold: require('@expo-google-fonts/archivo/600SemiBold/Archivo_600SemiBold.ttf'),
+    Archivo_700Bold: require('@expo-google-fonts/archivo/700Bold/Archivo_700Bold.ttf'),
+    Archivo_800ExtraBold: require('@expo-google-fonts/archivo/800ExtraBold/Archivo_800ExtraBold.ttf'),
+    ArchivoBlack_400Regular: require('@expo-google-fonts/archivo-black/400Regular/ArchivoBlack_400Regular.ttf'),
+    JetBrainsMono_400Regular: require('@expo-google-fonts/jetbrains-mono/400Regular/JetBrainsMono_400Regular.ttf'),
+    JetBrainsMono_500Medium: require('@expo-google-fonts/jetbrains-mono/500Medium/JetBrainsMono_500Medium.ttf'),
+    JetBrainsMono_600SemiBold: require('@expo-google-fonts/jetbrains-mono/600SemiBold/JetBrainsMono_600SemiBold.ttf'),
   });
 
   const [showSplash, setShowSplash] = useState(true);
