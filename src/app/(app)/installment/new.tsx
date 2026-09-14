@@ -4,7 +4,7 @@ import { Screen } from '@/components/ui/Screen';
 
 export default function NewInstallmentScreen() {
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title="Nueva compra a plazo" />
       <InstallmentForm />
     </Screen>

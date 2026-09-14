@@ -8,7 +8,7 @@ export default function EditRecurringScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title="Editar recurrente" />
       <RecurringForm recurringId={id} />
     </Screen>

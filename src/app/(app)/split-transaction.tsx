@@ -104,7 +104,7 @@ export default function SplitTransactionScreen() {
 
   if (txnQ.isLoading || categoriesQ.isLoading) {
     return (
-      <Screen edges={['top', 'bottom']}>
+      <Screen edges={['top', 'bottom']} variant="drawer">
         <ModalHeader title="Dividir transacción" />
         <LoadingState />
       </Screen>
@@ -112,7 +112,7 @@ export default function SplitTransactionScreen() {
   }
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title="Dividir transacción" />
       <ScrollView contentContainerClassName="gap-3 py-2" keyboardShouldPersistTaps="handled">
         <Card>

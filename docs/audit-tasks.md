@@ -318,7 +318,7 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
 
 ---
 
-## Fase 5 — Mobile / responsive
+## Fase 5 — Mobile / responsive ✅ cerrada (14 sep 2026)
 
 - [x] **Layout propio de tablet/desktop en Presupuesto y Carteras** (14 sep 2026) — confirmado:
       `useIsDesktop` era binario (900px, sin intermedio) y el contenido quedaba fijo en 560px
@@ -344,9 +344,35 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
       - Verificado en el navegador a 1024px (sin overlap, cae a 1 columna como antes — el fix
         funciona) y 1280px (2 columnas en Presupuesto, sin overlap con el sidebar) y en mobile
         (sin cambios). `tsc`/`expo lint`/`jest` limpios (37 suites / 199 tests, sin regresiones).
-- [ ] Formularios full-screen también en desktop — revisar `TransactionForm.tsx`, `WalletForm.tsx`
-      y si usan `Screen` full-bleed en desktop; evaluar variante `Drawer` (no existe hoy, confirmado
-      por grep).
+- [x] **Formularios full-screen también en desktop** (14 sep 2026) — confirmado el hallazgo con
+      captura: "Agregar transacción" en 1280px abría a pantalla completa, el formulario pegado
+      arriba-izquierda con casi toda la pantalla vacía. Al investigar apareció más grande de lo
+      que sugería el ítem: `Screen.tsx` lo usan **54 rutas** (no sólo `TransactionForm`/
+      `WalletForm`) — login/register, todas las páginas de Herramientas, vistas de detalle largas
+      (estado de cuenta, historial). Se consultó el alcance antes de construir: **sólo los
+      formularios rápidos de alta/edición** pasan a `Drawer` (nueva `variant="drawer"` en
+      `Screen.tsx`, panel de 440px que entra desde la derecha en vez de tomar toda la pantalla,
+      sólo activo en desktop -- en mobile se comporta exactamente igual que antes, hoja completa).
+      Rutas: `transaction/new`, `transaction/[id]`, `wallet/new`, `wallet/[id]`, `category/new`,
+      `category/[id]`, `recurring/new`, `recurring/[id]`, `installment/new`, `installment/[id]`,
+      `split-transaction`, `budget-edit` (12). El resto (Herramientas, detalle, login/register)
+      se queda `variant="page"` (el default) a propósito -- no encajan en un panel chico o no
+      tienen una pantalla "detrás" con sentido.
+      - Se cierra con click en el backdrop, la X de `ModalHeader` (sin cambios) o Escape (nuevo,
+        sólo web). El backdrop es puntero-only, sin `accessibilityLabel` propio -- duplicar la
+        misma etiqueta "Cerrar" que ya usa la X sólo confundía qué botón es cuál.
+      - **Limitación real, documentada a propósito**: en web `expo-router` desmonta la ruta
+        anterior al navegar (a diferencia de un modal nativo en iOS, que la deja viva detrás) --
+        así que el panel no dimeriza la pantalla previa de verdad, es un backdrop propio. Sigue
+        resolviendo el problema real (el formulario ya no ocupa el ancho completo con casi todo
+        vacío), pero no es un modal-sobre-contenido-vivo -- lograr eso necesitaría no desmontar la
+        ruta anterior en web, cambio de arquitectura de navegación aparte, no este ajuste.
+      - Verificado en el navegador: medido por DOM (no sólo visual -- la captura del panel a
+        1280px se veía "centrado" por el letterboxing del propio panel del navegador al emular un
+        viewport más grande que el visible; `getBoundingClientRect()` confirmó el panel pegado al
+        borde derecho, ancho 440, sin invadir nada) y confirmado el cierre disparando el click
+        real por DOM. Mobile sin cambios (hoja completa con manija de arrastre, igual que
+        siempre). `tsc`/`expo lint`/`jest` limpios (37 suites / 199 tests).
 - [x] **Carrusel "De un vistazo" (`NetWorthPager.tsx`)** (14 sep 2026) — confirmado el hallazgo:
       los puntos eran `View`, no `Pressable`, así que en desktop (sin swipe) no había forma de
       saltar de página sin arrastrar. Ahora cada punto es un botón accesible

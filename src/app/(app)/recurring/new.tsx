@@ -4,7 +4,7 @@ import { Screen } from '@/components/ui/Screen';
 
 export default function NewRecurringScreen() {
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title="Nuevo recurrente" />
       <RecurringForm />
     </Screen>
