@@ -74,6 +74,7 @@ export default function BudgetScreen() {
                 así que este número no compite con nada. */}
             <Money
               hero
+              animate
               value={Math.abs(remaining)}
               currency={currency}
               tone={over ? 'expense' : 'default'}
@@ -81,7 +82,7 @@ export default function BudgetScreen() {
             />
             <Text className="text-text-muted text-sm">
               {over ? 'te pasaste' : 'te queda'} de{' '}
-              <Money value={budgeted} currency={currency} tone="muted" />
+              <Money animate value={budgeted} currency={currency} tone="muted" />
             </Text>
           </View>
         }
@@ -112,13 +113,13 @@ export default function BudgetScreen() {
             <Card title="Total del período">
               <View className="flex-row justify-between">
                 <Labeled label="Presupuestado">
-                  <Money value={budgeted} currency={currency} />
+                  <Money animate value={budgeted} currency={currency} />
                 </Labeled>
                 <Labeled label="Gastado">
-                  <Money value={spent} currency={currency} tone="expense" />
+                  <Money animate value={spent} currency={currency} tone="expense" />
                 </Labeled>
                 <Labeled label="Disponible">
-                  <Money value={remaining} currency={currency} signed />
+                  <Money animate value={remaining} currency={currency} signed />
                 </Labeled>
               </View>
             </Card>

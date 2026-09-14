@@ -384,16 +384,58 @@ Pendiente, fuera de esta pasada (alcance deliberado, ver commit):
 
 ---
 
-## Fase 6 — Polish
+## Fase 6 — Polish ✅ cerrada (14 sep 2026)
 
-- [ ] Skeletons de layout en vez de spinner — no existe ningún componente Skeleton hoy (confirmado
-      por grep). Empezar por dashboard y detalle de cartera.
-- [ ] Motion: números que cuentan al cambiar de mes/categoría; transición de color de `ProgressBar`
-      al cruzar 80%/100% (depende del fix de Fase 1).
-- [ ] Revisar `prefers-reduced-motion` en las animaciones de Reanimated existentes.
-- [ ] Casos límite de §11 del audit: orden de transacciones futuras/recurrentes vs. históricas en
-      listas; subtipo por defecto incorrecto al editar cartera "Efectivo" (bug de datos a confirmar
-      contra el modelo real, no contra la UI).
+- [x] **Skeletons de layout en vez de spinner** (14 sep 2026) — `Skeleton.tsx` nuevo (`ui/`): pulso
+      de opacidad con `withRepeat`, no un spinner centrado que deja la pantalla en blanco.
+      `TransactionRowSkeleton`/`TransactionListSkeleton` (forma real de `TransactionRow`: avatar +
+      2 líneas + monto) en el detalle de cartera (`wallet-transactions.tsx`); `ResumenSkeleton`
+      local en `dashboard.tsx` (triple de "Este mes" + card de "Programado" + grilla de "De un
+      vistazo"). Verificado en el navegador forzando `loading=true` a mano (con backend local no
+      hay latencia real que capturar en pantalla) — coincide con la forma real en ambos casos.
+- [x] **`prefers-reduced-motion`** (14 sep 2026) — auditado el uso real de Reanimated: sin
+      `withRepeat` previo a `Skeleton.tsx` (0 animaciones en loop, confirmado por grep) y ninguna
+      llamada fuerza `ReduceMotion.Never`, así que **ya estaba resuelto por default** —
+      Reanimated 4 usa `ReduceMotion.System` por default en `withTiming`/`withSpring`/`withRepeat`
+      (confirmado contra el código fuente de la librería, no solo la doc), que en web chequea
+      `matchMedia('(prefers-reduced-motion: reduce)')` de verdad. La única animación de la app que
+      NO pasa por Reanimated es `FadeInView.tsx` (usa el `Animated` del core de RN, sin ese
+      default) — ahí sí hacía falta código: ahora chequea `AccessibilityInfo.isReduceMotionEnabled()`
+      y salta directo al estado final si está activo.
+- [x] **Motion: números que cuentan + transición de color** (14 sep 2026) — `useCountingNumber.ts`
+      nuevo (`requestAnimationFrame` + estado de React, no Reanimated: el contenido de un `<Text>`
+      no es un estilo animable en el hilo de UI): `Money` gana un prop `animate` (default `false`,
+      opt-in por pantalla) que hace que la cifra cuente hasta el valor nuevo en vez de saltar de
+      golpe. Aplicado a `SummaryTriple` (Lista, cambia con `MonthSwitcher`) y a los totales de
+      Presupuesto (cambia con `PeriodSwitcher`) -- no a cada fila de categoría, para no volver la
+      pantalla "ruidosa". Respeta reducir movimiento (mismo criterio que `FadeInView`). Además,
+      `ProgressBar`/`BudgetMeter` ya no saltan de color de golpe al cruzar 80%/100%: un
+      `stateIndex` 0/1/2 interpolado con `interpolateColor` (compartido entre los dos componentes,
+      `PROGRESS_STATE_INDEX`). Verificado en el navegador cambiando de período en Presupuesto
+      (capturada la cuenta a mitad de camino, USD 55.88 → 11.60 → 0.00). 3 tests nuevos en
+      `useCountingNumber.test.ts` (mock de `requestAnimationFrame`, sin esperas reales).
+- [x] **Casos límite de §11** (14 sep 2026):
+      - **Transacciones futuras sin distinguir del historial** — confirmado el hallazgo exacto del
+        audit ("1 dic" arriba de "ayer"): una transacción real con fecha futura (alguien la carga
+        a mano de antemano) es indistinguible de una pasada en la lista. `DayHeader.tsx` nuevo
+        (compartido entre `ListaTab` y el detalle de cartera): agrega un rótulo "próximo" en Faro
+        cuando `date > hoy` (`isFutureDay` nuevo en `lib/date.ts`). No es un bug de orden (`-date`
+        ordenando "lo más nuevo arriba" es correcto tal cual) sino de falta de separación visual.
+        Verificado en el navegador con una transacción real fechada a futuro.
+      - **Subtipo "Banco" en vez de "Efectivo" al editar esa cartera** — confirmado contra el
+        modelo real, no era un bug de datos: `wallet.kind` llega bien desde el backend. Es una
+        carrera de un solo frame en `WalletForm.tsx`: el `useState` de `kind` arranca en `'bank'`
+        (default de cartera nueva) y sólo se corrige en un `useEffect` que corre *después* de
+        pintar -- entre que `existing.isLoading` pasa a `false` y ese efecto corre, hay un render
+        de tránsito donde el formulario ya se ve pero con los defaults viejos. Fix: la pantalla
+        espera también a `prefilled` (que el efecto prende al final, después de aplicar todos los
+        campos), no sólo a `isLoading` -- y de paso se agregó el `ErrorState` que le faltaba a esa
+        carga (si no, con la carrera cerrada por `prefilled`, una carga fallida hubiera dejado el
+        formulario pegado en "Cargando…" para siempre en vez de mostrar el error). Verificado en
+        el navegador con una cartera "Efectivo" real (`kind=cash`): Subtipo abre en "Efectivo".
+
+      `tsc`/`expo lint`/`jest` limpios en cada paso de esta fase — 39 suites / 210 tests, sin
+      regresiones.
 
 ---
 

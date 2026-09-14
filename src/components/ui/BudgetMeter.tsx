@@ -1,12 +1,19 @@
 import { useEffect, useId } from 'react';
 import { Text, View } from 'react-native';
 import Svg, { Defs, Line, Pattern, Rect } from 'react-native-svg';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { budgetState } from '@/lib/budgetState';
 import { formatMoney } from '@/lib/money';
 import { useColors } from '@/theme';
 import { mono } from '@/theme/typography';
+import { PROGRESS_STATE_INDEX } from './ProgressBar';
 
 /**
  * Medidor de presupuesto -- identidad wxlter. (Fase 3, sep 2026). Reemplaza
@@ -46,7 +53,6 @@ export function BudgetMeter({
   const trackHeight = size === 'sm' ? 8 : 14;
   const isLg = size === 'lg';
 
-  const fillColor = state === 'over' ? colors.expense : state === 'warning' ? colors.warning : colors.income;
   const fillPct = noBudget ? 100 : Math.min(ratio, TRACK_SCALE) * (100 / TRACK_SCALE);
   const isOverPastLimit = state === 'over' && !noBudget;
   const baseFillPct = isOverPastLimit ? LIMIT_POS : fillPct;
@@ -56,10 +62,20 @@ export function BudgetMeter({
   useEffect(() => {
     width.value = withTiming(baseFillPct, { duration: 500, easing: Easing.out(Easing.cubic) });
   }, [baseFillPct, width]);
+
+  // El color también anima, no sólo el ancho -- mismo criterio y misma
+  // escala 0/1/2 que `ProgressBar` (pedido de la auditoría de producto,
+  // Fase 6: antes el relleno saltaba de golpe al cruzar 80%/100%).
+  const stateIndex = useSharedValue(PROGRESS_STATE_INDEX[state]);
+  useEffect(() => {
+    stateIndex.value = withTiming(PROGRESS_STATE_INDEX[state], { duration: 350, easing: Easing.out(Easing.cubic) });
+  }, [state, stateIndex]);
   const fillStyle = useAnimatedStyle(() => ({
     width: `${width.value}%`,
     height: '100%',
-    backgroundColor: noBudget ? 'transparent' : fillColor,
+    backgroundColor: noBudget
+      ? 'transparent'
+      : interpolateColor(stateIndex.value, [0, 1, 2], [colors.income, colors.warning, colors.expense]),
   }));
 
   const a11yLabel = noBudget
