@@ -317,6 +317,10 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="hidden-wallets"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="import-excel"
           options={{ presentation: 'modal', headerShown: false }}
         />
