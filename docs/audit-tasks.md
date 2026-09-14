@@ -140,9 +140,32 @@
       pendientes de confirmar) y recién después se ocultan las filas en borrado optimista.
     - Tests nuevos en `lib/__tests__/transactions.test.ts` (`describe('useSwipeDeleteTransactions')`,
       5 casos, incluyendo el caso de doble-swipe). Suite completo 180/180, typecheck limpio.
-- [ ] Vista unificada "Próximos pagos" cruzando Recurrentes + Compras a plazo — confirmar si
-      ya existe algo parcial dado que el repo ya tiene `installment/` y `recurring/` como rutas
-      separadas (`src/app/(app)/installment`, `src/app/(app)/recurring`).
+- [x] **Corrección: "Próximos pagos" ya existía, completo — no había que construirlo.**
+      ✅ Backend + frontend verificados y corregido un bug real encontrado en el camino.
+  - `reports/scheduled/` (`upcoming_scheduled` en `budget-app-django/apps/reports/services.py`)
+    ya unifica recurrentes + cuotas + pago de tarjeta + vencimiento de deuda en una sola lista
+    ordenada por fecha — más completo que lo que pedía el audit (solo recurrentes+cuotas).
+    Alimenta 3 superficies: la card "Programado" del dashboard, el detalle de día del
+    calendario financiero, y los recordatorios push de `notify_due_items`.
+  - **Bug real encontrado:** `ScheduledItem` no traía si el recurrente de origen era
+    income/expense/transfer — un sueldo recurrente se mostraba en "Programado" en gris con
+    paréntesis, igual que un gasto, y tocarlo para registrarlo prellenaba el formulario como
+    "Gasto" en vez de "Ingreso". La notificación push del día anterior también decía "Gasto
+    recurrente mañana" para un ingreso.
+  - Arreglado en los dos repos:
+    - `budget-app-django`: `upcoming_scheduled` agrega `"type"` a cada ítem (`rec.type` para
+      recurrentes; `"expense"` fijo para cuota/tarjeta/deuda, que nunca son entradas de plata);
+      `ScheduledItemSerializer` lo expone; `notify_due_items` usa el mismo campo para el título
+      de la notificación ("Ingreso recurrente mañana" / "Transferencia recurrente mañana" /
+      "Gasto recurrente mañana"). Tests nuevos en `test_scheduled.py` y `test_notifications.py`
+      — suite completo del backend 611/611.
+    - `moneyapp`: `ScheduledItem.type` en `api/types.ts`; `ScheduledRow` (dashboard.tsx, la
+      comparten la card "Programado" y el detalle de día del calendario) usa `item.type` para
+      signo/color/`accessibilityLabel`, y `openScheduledItem` prellena `prefillType` con
+      `item.type` en vez de asumir siempre "expense". De paso se agregó el
+      `accessibilityLabel`/`accessibilityRole` que le faltaba a la fila (mismo hallazgo de
+      accesibilidad del resto de la sesión). Typecheck limpio, suite completo 180/180 (sin test
+      nuevo: ninguna pantalla de `src/app` tiene test en este repo, convención existente).
 - [ ] Revisar si "Historial" (header) y Herramientas → Análisis → Patrimonio siguen siendo dos
       entradas a la misma pantalla `/net-worth-history`.
 

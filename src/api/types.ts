@@ -830,6 +830,10 @@ export type ScheduledKind = 'recurring' | 'installment' | 'card_payment' | 'debt
 export interface ScheduledItem {
   date: ISODate;
   kind: ScheduledKind;
+  /** Un `kind: 'recurring'` puede ser income/expense/transfer (viene del
+   * `RecurringExpense` de origen); los otros 3 `kind` siempre son "expense"
+   * (nunca hay un pago de tarjeta o vencimiento de deuda que entre plata). */
+  type: TransactionType;
   /** id del RecurringExpense/InstallmentPurchase/Wallet de origen (para
    * card_payment y debt_due, la cartera misma). */
   source_id: UUID;
