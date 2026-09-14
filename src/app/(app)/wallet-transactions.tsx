@@ -12,7 +12,7 @@ import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { formatDayHeader } from '@/lib/date';
-import { balanceAfterEach, groupByDay } from '@/lib/transactions';
+import { balanceAfterEach, groupByDay, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { toNumber } from '@/lib/money';
 import { useColors } from '@/theme';
 
@@ -26,19 +26,27 @@ export default function WalletTransactionsScreen() {
   const query = useTransactions({ wallet: walletId });
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
+  const { pendingDeleteIds, onSwipeDelete } = useSwipeDeleteTransactions();
 
-  const items = query.data ?? [];
-  const days = useMemo(() => groupByDay(items), [items]);
+  const allItems = query.data ?? [];
   // Saldo de la cartera justo después de cada movimiento -- se camina hacia
   // atrás desde el saldo de hoy, así que hace falta el historial COMPLETO
-  // (sin paginar), que es justo lo que devuelve `useTransactions` acá.
+  // (sin paginar, y SIN filtrar los pendientes de deshacer: el saldo de hoy
+  // todavía los incluye hasta que el borrado se confirme de verdad).
   const balances = useMemo(
     () =>
       walletId && walletQ.data
-        ? balanceAfterEach(items, toNumber(walletQ.data.current_balance), walletId)
+        ? balanceAfterEach(allItems, toNumber(walletQ.data.current_balance), walletId)
         : new Map<string, number>(),
-    [items, walletQ.data, walletId],
+    [allItems, walletQ.data, walletId],
   );
+  // Recién acá se ocultan las filas deslizadas-a-borrar -- después de
+  // calcular `balances` contra el historial completo.
+  const items = useMemo(
+    () => allItems.filter((t) => !pendingDeleteIds.has(t.id)),
+    [allItems, pendingDeleteIds],
+  );
+  const days = useMemo(() => groupByDay(items), [items]);
 
   const refresh = usePullRefresh(query.isFetching && !query.isLoading, () => query.refetch());
 
@@ -113,6 +121,7 @@ export default function WalletTransactionsScreen() {
                       perspectiveWalletId={walletId}
                       balanceAfter={balances.get(item.id)}
                       onPress={() => router.push(`/transaction/${item.id}`)}
+                      onSwipeDelete={() => onSwipeDelete(item.id)}
                     />
                   </View>
                 ))}

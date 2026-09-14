@@ -11,7 +11,7 @@ import { Screen } from '@/components/ui/Screen';
 import { SummaryTriple } from '@/components/SummaryTriple';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { formatDayHeader } from '@/lib/date';
-import { groupByDay, summarizeByType } from '@/lib/transactions';
+import { groupByDay, summarizeByType, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { useWorkspaceStore } from '@/store/workspace';
 
 /** Todos los movimientos de una etiqueta -- se llega acá tocando su fila en
@@ -24,11 +24,15 @@ export default function TagTransactionsScreen() {
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
   const tagObj = tags?.find((t) => t.id === tag);
+  const { pendingDeleteIds, onSwipeDelete } = useSwipeDeleteTransactions();
 
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
 
-  const items = query.data ?? [];
+  const items = useMemo(
+    () => (query.data ?? []).filter((t) => !pendingDeleteIds.has(t.id)),
+    [query.data, pendingDeleteIds],
+  );
   const totals = useMemo(
     () => summarizeByType(items.filter((t) => t.currency === currency)),
     [items, currency],
@@ -65,6 +69,7 @@ export default function TagTransactionsScreen() {
                       wallet={wallets.get(item.wallet)}
                       toWallet={item.to_wallet ? wallets.get(item.to_wallet) : undefined}
                       onPress={() => router.push(`/transaction/${item.id}`)}
+                      onSwipeDelete={() => onSwipeDelete(item.id)}
                     />
                   </View>
                 ))}

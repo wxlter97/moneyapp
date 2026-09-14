@@ -4,19 +4,25 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from '
 
 import { useColors } from '@/theme';
 
+export type ProgressState = 'ok' | 'warning' | 'over';
+
 interface ProgressBarProps {
   /** 0..1 (se recorta). */
   progress: number;
-  /** Color de la barra cuando NO hay sobregiro. */
+  /** Color de la barra cuando el estado es 'ok'. */
   tone?: 'primary' | 'income';
-  /** Si el gasto supera el presupuesto, se pinta en rojo. */
-  over?: boolean;
+  /** 'ok' = tone normal, 'warning' = cerca del límite, 'over' = sobregirado.
+   * El color nunca es la única señal: quien use esta barra para un dato
+   * financiero (presupuesto, crédito usado…) debe reforzar 'warning'/'over'
+   * con texto o el ícono `alert` junto al número — ver `BudgetProgressRow`. */
+  state?: ProgressState;
 }
 
-export function ProgressBar({ progress, tone = 'primary', over = false }: ProgressBarProps) {
+export function ProgressBar({ progress, tone = 'primary', state = 'ok' }: ProgressBarProps) {
   const colors = useColors();
   const pct = Math.max(0, Math.min(1, Number.isFinite(progress) ? progress : 0));
-  const fill = over ? colors.expense : tone === 'income' ? colors.income : colors.primary;
+  const fill =
+    state === 'over' ? colors.expense : state === 'warning' ? colors.warning : tone === 'income' ? colors.income : colors.primary;
 
   const width = useSharedValue(0);
   useEffect(() => {

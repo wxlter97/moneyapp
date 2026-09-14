@@ -58,6 +58,11 @@ export function WorkspaceSwitcher() {
         }}
         className="flex-row items-center gap-1 self-start py-0.5 active:opacity-70"
         accessibilityRole="button"
+        // Sin esto, un lector de pantalla anuncia el botón sin texto: no hay
+        // forma de saber que "Casa ⌄" es el selector de presupuesto/workspace
+        // activo, ni de saber cuál está activo (ver auditoría de accesibilidad).
+        accessibilityLabel={`Cambiar de presupuesto, actual: ${active?.name ?? 'ninguno'}`}
+        accessibilityState={{ expanded: open }}
       >
         <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
           {active?.name ?? '—'}

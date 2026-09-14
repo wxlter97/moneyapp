@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import type { Wallet } from '@/api/types';
 import { Money } from '@/components/ui/Money';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { toNumber } from '@/lib/money';
+import { formatMoney, toNumber } from '@/lib/money';
 import { walletColor } from '@/lib/wallets';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -14,6 +14,20 @@ interface WalletRowProps {
   hasChildren?: boolean;
   /** Nivel de anidación (0 = raíz). */
   depth?: number;
+}
+
+/**
+ * Nombre accesible para el botón que envuelve esta fila. Vive acá (no en la
+ * pantalla que arma el `Pressable`, ver `(tabs)/wallets.tsx`) para no
+ * duplicar el cálculo del saldo mostrado (agregado si tiene hijos, con el
+ * mismo signo que `<Money>`).
+ */
+export function walletRowLabel(wallet: Wallet, hasChildren = false): string {
+  const balance = toNumber(hasChildren ? wallet.aggregated_balance : wallet.current_balance);
+  const parts = [wallet.name, formatMoney(balance, wallet.currency)];
+  if (wallet.visibility === 'private') parts.push('privada');
+  if (!wallet.is_active) parts.push('inactiva');
+  return parts.join(', ');
 }
 
 export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowProps) {
@@ -96,8 +110,12 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
             progress={
               1 - toNumber(wallet.available_credit) / toNumber(wallet.credit_limit)
             }
-            over={
+            state={
               toNumber(wallet.available_credit) / toNumber(wallet.credit_limit) < 0.1
+                ? 'over'
+                : toNumber(wallet.available_credit) / toNumber(wallet.credit_limit) < 0.25
+                  ? 'warning'
+                  : 'ok'
             }
           />
           <Text className="text-text-muted text-[11px]">

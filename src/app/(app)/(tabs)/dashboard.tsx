@@ -8,7 +8,6 @@ import { useUIStore } from '@/store/ui';
 import {
   useBudgetReport,
   useDashboardSummary,
-  useDeleteTransaction,
   useNetWorth,
   useScheduled,
   useTags,
@@ -34,9 +33,8 @@ import { Segmented } from '@/components/ui/Segmented';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { currentYearMonth, formatDayHeader, formatShortDate, monthRange, todayISO } from '@/lib/date';
-import { formatSigned, toNumber } from '@/lib/money';
-import { groupByDay, summarizeByType } from '@/lib/transactions';
-import { useSnackbarStore } from '@/store/snackbar';
+import { formatMoney, formatSigned, toNumber } from '@/lib/money';
+import { groupByDay, summarizeByType, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -328,12 +326,30 @@ function ScheduledRow({
   showDate?: boolean;
   first?: boolean;
 }) {
+  // Un recurrente puede ser income/expense/transfer -- antes se mostraba
+  // SIEMPRE en negativo/gris, así que un sueldo recurrente se leía como un
+  // gasto más. Una transferencia sigue en gris (sale de esta cartera, mismo
+  // criterio que `TransactionRow`); solo el ingreso cambia de signo y color.
+  const isIncome = item.type === 'income';
+  const title = item.description || item.category_name || 'Programado';
+  const a11yLabel = [
+    isIncome ? 'Ingreso' : item.type === 'transfer' ? 'Transferencia' : 'Gasto',
+    title,
+    item.wallet_name,
+    formatShortDate(item.date),
+    formatMoney(toNumber(item.amount), currency),
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <Pressable
       onPress={() => {
         haptics.tap();
         openScheduledItem(item);
       }}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
       className={`flex-row items-center gap-3 py-2.5 active:opacity-60 ${first ? '' : 'border-t border-border/60'}`}
     >
       {showDate ? (
@@ -343,14 +359,20 @@ function ScheduledRow({
       ) : null}
       <View className="flex-1">
         <Text className="text-text text-sm" numberOfLines={1}>
-          {item.description || item.category_name || 'Programado'}
+          {title}
         </Text>
         <Text className="text-text-muted text-xs" numberOfLines={1}>
           {item.wallet_name}
           {scheduledKindSuffix(item.kind)}
         </Text>
       </View>
-      <Money value={-toNumber(item.amount)} currency={currency} parens tone="muted" className="text-sm" />
+      <Money
+        value={isIncome ? toNumber(item.amount) : -toNumber(item.amount)}
+        currency={currency}
+        parens
+        tone={isIncome ? 'income' : 'muted'}
+        className="text-sm"
+      />
     </Pressable>
   );
 }
@@ -378,8 +400,8 @@ function ScheduledCard({
 
 /** Abre "Agregar transacción" con los datos del ítem ya cargados -- el
  * recurrente/cuota de origen no se toca, esto solo ahorra tipear al
- * registrarlo a mano. Un recurrente tipo transferencia (aporte automático a
- * una meta) abre como transferencia; el resto, como gasto. */
+ * registrarlo a mano. Se prellena con `it.type` (income/expense/transfer),
+ * no siempre "expense": un recurrente puede ser cualquiera de los 3. */
 function openScheduledItem(it: ScheduledItem) {
   // Pago de tarjeta o vencimiento de deuda: no hay forma de adivinar bien
   // "expense o transfer, desde qué cartera" (a diferencia de un recurrente,
@@ -392,7 +414,7 @@ function openScheduledItem(it: ScheduledItem) {
   }
 
   const params: Record<string, string> = {
-    prefillType: it.to_wallet ? 'transfer' : 'expense',
+    prefillType: it.type,
     prefillWallet: it.wallet,
     prefillAmount: it.amount,
     prefillDate: it.date,
@@ -446,8 +468,7 @@ function ListaTab({
   const tagsQuery = useTags();
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
-  const deleteTxn = useDeleteTransaction();
-  const showSnackbar = useSnackbarStore((s) => s.show);
+  const { pendingDeleteIds, onSwipeDelete } = useSwipeDeleteTransactions();
 
   // El aviso de "busca en todo, no sólo el mes" se ve unos segundos la
   // primera vez que alguien busca, y nunca más (ver `store/ui.ts`).
@@ -466,9 +487,6 @@ function ListaTab({
   const [amountMin, setAmountMin] = useState('0.00');
   const [amountMax, setAmountMax] = useState('0.00');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  // Ocultas de inmediato al deslizar-borrar; el borrado real llega con el
-  // timeout del snackbar si nadie toca "Deshacer" antes.
-  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
 
   // Cuántos filtros avanzados (aparte del texto, que ya se ve en su propio
   // campo) están activos -- para el numerito sobre el ícono. El tipo ahora
@@ -530,34 +548,6 @@ function ListaTab({
   const days = useMemo(() => groupByDay(items), [items]);
 
   const refresh = usePullRefresh(txQuery.isFetching && !txQuery.isLoading, () => txQuery.refetch());
-
-  function onSwipeDelete(id: string) {
-    setPendingDeleteIds((prev) => new Set(prev).add(id));
-    showSnackbar({
-      message: 'Movimiento eliminado.',
-      actionLabel: 'Deshacer',
-      onAction: () => {
-        haptics.selection();
-        setPendingDeleteIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      },
-      onTimeout: async () => {
-        try {
-          await deleteTxn.mutateAsync(id);
-        } catch {
-          haptics.error();
-          setPendingDeleteIds((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-          });
-        }
-      },
-    });
-  }
 
   return (
     <ScrollView

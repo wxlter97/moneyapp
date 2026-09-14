@@ -75,6 +75,22 @@ export function CalendarGrid({ month, selected, markers, onSelectDay }: Calendar
           const isToday = iso === today;
           const isSelected = iso === selected;
           const dotColor = isSelected ? colors.primaryFg : undefined;
+          // Fecha en palabras + qué tiene ese día -- antes solo decía "{día}
+          // de {mes}" con el mes en número (ej. "5 de 9"), y no comunicaba
+          // los puntos de ingreso/gasto/programado que sí se ven en la celda.
+          const dayLabel = [
+            new Date(month.year, month.month - 1, day).toLocaleDateString('es-ES', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            }),
+            isToday ? 'hoy' : null,
+            marker?.income ? 'con ingresos' : null,
+            marker?.expense ? 'con gastos' : null,
+            marker?.scheduled ? 'con movimientos programados' : null,
+          ]
+            .filter(Boolean)
+            .join(', ');
 
           return (
             <View key={i} style={{ width: CELL_WIDTH, height: CELL_HEIGHT, padding: 2 }}>
@@ -84,7 +100,8 @@ export function CalendarGrid({ month, selected, markers, onSelectDay }: Calendar
                   onSelectDay(iso);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`${day} de ${month.month}`}
+                accessibilityLabel={dayLabel}
+                accessibilityState={{ selected: isSelected }}
                 className={`flex-1 items-center justify-center rounded-xl ${
                   isSelected ? 'bg-primary' : isToday ? 'border border-primary' : ''
                 }`}

@@ -44,7 +44,8 @@ export type IconName =
   | 'info'
   | 'gift'
   | 'star'
-  | 'calculator';
+  | 'calculator'
+  | 'alert';
 
 interface IconProps {
   name: IconName;
@@ -320,6 +321,13 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
           <Circle cx={8.2} cy={16} r={1} fill={color} stroke="none" />
           <Circle cx={12} cy={16} r={1} fill={color} stroke="none" />
           <Circle cx={15.8} cy={16} r={1} fill={color} stroke="none" />
+        </>
+      )}
+      {name === 'alert' && (
+        <>
+          <Path d="M12 3.5l9.5 16.5H2.5L12 3.5z" {...p} strokeLinejoin="round" />
+          <Line x1={12} y1={10} x2={12} y2={14.5} {...p} />
+          <Circle cx={12} cy={17.3} r={1} fill={color} stroke="none" />
         </>
       )}
       {name === 'face-id' && (
