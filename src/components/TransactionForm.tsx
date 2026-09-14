@@ -89,10 +89,11 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [openRow, setOpenRow] = useState<OpenRow>(null);
   const [pendingReceipt, setPendingReceipt] = useState<PickedFile | null>(null);
-  // El flujo por defecto es monto + categoría + cartera + fecha; nota,
-  // etiquetas, recibo y el toggle de presupuesto quedan colapsados detrás de
-  // "Más detalles" salvo que la transacción que se está editando ya traiga
-  // algo ahí adentro (ver el efecto de abajo, corre una vez llega el prefill).
+  // El flujo por defecto es monto + nota + categoría + cartera + fecha + el
+  // toggle de presupuesto (cuando aplica); etiquetas y recibo quedan
+  // colapsados detrás de "Más detalles" salvo que la transacción que se está
+  // editando ya traiga algo ahí adentro (ver el efecto de abajo, corre una
+  // vez llega el prefill).
   const [detailsOpen, setDetailsOpen] = useState(false);
   // Descuento sugerido: sólo al crear (ver docstring más abajo), aplicado a
   // mano con el botón "Aplicar descuento" -- nunca automático.
