@@ -53,8 +53,11 @@ export const lightColors: ThemeColors = {
   border: '#DAD7CD',
   text: '#111111',
   textMuted: '#63625B',
-  primary: '#FFDB00',
-  primaryFg: '#111111',
+  // Faro oscurecido, no el #FFDB00 puro de `darkColors` -- ver el mismo
+  // fix en `theme/accents.ts` (acento `wxlter`): como color de TEXTO sobre
+  // Papel, Faro puro no pasa contraste.
+  primary: '#7A5C00',
+  primaryFg: '#FFFFFF',
   income: '#1F7A40',
   expense: '#C43D28',
   warning: '#B4631A',
