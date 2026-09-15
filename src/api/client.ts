@@ -109,6 +109,16 @@ api.interceptors.request.use((cfg: InternalAxiosRequestConfig) => {
 let refreshInFlight: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
+  // Se relee de `tokenStorage` (no sólo la copia en memoria de ESTA
+  // pestaña/ventana) antes de intentar: con `ROTATE_REFRESH_TOKENS` activo
+  // en el backend, otra pestaña de la misma sesión pudo haber refrescado
+  // primero -- rotando el refresh token y dejando el que esta pestaña
+  // recuerda ya invalidado (`BLACKLIST_AFTER_ROTATION`). Sin este re-read,
+  // esa pestaña intentaba refrescar con un token ya muerto, fallaba, y
+  // deslogueaba una sesión que en realidad seguía viva en la otra pestaña
+  // (hallazgo real: "ahora pide iniciar sesión más seguido").
+  const stored = await tokenStorage.get();
+  if (stored?.refresh) refreshToken = stored.refresh;
   if (!refreshToken) throw new Error('no refresh token');
 
   // Se hace por `api` (no axios crudo) para compartir baseURL/adapter, pero

@@ -35,12 +35,17 @@ export const ACCENTS: Accent[] = [
   {
     id: 'wxlter',
     label: 'wxlter.',
-    // Faro #FFDB00 -- identidad de marca, no un acento "tierra" más: por
-    // eso rompe el patrón de par claro/oscuro de abajo (es lo bastante
-    // brillante para leerse igual de bien sobre Papel que sobre Tinta, sin
-    // necesitar un tono distinto por esquema). primaryFg siempre casi-negro:
-    // blanco sobre este amarillo no pasa contraste.
-    light: { primary: '#FFDB00', primaryFg: '#111111' },
+    // Corrección real (14 sep 2026): esto SÍ traía el mismo tono en claro y
+    // oscuro -- se justificaba como "bastante brillante para leerse igual de
+    // bien sobre Papel que sobre Tinta", pero eso sólo vale para RELLENOS
+    // (un botón, la píldora activa: el texto encima es casi-negro/blanco, no
+    // el amarillo mismo). `colors.primary` también se usa como COLOR DE
+    // TEXTO en decenas de lugares ("Crear una", "+ Nueva categoría"…) --
+    // Faro puro como texto sobre Papel da ~1.5:1 de contraste, invisible.
+    // Modo oscuro no cambia (Faro sobre Tinta anda perfecto, es el mismo
+    // texto que ya se ve bien en todos los screenshots de esta sesión).
+    // Mismo patrón que el resto de la paleta: un tono por esquema.
+    light: { primary: '#7A5C00', primaryFg: '#FFFFFF' },
     dark: { primary: '#FFDB00', primaryFg: '#111111' },
   },
   {

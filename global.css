@@ -35,8 +35,11 @@ select,
     --color-border: 218 215 205;
     --color-text: 17 17 17;
     --color-text-muted: 99 98 91;
-    --color-primary: 255 219 0;
-    --color-primary-fg: 17 17 17;
+    /* Faro oscurecido en claro -- ver theme/accents.ts (acento wxlter.):
+       Faro puro (255 219 0) como color de TEXTO sobre Papel no pasa
+       contraste. Oscuro sigue con Faro puro, ver :root.dark abajo. */
+    --color-primary: 122 92 0;
+    --color-primary-fg: 255 255 255;
     --color-income: 31 122 64;
     --color-expense: 196 61 40;
     --color-warning: 180 99 26;
