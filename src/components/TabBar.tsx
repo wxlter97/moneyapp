@@ -1,11 +1,13 @@
-import { Platform, Pressable, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, type LayoutChangeEvent, View } from 'react-native';
 import type { EdgeInsets } from 'react-native-safe-area-context';
 import Animated, {
+  Easing,
   FadeIn,
-  LinearTransition,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { SideNav } from './SideNav';
@@ -41,11 +43,13 @@ const H_MARGIN = 16;
 // `rounded-3xl` = 32px) — antes era la mitad de la altura (una píldora
 // completa), lo que no coincidía con el radio de las demás superficies.
 const BAR_RADIUS = 30;
-// La píldora del botón activo es más chica que la barra que la contiene
-// (altura del botón, no de la barra completa) -- coherente con que ahora
-// sólo el botón activo tiene forma de píldora "real": los inactivos son un
-// círculo de ícono solo.
-const PILL_RADIUS = 22;
+const PILL_HEIGHT = 42;
+const PILL_RADIUS = 21;
+
+interface Rect {
+  x: number;
+  width: number;
+}
 
 /**
  * Barra de pestañas flotante, estilo "liquid glass": vidrio + esquinas
@@ -53,13 +57,14 @@ const PILL_RADIUS = 22;
  * Misma apariencia en iOS/Android/Web (usa `GlassSurface`, no APIs
  * exclusivas).
  *
- * Sólo la pestaña activa muestra texto junto al ícono, dentro de una
- * píldora sólida en Faro (identidad, ver Fase 3) -- las demás son un
- * círculo de ícono solo. Antes las 4 mostraban ícono + etiqueta apiladas
- * siempre: se veía más cargado que el resto de la app, que ya usa el color
- * de acento como la única señal de "esto está seleccionado" en todos lados
- * (Herramientas → Apariencia, filtros, segmented controls...) — acá no
- * hacía excepción, sólo le faltaba dejar de repetir el texto 4 veces.
+ * Sólo la pestaña activa muestra texto junto al ícono -- las demás son un
+ * círculo de ícono solo. La píldora en sí es UN sólo elemento compartido
+ * (no una por botón) que se desliza y cambia de ancho hasta la posición
+ * real del botón activo (medida con `onLayout`, no adivinada): antes cada
+ * botón tenía su propia píldora que entraba/salía con la animación de
+ * layout genérica de Reanimated, y con un cambio de ancho grande (ícono
+ * solo -> ícono + texto) eso se ve como un pop que crece desde el centro,
+ * no como un movimiento continuo -- lo mismo que "carpeta" pedía evitar.
  */
 export function TabBar({ state, navigation, insets }: TabBarProps) {
   const colors = useColors();
@@ -111,43 +116,89 @@ export function TabBar({ state, navigation, insets }: TabBarProps) {
         }}
       >
         <GlassSurface radius={BAR_RADIUS}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              height: BAR_HEIGHT,
-              paddingHorizontal: 10,
-            }}
-          >
-            {state.routes.map((route, index) => {
-              const cfg = TAB_SCREENS.find((s) => s.name === route.name);
-              if (!cfg) return null;
-              const focused = state.index === index;
-              return (
-                <TabBarButton
-                  key={route.key}
-                  focused={focused}
-                  icon={cfg.icon}
-                  label={cfg.title}
-                  colors={colors}
-                  onPress={() => {
-                    const event = navigation.emit({
-                      type: 'tabPress',
-                      target: route.key,
-                      canPreventDefault: true,
-                    });
-                    if (!focused && !event.defaultPrevented) {
-                      haptics.tap();
-                      navigation.navigate(route.name);
-                    }
-                  }}
-                />
-              );
-            })}
-          </View>
+          <SlidingRow state={state} navigation={navigation} colors={colors} />
         </GlassSurface>
       </View>
+    </View>
+  );
+}
+
+function SlidingRow({
+  state,
+  navigation,
+  colors,
+}: Pick<TabBarProps, 'state' | 'navigation'> & {
+  colors: { primary: string; primaryFg: string; textMuted: string };
+}) {
+  const [rects, setRects] = useState<Record<number, Rect>>({});
+  const pillX = useSharedValue(0);
+  const pillW = useSharedValue(0);
+  const measuredOnce = useRef(false);
+
+  const activeRect = rects[state.index];
+  useEffect(() => {
+    if (!activeRect) return;
+    if (!measuredOnce.current) {
+      // Primer layout real: directo a la posición, sin deslizar desde 0 -- si
+      // no, la píldora "vuela" desde la esquina apenas se abre la pantalla.
+      pillX.value = activeRect.x;
+      pillW.value = activeRect.width;
+      measuredOnce.current = true;
+      return;
+    }
+    pillX.value = withTiming(activeRect.x, { duration: 320, easing: Easing.out(Easing.cubic) });
+    pillW.value = withTiming(activeRect.width, { duration: 320, easing: Easing.out(Easing.cubic) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRect?.x, activeRect?.width]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    left: pillX.value,
+    top: (BAR_HEIGHT - PILL_HEIGHT) / 2,
+    width: pillW.value,
+    height: PILL_HEIGHT,
+    borderRadius: PILL_RADIUS,
+    backgroundColor: colors.primary,
+    opacity: measuredOnce.current ? 1 : 0,
+  }));
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: BAR_HEIGHT,
+        paddingHorizontal: 10,
+      }}
+    >
+      <Animated.View pointerEvents="none" style={pillStyle} />
+      {state.routes.map((route, index) => {
+        const cfg = TAB_SCREENS.find((s) => s.name === route.name);
+        if (!cfg) return null;
+        const focused = state.index === index;
+        return (
+          <TabBarButton
+            key={route.key}
+            focused={focused}
+            icon={cfg.icon}
+            label={cfg.title}
+            colors={colors}
+            onLayout={(rect) => setRects((prev) => ({ ...prev, [index]: rect }))}
+            onPress={() => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!focused && !event.defaultPrevented) {
+                haptics.tap();
+                navigation.navigate(route.name);
+              }
+            }}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -158,19 +209,27 @@ function TabBarButton({
   label,
   colors,
   onPress,
+  onLayout,
 }: {
   focused: boolean;
   icon: TabIconName;
   label: string;
   colors: { primary: string; primaryFg: string; textMuted: string };
   onPress: () => void;
+  onLayout: (rect: Rect) => void;
 }) {
   const press = useSharedValue(1);
   const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
   const fg = focused ? colors.primaryFg : colors.textMuted;
 
+  function handleLayout(e: LayoutChangeEvent) {
+    const { x, width } = e.nativeEvent.layout;
+    onLayout({ x, width });
+  }
+
   return (
     <Pressable
+      onLayout={handleLayout}
       onPress={onPress}
       onPressIn={() => {
         press.value = withSpring(0.94, { damping: 14, stiffness: 320 });
@@ -182,37 +241,28 @@ function TabBarButton({
       accessibilityState={{ selected: focused }}
       accessibilityLabel={label}
     >
-      {/* `layout`: cuando el ancho cambia (el texto entra/sale al cambiar de
-          pestaña) el resto de la fila se acomoda con una transición en vez
-          de saltar de golpe. */}
-      <Animated.View layout={LinearTransition.springify().damping(16).stiffness(220)} style={scaleStyle}>
-        <View
-          style={{
+      <Animated.View
+        style={[
+          {
             flexDirection: 'row',
             alignItems: 'center',
             gap: 7,
-            height: 42,
+            height: PILL_HEIGHT,
             paddingHorizontal: focused ? 15 : 11,
-            borderRadius: PILL_RADIUS,
-            backgroundColor: focused ? colors.primary : 'transparent',
-          }}
-        >
-          <TabBarIcon name={icon} color={fg} focused={focused} />
-          {focused ? (
-            <Animated.Text
-              entering={FadeIn.duration(140)}
-              numberOfLines={1}
-              style={{
-                color: fg,
-                fontSize: 13.5,
-                fontFamily: fonts.semibold,
-                maxWidth: 92,
-              }}
-            >
-              {label}
-            </Animated.Text>
-          ) : null}
-        </View>
+          },
+          scaleStyle,
+        ]}
+      >
+        <TabBarIcon name={icon} color={fg} focused={focused} />
+        {focused ? (
+          <Animated.Text
+            entering={FadeIn.duration(160)}
+            numberOfLines={1}
+            style={{ color: fg, fontSize: 13.5, fontFamily: fonts.semibold, maxWidth: 92 }}
+          >
+            {label}
+          </Animated.Text>
+        ) : null}
       </Animated.View>
     </Pressable>
   );

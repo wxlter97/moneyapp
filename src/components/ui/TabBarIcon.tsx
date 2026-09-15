@@ -11,8 +11,9 @@ export type TabIconName = 'overview' | 'budget' | 'wallets' | 'tools';
 const PATHS: Record<TabIconName, string> = {
   // casa
   overview: 'M3 10.5 12 4l9 6.5M5.5 9.5V19a1 1 0 0 0 1 1H10v-5h4v5h3.5a1 1 0 0 0 1-1V9.5',
-  // diana
-  budget: 'M12 3v3M12 18v3M3 12h3M18 12h3',
+  // barras (antes una diana -- leía más a "meta" que a "presupuesto"; mismo
+  // glifo que ya usa la tile "Presupuesto" del dashboard, `Icon name="bars"`)
+  budget: 'M6 19v-6M12 19V7M18 19v-9',
   // billetera
   wallets:
     'M4 8.5A2.5 2.5 0 0 1 6.5 6H17a2 2 0 0 1 2 2v0M4 8.5V17a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1H6.5A2.5 2.5 0 0 1 4 8.5ZM16.5 13.5h.01',
@@ -30,14 +31,10 @@ export function TabBarIcon({
   color: ColorValue;
   focused: boolean;
 }) {
-  const extra =
-    name === 'budget'
-      ? 'M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0M12 12m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0'
-      : '';
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
-        d={PATHS[name] + (extra ? ' ' + extra : '')}
+        d={PATHS[name]}
         stroke={color}
         strokeWidth={focused ? 2.2 : 1.8}
         strokeLinecap="round"
