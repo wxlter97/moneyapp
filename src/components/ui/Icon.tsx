@@ -45,7 +45,9 @@ export type IconName =
   | 'gift'
   | 'star'
   | 'calculator'
-  | 'alert';
+  | 'alert'
+  | 'bank'
+  | 'cash';
 
 interface IconProps {
   name: IconName;
@@ -328,6 +330,25 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
           <Path d="M12 3.5l9.5 16.5H2.5L12 3.5z" {...p} strokeLinejoin="round" />
           <Line x1={12} y1={10} x2={12} y2={14.5} {...p} />
           <Circle cx={12} cy={17.3} r={1} fill={color} stroke="none" />
+        </>
+      )}
+      {name === 'bank' && (
+        <>
+          <Path d="M3 9.5 12 4l9 5.5" {...p} strokeLinejoin="round" />
+          <Line x1={5} y1={9.5} x2={5} y2={19} {...p} />
+          <Line x1={9} y1={9.5} x2={9} y2={19} {...p} />
+          <Line x1={12} y1={9.5} x2={12} y2={19} {...p} />
+          <Line x1={15} y1={9.5} x2={15} y2={19} {...p} />
+          <Line x1={19} y1={9.5} x2={19} y2={19} {...p} />
+          <Line x1={2.5} y1={19} x2={21.5} y2={19} {...p} />
+        </>
+      )}
+      {name === 'cash' && (
+        <>
+          <Rect x={2.5} y={6.5} width={19} height={11} rx={2} {...p} />
+          <Circle cx={12} cy={12} r={2.4} {...p} />
+          <Circle cx={5.5} cy={9.5} r={0.9} fill={color} stroke="none" />
+          <Circle cx={18.5} cy={14.5} r={0.9} fill={color} stroke="none" />
         </>
       )}
       {name === 'face-id' && (

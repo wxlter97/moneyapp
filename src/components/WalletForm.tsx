@@ -32,7 +32,7 @@ import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
 import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
@@ -51,11 +51,31 @@ interface WalletFormProps {
   walletId?: string;
 }
 
-const PURPOSE_OPTIONS: { value: WalletPurpose; label: string }[] = [
-  { value: 'spending', label: 'Gasto' },
-  { value: 'savings', label: 'Ahorro' },
-  { value: 'debt', label: 'Deuda' },
-  { value: 'asset', label: 'Activo' },
+interface WalletPreset {
+  key: string;
+  label: string;
+  purpose: WalletPurpose;
+  kind: WalletKind;
+  icon: IconName;
+}
+
+// Reemplaza los 2 selectores independientes que había antes (Tipo:
+// Gasto/Ahorro/Deuda/Activo + Subtipo: Banco/Crédito/Efectivo/Otro, 8
+// opciones entre los dos) -- se podían combinar cosas sin sentido (Ahorro +
+// Crédito mostraba campos de tarjeta en una cartera de ahorro) y no quedaba
+// claro cuáles combinaban. Una sola lista de carteras concretas, cada una
+// ya con su `purpose`+`kind` correctos -- un paso, no dos, y sin
+// combinaciones inválidas posibles. Sólo al CREAR: `kind` solo se sigue
+// pudiendo cambiar después vía "Subtipo" (ver más abajo, sin tocar) --
+// `purpose` nunca se cambia post-creación, igual que antes.
+const WALLET_PRESETS: WalletPreset[] = [
+  { key: 'bank', label: 'Cuenta bancaria', purpose: 'spending', kind: 'bank', icon: 'bank' },
+  { key: 'cash', label: 'Efectivo', purpose: 'spending', kind: 'cash', icon: 'cash' },
+  { key: 'credit', label: 'Tarjeta de crédito', purpose: 'debt', kind: 'credit', icon: 'card' },
+  { key: 'savings', label: 'Ahorro', purpose: 'savings', kind: 'bank', icon: 'star' },
+  { key: 'loan', label: 'Préstamo / deuda', purpose: 'debt', kind: 'custom', icon: 'trending' },
+  { key: 'asset', label: 'Activo', purpose: 'asset', kind: 'custom', icon: 'archive' },
+  { key: 'other', label: 'Otra', purpose: 'spending', kind: 'custom', icon: 'hash' },
 ];
 
 const KIND_OPTIONS: { value: WalletKind; label: string }[] = [
@@ -252,11 +272,11 @@ export function WalletForm({ walletId }: WalletFormProps) {
     split.isPending;
   const canSubmit = name.trim().length > 0 && !busy;
 
-  function onChangePurpose(next: WalletPurpose) {
-    setPurpose(next);
+  function onChangePreset(preset: WalletPreset) {
+    haptics.selection();
+    setPurpose(preset.purpose);
+    setKind(preset.kind);
     setParentId(null);
-    if (next === 'debt') setKind('credit');
-    else if (next === 'spending') setKind('bank');
   }
 
   async function onToggleArchive() {
@@ -416,15 +436,41 @@ export function WalletForm({ walletId }: WalletFormProps) {
 
         {!editing ? (
           <View className="gap-1.5">
-            <Text className="text-text-muted text-sm">Tipo</Text>
-            <Segmented value={purpose} onChange={onChangePurpose} options={PURPOSE_OPTIONS} />
+            <Text className="text-text-muted text-sm">Tipo de cartera</Text>
+            <View className="-m-1 flex-row flex-wrap">
+              {WALLET_PRESETS.map((preset) => {
+                const active = preset.purpose === purpose && preset.kind === kind;
+                return (
+                  <View key={preset.key} className="w-1/2 p-1">
+                    <Pressable
+                      onPress={() => onChangePreset(preset)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={preset.label}
+                      className={`flex-row items-center gap-2.5 rounded-2xl border px-3 py-3 active:opacity-70 ${
+                        active ? 'border-primary bg-primary/10' : 'border-border bg-surface'
+                      }`}
+                    >
+                      <Icon name={preset.icon} size={18} color={active ? colors.primary : colors.textMuted} />
+                      <Text
+                        className={active ? 'text-primary flex-1 text-sm' : 'text-text flex-1 text-sm'}
+                        style={active ? { fontFamily: fonts.semibold } : undefined}
+                        numberOfLines={1}
+                      >
+                        {preset.label}
+                      </Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
           </View>
-        ) : null}
-
-        <View className="gap-1.5">
-          <Text className="text-text-muted text-sm">Subtipo</Text>
-          <Segmented value={kind} onChange={setKind} options={KIND_OPTIONS} />
-        </View>
+        ) : (
+          <View className="gap-1.5">
+            <Text className="text-text-muted text-sm">Subtipo</Text>
+            <Segmented value={kind} onChange={setKind} options={KIND_OPTIONS} />
+          </View>
+        )}
 
         <View className="gap-1.5">
           <Text className="text-text-muted text-sm">Color</Text>
