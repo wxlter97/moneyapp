@@ -8,6 +8,7 @@ import { useUIStore } from '@/store/ui';
 import {
   useBudgetReport,
   useDashboardSummary,
+  useGamificationSummary,
   useNetWorth,
   useScheduled,
   useTags,
@@ -196,6 +197,8 @@ function ResumenTab({ currency }: { currency: string }) {
         </View>
       ) : null}
 
+      <StreakCard />
+
       <ScheduledCard items={scheduled.data ?? []} loading={scheduled.isLoading} currency={currency} />
 
       {/* Vistazo condensado: Carteras y Presupuesto ya tienen su propia
@@ -325,6 +328,42 @@ function ResumenSkeleton() {
         </View>
       </View>
     </>
+  );
+}
+
+/** Racha de días sin gasto fuera de presupuesto, o cuántos logros ya se
+ * ganaron si todavía no hay racha -- un toque lleva al detalle completo
+ * (`/achievements`). Silenciosa mientras carga o si falla: es un plus, no
+ * algo crítico para el resto de la pantalla. */
+function StreakCard() {
+  const colors = useColors();
+  const summary = useGamificationSummary();
+  if (summary.isLoading || summary.isError || !summary.data) return null;
+
+  const { current_streak, badges } = summary.data;
+  const earnedCount = badges.filter((b) => b.earned).length;
+  if (current_streak === 0 && earnedCount === 0) return null;
+
+  return (
+    <Pressable
+      onPress={() => {
+        haptics.tap();
+        router.push('/achievements');
+      }}
+      accessibilityRole="button"
+      accessibilityLabel="Logros"
+      className="flex-row items-center justify-between rounded-2xl bg-surface-2 px-4 py-3 active:opacity-60"
+    >
+      <View className="flex-row items-center gap-2">
+        <Icon name="bolt" size={18} color={colors.warning} />
+        <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+          {current_streak > 0
+            ? `${current_streak} ${current_streak === 1 ? 'día' : 'días'} sin gastos fuera de presupuesto`
+            : `${earnedCount} ${earnedCount === 1 ? 'logro' : 'logros'} ganado${earnedCount === 1 ? '' : 's'}`}
+        </Text>
+      </View>
+      <Icon name="chevron-right" size={14} color={colors.textMuted} />
+    </Pressable>
   );
 }
 

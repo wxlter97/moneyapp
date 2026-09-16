@@ -58,7 +58,7 @@ export default function PrivacyScreen() {
 
         <Section title="Dónde vive tu información">
           Tu base de datos corre en servidores gestionados (Neon, sobre infraestructura de
-          AWS) y el backend en Google Cloud Run -- fuera de El Salvador. Al usar Porsupuesto,
+          AWS) y el backend en Google Cloud Run -- fuera de El Salvador. Al usar porksupuesto,
           aceptás esa transferencia internacional de tus datos.
         </Section>
 
@@ -83,7 +83,7 @@ export default function PrivacyScreen() {
         </Section>
 
         <Section title="Menores de edad">
-          Porsupuesto no está dirigido a menores de 18 años. Si te enterás de que un menor creó
+          porksupuesto no está dirigido a menores de 18 años. Si te enterás de que un menor creó
           una cuenta, avisanos y la borramos.
         </Section>
 

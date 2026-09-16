@@ -77,7 +77,7 @@ export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
         </Animated.View>
         <Animated.View style={wordStyle}>
           <Text style={{ color: '#111111', fontSize: 24, fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
-            Porsupuesto
+            porksupuesto
           </Text>
         </Animated.View>
       </View>

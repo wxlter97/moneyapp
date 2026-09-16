@@ -523,6 +523,24 @@ export function useGoalProjection(id: string | undefined, enabled: boolean) {
   });
 }
 
+/** Solo tiene sentido en una cartera de ahorro con tasa configurada -- el
+ * caller pasa `enabled` (típicamente `purpose === 'savings' &&
+ * !!savings_interest_rate`) para no pegarle a un 404 en cualquier otra
+ * cartera. `year`/`month` por defecto el mes en curso. */
+export function useSavingsInterestProjection(
+  id: string | undefined,
+  enabled: boolean,
+  year?: number,
+  month?: number
+) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletInterestProjection(id ?? '', year, month),
+    queryFn: () => res.wallets.interestProjection(id!, year, month),
+    enabled: !!ws && !!id && enabled,
+  });
+}
+
 /** Estado de cuenta de una tarjeta de crédito a `asOf` (hoy si se omite). */
 export function useCreditCardStatement(id: string | undefined, asOf?: string) {
   const ws = useActiveWs();
@@ -1176,5 +1194,18 @@ export function useReplySupportTicket() {
       qc.invalidateQueries({ queryKey: qk.ws(ws).supportTickets() });
       qc.setQueryData(qk.ws(ws).supportTicket(ticket.id), ticket);
     },
+  });
+}
+
+// --- gamificación (racha, badges) ---------------------------------------
+/** Racha actual/máxima sin gasto fuera de presupuesto, fines de semana sin
+ * gastos, % de ahorro del mes en curso y estado de cada badge. De paso el
+ * backend otorga cualquier badge nuevo que ya se haya ganado. */
+export function useGamificationSummary() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).gamificationSummary(),
+    queryFn: () => res.gamification.summary(),
+    enabled: !!ws,
   });
 }

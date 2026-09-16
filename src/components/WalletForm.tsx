@@ -20,6 +20,7 @@ import {
   useDeleteWallet,
   useGoalProjection,
   useLoyaltyBanks,
+  useSavingsInterestProjection,
   useSplitWallet,
   useUnarchiveWallet,
   useUpdateWallet,
@@ -27,7 +28,16 @@ import {
   useWallets,
 } from '@/api/queries';
 import { errorMessage, fieldErrors } from '@/api/errors';
-import type { WalletCard, WalletInput, WalletKind, WalletPurpose } from '@/api/types';
+import {
+  SAVINGS_INTEREST_COMPOUNDING_LABEL,
+  SAVINGS_INTEREST_RATE_PERIOD_LABEL,
+  type SavingsInterestCompounding,
+  type SavingsInterestRatePeriod,
+  type WalletCard,
+  type WalletInput,
+  type WalletKind,
+  type WalletPurpose,
+} from '@/api/types';
 import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
@@ -119,6 +129,11 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [monthly, setMonthly] = useState('0.00');
   const [debtTotal, setDebtTotal] = useState('0.00');
   const [interestRate, setInterestRate] = useState('');
+  const [savingsInterestRate, setSavingsInterestRate] = useState('');
+  const [savingsInterestRatePeriod, setSavingsInterestRatePeriod] =
+    useState<SavingsInterestRatePeriod>('annual');
+  const [savingsInterestCompounding, setSavingsInterestCompounding] =
+    useState<SavingsInterestCompounding>('monthly');
   const [dueDate, setDueDate] = useState('');
   const [cardLast4, setCardLast4] = useState('');
   const [extraCards, setExtraCards] = useState<WalletCard[]>([]);
@@ -164,6 +179,11 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setMonthly(w.monthly_contribution ? toNumber(w.monthly_contribution).toFixed(2) : '0.00');
     setDebtTotal(w.purpose === 'debt' && w.goal_amount ? toNumber(w.goal_amount).toFixed(2) : '0.00');
     setInterestRate(w.interest_rate ? toNumber(w.interest_rate).toString() : '');
+    setSavingsInterestRate(
+      w.savings_interest_rate ? toNumber(w.savings_interest_rate).toString() : ''
+    );
+    setSavingsInterestRatePeriod(w.savings_interest_rate_period ?? 'annual');
+    setSavingsInterestCompounding(w.savings_interest_compounding ?? 'monthly');
     setDueDate(w.due_date ?? '');
     setCardLast4(w.card_last4 ?? '');
     setExtraCards(w.extra_cards ?? []);
@@ -331,6 +351,12 @@ export function WalletForm({ walletId }: WalletFormProps) {
       goal_date: isSavings && goalDate ? goalDate : null,
       monthly_contribution:
         isSavings && toNumber(monthly) > 0 ? toNumber(monthly).toFixed(2) : null,
+      savings_interest_rate:
+        isSavings && savingsInterestRate.trim() ? toNumber(savingsInterestRate).toFixed(3) : null,
+      ...(isSavings && {
+        savings_interest_rate_period: savingsInterestRatePeriod,
+        savings_interest_compounding: savingsInterestCompounding,
+      }),
       interest_rate: isDebt && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
       due_date: isDebt && dueDate ? dueDate : null,
       card_last4: cardNumberEligible && cardLast4.trim() ? cardLast4.trim() : null,
@@ -630,6 +656,38 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 <GoalProjectionCard walletId={walletId!} currency={existing.data.currency} />
                 <CalculatorLink slug="ahorro-mensual" label="Ahorro mensual" />
               </>
+            ) : null}
+
+            <TextField
+              label="Tasa de interés a ganar (opcional)"
+              value={savingsInterestRate}
+              onChangeText={(t) => setSavingsInterestRate(t.replace(/[^0-9.]/g, ''))}
+              keyboardType="decimal-pad"
+              placeholder="3.5"
+            />
+            {savingsInterestRate.trim() ? (
+              <>
+                <Segmented
+                  value={savingsInterestRatePeriod}
+                  onChange={setSavingsInterestRatePeriod}
+                  options={(['monthly', 'annual'] as const).map((v) => ({
+                    value: v,
+                    label: SAVINGS_INTEREST_RATE_PERIOD_LABEL[v],
+                  }))}
+                />
+                <Select
+                  label="Capitalización"
+                  value={savingsInterestCompounding}
+                  onChange={(v) => setSavingsInterestCompounding(v as SavingsInterestCompounding)}
+                  options={(['daily', 'biweekly', 'monthly', 'annual'] as const).map((v) => ({
+                    value: v,
+                    label: SAVINGS_INTEREST_COMPOUNDING_LABEL[v],
+                  }))}
+                />
+              </>
+            ) : null}
+            {editing && existing.data?.purpose === 'savings' && existing.data?.savings_interest_rate ? (
+              <SavingsInterestProjectionCard walletId={walletId!} currency={existing.data.currency} />
             ) : null}
           </>
         ) : null}
@@ -968,6 +1026,31 @@ function GoalProjectionCard({
       {data.on_track === false ? (
         <Text className="text-warning text-xs">Vas más lento que tu fecha objetivo.</Text>
       ) : null}
+    </View>
+  );
+}
+
+function SavingsInterestProjectionCard({
+  walletId,
+  currency,
+}: {
+  walletId: string;
+  currency: string;
+}) {
+  const today = new Date();
+  const q = useSavingsInterestProjection(walletId, true, today.getFullYear(), today.getMonth() + 1);
+  const data = q.data;
+  if (q.isLoading || q.isError || !data) return null;
+
+  return (
+    <View className="gap-1 rounded-2xl bg-surface-2 px-4 py-3">
+      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+        Interés estimado este mes: ~{formatMoney(data.estimated_interest, currency)}
+      </Text>
+      <Text className="text-text-muted text-xs">
+        {data.annual_rate_pct}% anual · capitalización {SAVINGS_INTEREST_COMPOUNDING_LABEL[data.compounding]}
+        {data.is_partial_month ? ' · mes en curso, es una proyección' : ''}
+      </Text>
     </View>
   );
 }

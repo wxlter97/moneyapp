@@ -26,6 +26,7 @@ import type {
   EmailImportLog,
   EmailImportStatus,
   ExchangeRate,
+  GamificationSummary,
   GoalProjection,
   InstallmentPurchase,
   InstallmentPurchaseInput,
@@ -46,6 +47,7 @@ import type {
   RecurringExpense,
   RecurringExpenseInput,
   RecurringSuggestion,
+  SavingsInterestProjection,
   ScheduledItem,
   SetForwardBudgetInput,
   SetForwardBudgetResult,
@@ -350,6 +352,14 @@ export const wallets = {
   /** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
   statements: () =>
     api.get<CreditCardStatementSummary[]>('/wallets/statements/').then((r) => r.data),
+  /** Solo tiene sentido en una cartera de ahorro con tasa configurada -- 404 si no.
+   * `year`/`month` por defecto el mes en curso. */
+  interestProjection: (id: string, year?: number, month?: number) =>
+    api
+      .get<SavingsInterestProjection>(`/wallets/${id}/interest-projection/`, {
+        params: year && month ? { year, month } : undefined,
+      })
+      .then((r) => r.data),
   /** Convierte esta cartera en un grupo: crea una cuenta nueva (hija) con
    * `name` y le pasa todo lo propio (saldo, movimientos, recurrentes,
    * compras a plazo) -- la cartera original queda en 0, agrupando. */
@@ -617,4 +627,9 @@ export const supportTickets = {
   /** Agrega un mensaje del usuario al hilo (p. ej. más contexto después de abrirlo). */
   reply: (id: string, message: string) =>
     api.post<SupportTicket>(`/support-tickets/${id}/reply/`, { message }).then((r) => r.data),
+};
+
+// --- gamificación (racha, badges) ---------------------------------------
+export const gamification = {
+  summary: () => api.get<GamificationSummary>('/gamification/summary/').then((r) => r.data),
 };

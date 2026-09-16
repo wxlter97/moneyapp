@@ -32,6 +32,8 @@ export const qk = {
       ['ws', ws, 'wallets', params ?? {}] as const,
     wallet: (id: string) => ['ws', ws, 'wallet', id] as const,
     walletProjection: (id: string) => ['ws', ws, 'wallet', id, 'projection'] as const,
+    walletInterestProjection: (id: string, year?: number, month?: number) =>
+      ['ws', ws, 'wallet', id, 'interest-projection', year ?? null, month ?? null] as const,
     walletStatement: (id: string, asOf?: string) =>
       ['ws', ws, 'wallet', id, 'statement', asOf ?? 'today'] as const,
     walletStatements: () => ['ws', ws, 'wallets', 'statements'] as const,
@@ -81,5 +83,7 @@ export const qk = {
     supportTickets: (params?: { status?: string; type?: string }) =>
       ['ws', ws, 'support-tickets', params ?? {}] as const,
     supportTicket: (id: string) => ['ws', ws, 'support-ticket', id] as const,
+
+    gamificationSummary: () => ['ws', ws, 'gamification-summary'] as const,
   }),
 };

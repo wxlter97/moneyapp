@@ -56,7 +56,7 @@ export default function LoginScreen() {
             <BrandMark size={64} />
             <View className="items-center gap-1">
               <Text className="text-text text-2xl" style={{ fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
-                Porsupuesto
+                porksupuesto
               </Text>
               <Text className="text-text-muted">Inicia sesión para continuar.</Text>
             </View>

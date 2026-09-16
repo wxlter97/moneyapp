@@ -108,6 +108,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
         hint: 'Quién le debe a quién en gastos divididos',
         onPress: () => router.push('/balances'),
       },
+      {
+        icon: 'bolt',
+        label: 'Logros',
+        hint: 'Racha sin gastos, fines de semana y badges',
+        onPress: () => router.push('/achievements'),
+      },
     ],
   },
   {

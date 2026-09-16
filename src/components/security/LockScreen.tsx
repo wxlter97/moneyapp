@@ -87,7 +87,7 @@ export function LockScreen({ onUnlock, biometricAvailable }: LockScreenProps) {
           <Icon name="lock" size={26} color={colors.text} />
         </View>
         <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
-          Porsupuesto bloqueado
+          porksupuesto bloqueado
         </Text>
       </View>
 
