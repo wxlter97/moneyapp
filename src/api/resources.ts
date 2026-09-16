@@ -51,6 +51,10 @@ import type {
   SetForwardBudgetResult,
   SplitPeopleInput,
   Subscription,
+  SupportTicket,
+  SupportTicketInput,
+  SupportTicketStatus,
+  SupportTicketType,
   Tag,
   TagSummary,
   Transaction,
@@ -596,4 +600,21 @@ export const reports = {
   /** Recurrentes + cuotas próximas, sin materializarlas. Fechas ISO. */
   scheduled: (params?: { since?: string; until?: string }) =>
     api.get<ScheduledItem[]>('/reports/scheduled/', { params }).then((r) => r.data),
+};
+
+// --- soporte (reportar errores, consultas, sugerencias) -----------------
+export interface SupportTicketListParams {
+  status?: SupportTicketStatus;
+  type?: SupportTicketType;
+}
+
+export const supportTickets = {
+  list: (params: SupportTicketListParams = {}) =>
+    fetchAll<SupportTicket>('/support-tickets/', params),
+  get: (id: string) => api.get<SupportTicket>(`/support-tickets/${id}/`).then((r) => r.data),
+  create: (input: SupportTicketInput) =>
+    api.post<SupportTicket>('/support-tickets/', input).then((r) => r.data),
+  /** Agrega un mensaje del usuario al hilo (p. ej. más contexto después de abrirlo). */
+  reply: (id: string, message: string) =>
+    api.post<SupportTicket>(`/support-tickets/${id}/reply/`, { message }).then((r) => r.data),
 };

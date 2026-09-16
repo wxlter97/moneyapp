@@ -25,6 +25,7 @@ import type {
   RecurringExpenseInput,
   SetForwardBudgetInput,
   SplitPeopleInput,
+  SupportTicketInput,
   TransactionInput,
   TransactionSplitPart,
   WalletInput,
@@ -1134,5 +1135,46 @@ export function useScheduled(range?: { since?: string; until?: string }) {
     queryKey: qk.ws(ws).reportScheduled(range),
     queryFn: () => res.reports.scheduled(range),
     enabled: !!ws,
+  });
+}
+
+// --- soporte (reportar errores, consultas, sugerencias) -----------------
+export function useSupportTickets(params: res.SupportTicketListParams = {}) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).supportTickets(params),
+    queryFn: () => res.supportTickets.list(params),
+    enabled: !!ws,
+  });
+}
+
+export function useSupportTicket(id: string | undefined) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).supportTicket(id ?? ''),
+    queryFn: () => res.supportTickets.get(id!),
+    enabled: !!ws && !!id,
+  });
+}
+
+export function useCreateSupportTicket() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SupportTicketInput) => res.supportTickets.create(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.ws(ws).supportTickets() }),
+  });
+}
+
+export function useReplySupportTicket() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, message }: { id: string; message: string }) =>
+      res.supportTickets.reply(id, message),
+    onSuccess: (ticket) => {
+      qc.invalidateQueries({ queryKey: qk.ws(ws).supportTickets() });
+      qc.setQueryData(qk.ws(ws).supportTicket(ticket.id), ticket);
+    },
   });
 }
