@@ -217,6 +217,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
         hint: 'Qué es esta app y quién la hace',
         onPress: () => router.push('/about'),
       },
+      {
+        icon: 'alert',
+        label: 'Soporte',
+        hint: 'Reportar un error, hacer una consulta o sugerir algo',
+        onPress: () => router.push('/support'),
+      },
     ],
   },
 ];

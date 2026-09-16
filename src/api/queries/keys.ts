@@ -77,5 +77,9 @@ export const qk = {
 
     loyaltySummary: (range?: { date_after?: string; date_before?: string }) =>
       ['ws', ws, 'loyalty-summary', range ?? {}] as const,
+
+    supportTickets: (params?: { status?: string; type?: string }) =>
+      ['ws', ws, 'support-tickets', params ?? {}] as const,
+    supportTicket: (id: string) => ['ws', ws, 'support-ticket', id] as const,
   }),
 };

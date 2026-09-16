@@ -25,9 +25,9 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
             setFocused(false);
             onBlur?.(e);
           }}
-          className={`h-12 rounded-xl border bg-surface px-3 text-text ${
-            error ? 'border-expense' : focused ? 'border-primary' : 'border-border'
-          }`}
+          className={`rounded-xl border bg-surface px-3 text-text ${
+            rest.multiline ? 'min-h-32 py-3' : 'h-12'
+          } ${error ? 'border-expense' : focused ? 'border-primary' : 'border-border'}`}
           {...rest}
         />
         {error ? <Text className="text-expense text-xs">{error}</Text> : null}

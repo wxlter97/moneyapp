@@ -1059,6 +1059,43 @@ export interface CheckoutResult {
 }
 
 // ---------------------------------------------------------------------------
+// Soporte (reportar errores, consultas, sugerencias)
+// ---------------------------------------------------------------------------
+export type SupportTicketType = 'bug' | 'query' | 'suggestion';
+export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved';
+
+/** Un mensaje del hilo de un ticket -- del usuario o de soporte (ver `is_staff_reply`). */
+export interface SupportTicketMessage {
+  id: UUID;
+  body: string;
+  is_staff_reply: boolean;
+  author_name: string | null;
+  created_at: ISODateTime;
+}
+
+export interface SupportTicket {
+  id: UUID;
+  type: SupportTicketType;
+  subject: string;
+  /** El reporte original -- inmutable; las respuestas van en `messages`. */
+  message: string;
+  status: SupportTicketStatus;
+  app_version: string;
+  platform: string;
+  messages: SupportTicketMessage[];
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+}
+
+export interface SupportTicketInput {
+  type: SupportTicketType;
+  subject: string;
+  message: string;
+  app_version?: string;
+  platform?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Errores DRF
 // ---------------------------------------------------------------------------
 /** Forma típica de un 400 de DRF: `{ campo: ["mensaje"], ... }` o `{ detail: "..." }`. */
