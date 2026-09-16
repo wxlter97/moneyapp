@@ -89,8 +89,11 @@ export function TransactionRow({
   // personas) importa más para leer el monto que "tiene recibo", así que
   // gana si varias son ciertas -- entre esto y la pill de abajo (reembolso,
   // presupuesto u origen) quedan como máximo dos señales visibles por fila.
+  // `shares` puede venir ausente si el cliente ya se actualizó pero el
+  // backend todavía no (o viceversa) -- optional chaining para no romper
+  // toda la lista de transacciones por un campo nuevo.
   const metaIcon =
-    txn.split_group || txn.shares.length > 0 ? 'split' : txn.has_receipt ? 'camera' : null;
+    txn.split_group || (txn.shares?.length ?? 0) > 0 ? 'split' : txn.has_receipt ? 'camera' : null;
 
   // Nombre accesible explícito: sin esto, un lector de pantalla anuncia el
   // botón de la fila sin texto (ver auditoría de accesibilidad — cada fila
