@@ -1,18 +1,17 @@
 import { useMemo } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { useTransactions, useWallet } from '@/api/queries';
 import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import { DayHeader } from '@/components/DayHeader';
 import { TransactionRow } from '@/components/TransactionRow';
-import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Screen } from '@/components/ui/Screen';
 import { TransactionListSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/components/ui/states';
-import { haptics } from '@/lib/haptics';
 import { balanceAfterEach, groupByDay, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { toNumber } from '@/lib/money';
 import { useColors } from '@/theme';
@@ -58,42 +57,36 @@ export default function WalletTransactionsScreen() {
         right={
           <View className="flex-row items-center gap-2">
             {walletQ.data?.billing_cycle_day ? (
-              <Pressable
-                onPress={() => {
-                  haptics.tap();
-                  router.push(`/statement/${walletId}`);
-                }}
-                accessibilityRole="button"
+              <IconButton
+                icon="receipt"
+                size={32}
+                iconSize={14}
+                color={colors.textMuted}
+                onPress={() => router.push(`/statement/${walletId}`)}
                 accessibilityLabel="Ver estado de cuenta"
-                className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
-              >
-                <Icon name="receipt" size={14} color={colors.textMuted} />
-              </Pressable>
+                className="rounded-full bg-surface-2 active:opacity-70"
+              />
             ) : null}
             {walletQ.data?.card_product ? (
-              <Pressable
-                onPress={() => {
-                  haptics.tap();
-                  router.push('/loyalty');
-                }}
-                accessibilityRole="button"
+              <IconButton
+                icon="gift"
+                size={32}
+                iconSize={14}
+                color={colors.textMuted}
+                onPress={() => router.push('/loyalty')}
                 accessibilityLabel="Ver recompensas"
-                className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
-              >
-                <Icon name="gift" size={14} color={colors.textMuted} />
-              </Pressable>
+                className="rounded-full bg-surface-2 active:opacity-70"
+              />
             ) : null}
-            <Pressable
-              onPress={() => {
-                haptics.tap();
-                router.push(`/wallet/${walletId}`);
-              }}
-              accessibilityRole="button"
+            <IconButton
+              icon="pencil"
+              size={32}
+              iconSize={14}
+              color={colors.textMuted}
+              onPress={() => router.push(`/wallet/${walletId}`)}
               accessibilityLabel="Editar cartera"
-              className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
-            >
-              <Icon name="pencil" size={14} color={colors.textMuted} />
-            </Pressable>
+              className="rounded-full bg-surface-2 active:opacity-70"
+            />
           </View>
         }
       />

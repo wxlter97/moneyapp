@@ -13,6 +13,7 @@ import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { FadeInView } from './ui/FadeInView';
 import { Icon } from './ui/Icon';
+import { IconButton } from './ui/IconButton';
 
 interface MonthSwitcherProps {
   value: YearMonth;
@@ -111,13 +112,15 @@ export function MonthSwitcher({ value, onChange, clampToCurrent = false }: Month
             {mode === 'months' ? (
               <>
                 <View className="mb-2 flex-row items-center justify-between">
-                  <Pressable
+                  <IconButton
+                    icon="chevron-left"
+                    size={32}
+                    iconSize={18}
+                    color={colors.text}
                     onPress={() => setBrowseYear((y) => y - 1)}
-                    className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                    className="rounded-lg active:bg-surface-2"
                     accessibilityLabel="Año anterior"
-                  >
-                    <Icon name="chevron-left" size={18} color={colors.text} />
-                  </Pressable>
+                  />
                   <Pressable
                     onPress={() => {
                       setYearRangeStart(browseYear - 5);
@@ -129,13 +132,15 @@ export function MonthSwitcher({ value, onChange, clampToCurrent = false }: Month
                   >
                     <Text className="text-text font-semibold">{browseYear}</Text>
                   </Pressable>
-                  <Pressable
+                  <IconButton
+                    icon="chevron-right"
+                    size={32}
+                    iconSize={18}
+                    color={colors.text}
                     onPress={() => setBrowseYear((y) => y + 1)}
-                    className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                    className="rounded-lg active:bg-surface-2"
                     accessibilityLabel="Año siguiente"
-                  >
-                    <Icon name="chevron-right" size={18} color={colors.text} />
-                  </Pressable>
+                  />
                 </View>
 
                 <View className="flex-row flex-wrap">
@@ -166,23 +171,27 @@ export function MonthSwitcher({ value, onChange, clampToCurrent = false }: Month
             ) : (
               <>
                 <View className="mb-2 flex-row items-center justify-between">
-                  <Pressable
+                  <IconButton
+                    icon="chevron-left"
+                    size={32}
+                    iconSize={18}
+                    color={colors.text}
                     onPress={() => setYearRangeStart((y) => y - YEAR_GRID_SPAN)}
-                    className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                    className="rounded-lg active:bg-surface-2"
                     accessibilityLabel="Años anteriores"
-                  >
-                    <Icon name="chevron-left" size={18} color={colors.text} />
-                  </Pressable>
+                  />
                   <Text className="text-text font-semibold">
                     {yearRangeStart} – {yearRangeStart + YEAR_GRID_SPAN - 1}
                   </Text>
-                  <Pressable
+                  <IconButton
+                    icon="chevron-right"
+                    size={32}
+                    iconSize={18}
+                    color={colors.text}
                     onPress={() => setYearRangeStart((y) => y + YEAR_GRID_SPAN)}
-                    className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                    className="rounded-lg active:bg-surface-2"
                     accessibilityLabel="Años siguientes"
-                  >
-                    <Icon name="chevron-right" size={18} color={colors.text} />
-                  </Pressable>
+                  />
                 </View>
 
                 <View className="flex-row flex-wrap">

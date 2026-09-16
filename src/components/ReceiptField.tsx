@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, Linking, Modal, Platform, Pressable, StyleShe
 
 import { useReceiptImage, useRemoveReceipt, useUploadReceipt } from '@/api/queries';
 import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
 import { haptics } from '@/lib/haptics';
 import {
   isPdfType,
@@ -211,15 +212,17 @@ export function ReceiptField({
               />
             ) : null}
           </View>
-          <Pressable
-            onPress={() => setViewerOpen(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar"
-            className="absolute right-5 h-10 w-10 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
-            style={{ top: 56 }}
-          >
-            <Icon name="close" size={18} color="#FFFFFF" />
-          </Pressable>
+          <View className="absolute right-5" style={{ top: 56 }}>
+            <IconButton
+              icon="close"
+              size={40}
+              iconSize={18}
+              color="#FFFFFF"
+              onPress={() => setViewerOpen(false)}
+              accessibilityLabel="Cerrar"
+              className="rounded-full bg-surface-2 active:opacity-70"
+            />
+          </View>
         </View>
       </Modal>
     </View>

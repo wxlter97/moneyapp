@@ -46,6 +46,9 @@ export const qk = {
     transaction: (id: string) => ['ws', ws, 'transaction', id] as const,
     receiptImage: (id: string) => ['ws', ws, 'transaction', id, 'receipt'] as const,
 
+    people: () => ['ws', ws, 'people'] as const,
+    personBalances: () => ['ws', ws, 'person-balances'] as const,
+
     categoryBudgets: (periodStart?: ISODate) =>
       ['ws', ws, 'category-budgets', periodStart ?? null] as const,
 

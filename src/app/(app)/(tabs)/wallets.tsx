@@ -8,7 +8,7 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { WalletRow, walletRowLabel } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
 import { DragList } from '@/components/ui/DragList';
-import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Segmented } from '@/components/ui/Segmented';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
@@ -76,14 +76,15 @@ export default function WalletsScreen() {
               </Pressable>
             ) : null}
             {!reordering ? (
-              <Pressable
+              <IconButton
+                icon="plus"
+                size={32}
+                iconSize={16}
+                color={colors.primaryFg}
                 onPress={() => router.push('/wallet/new')}
-                className="h-8 w-8 items-center justify-center rounded-full bg-primary active:opacity-80"
-                accessibilityRole="button"
                 accessibilityLabel="Nueva cartera"
-              >
-                <Icon name="plus" size={16} color={colors.primaryFg} />
-              </Pressable>
+                className="rounded-full bg-primary active:opacity-80"
+              />
             ) : null}
           </View>
         }

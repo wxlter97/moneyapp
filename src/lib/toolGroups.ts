@@ -102,6 +102,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
         hint: 'Pagos en cuotas',
         onPress: () => router.push('/installments'),
       },
+      {
+        icon: 'users',
+        label: 'Personas',
+        hint: 'Quién le debe a quién en gastos divididos',
+        onPress: () => router.push('/balances'),
+      },
     ],
   },
   {

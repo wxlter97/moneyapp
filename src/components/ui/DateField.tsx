@@ -6,6 +6,7 @@ import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { FadeInView } from './FadeInView';
 import { Icon } from './Icon';
+import { IconButton } from './IconButton';
 
 interface DateFieldProps {
   label: string;
@@ -131,13 +132,15 @@ export function DateField({
           {mode === 'days' ? (
             <>
               <View className="mb-2 flex-row items-center justify-between">
-                <Pressable
+                <IconButton
+                  icon="chevron-left"
+                  size={32}
+                  iconSize={18}
+                  color={colors.text}
                   onPress={() => setView((v) => new Date(v.getFullYear(), v.getMonth() - 1, 1))}
-                  className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                  className="rounded-lg active:bg-surface-2"
                   accessibilityLabel="Mes anterior"
-                >
-                  <Icon name="chevron-left" size={18} color={colors.text} />
-                </Pressable>
+                />
                 <Pressable
                   onPress={openMonths}
                   className="flex-row items-center gap-1 rounded-lg px-2 py-1 active:bg-surface-2"
@@ -149,13 +152,15 @@ export function DateField({
                   </Text>
                   <Icon name="chevron-down" size={14} color={colors.textMuted} />
                 </Pressable>
-                <Pressable
+                <IconButton
+                  icon="chevron-right"
+                  size={32}
+                  iconSize={18}
+                  color={colors.text}
                   onPress={() => setView((v) => new Date(v.getFullYear(), v.getMonth() + 1, 1))}
-                  className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                  className="rounded-lg active:bg-surface-2"
                   accessibilityLabel="Mes siguiente"
-                >
-                  <Icon name="chevron-right" size={18} color={colors.text} />
-                </Pressable>
+                />
               </View>
 
               <View className="flex-row">
@@ -204,13 +209,15 @@ export function DateField({
           ) : mode === 'months' ? (
             <>
               <View className="mb-2 flex-row items-center justify-between">
-                <Pressable
+                <IconButton
+                  icon="chevron-left"
+                  size={32}
+                  iconSize={18}
+                  color={colors.text}
                   onPress={() => setView((v) => new Date(v.getFullYear() - 1, v.getMonth(), 1))}
-                  className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                  className="rounded-lg active:bg-surface-2"
                   accessibilityLabel="Año anterior"
-                >
-                  <Icon name="chevron-left" size={18} color={colors.text} />
-                </Pressable>
+                />
                 <Pressable
                   onPress={() => setMode('years')}
                   className="rounded-lg px-2 py-1 active:bg-surface-2"
@@ -219,13 +226,15 @@ export function DateField({
                 >
                   <Text className="text-text font-semibold">{view.getFullYear()}</Text>
                 </Pressable>
-                <Pressable
+                <IconButton
+                  icon="chevron-right"
+                  size={32}
+                  iconSize={18}
+                  color={colors.text}
                   onPress={() => setView((v) => new Date(v.getFullYear() + 1, v.getMonth(), 1))}
-                  className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                  className="rounded-lg active:bg-surface-2"
                   accessibilityLabel="Año siguiente"
-                >
-                  <Icon name="chevron-right" size={18} color={colors.text} />
-                </Pressable>
+                />
               </View>
 
               <View className="flex-row flex-wrap">
@@ -254,23 +263,27 @@ export function DateField({
           ) : (
             <>
               <View className="mb-2 flex-row items-center justify-between">
-                <Pressable
+                <IconButton
+                  icon="chevron-left"
+                  size={32}
+                  iconSize={18}
+                  color={colors.text}
                   onPress={() => setYearRangeStart((y) => y - 12)}
-                  className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                  className="rounded-lg active:bg-surface-2"
                   accessibilityLabel="12 años antes"
-                >
-                  <Icon name="chevron-left" size={18} color={colors.text} />
-                </Pressable>
+                />
                 <Text className="text-text font-semibold">
                   {yearRangeStart} – {yearRangeStart + 11}
                 </Text>
-                <Pressable
+                <IconButton
+                  icon="chevron-right"
+                  size={32}
+                  iconSize={18}
+                  color={colors.text}
                   onPress={() => setYearRangeStart((y) => y + 12)}
-                  className="h-8 w-8 items-center justify-center rounded-lg active:bg-surface-2"
+                  className="rounded-lg active:bg-surface-2"
                   accessibilityLabel="12 años después"
-                >
-                  <Icon name="chevron-right" size={18} color={colors.text} />
-                </Pressable>
+                />
               </View>
 
               <View className="flex-row flex-wrap">

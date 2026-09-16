@@ -39,7 +39,9 @@ import type {
   NetWorthBreakdown,
   NotificationPreferences,
   Paginated,
+  Person,
   PersonalAccessToken,
+  PersonBalance,
   Plan,
   RecurringExpense,
   RecurringExpenseInput,
@@ -47,6 +49,7 @@ import type {
   ScheduledItem,
   SetForwardBudgetInput,
   SetForwardBudgetResult,
+  SplitPeopleInput,
   Subscription,
   Tag,
   TagSummary,
@@ -504,6 +507,25 @@ export const transactions = {
   split: (id: string, parts: TransactionSplitPart[]) =>
     api.post<Transaction[]>(`/transactions/${id}/split/`, { parts }).then((r) => r.data),
 
+  /** Divide esta transacción entre varias personas (reemplaza cualquier
+   * división anterior de la misma transacción). */
+  splitPeople: (id: string, input: SplitPeopleInput) =>
+    api.post<Transaction>(`/transactions/${id}/split-people/`, input).then((r) => r.data),
+
+  /** Marca (o desmarca) como liquidada la parte de una persona. */
+  settleShare: (id: string, shareId: string, isSettled: boolean) =>
+    api
+      .post<Transaction>(`/transactions/${id}/settle-share/${shareId}/`, { is_settled: isSettled })
+      .then((r) => r.data),
+
+  /** Quién le debe cuánto a quién en el workspace activo. */
+  balances: () => api.get<PersonBalance[]>('/transactions/balances/').then((r) => r.data),
+
+  /** Transacciones existentes que podrían ser la misma que se está por
+   * cargar a mano -- no bloquea nada, sólo informa (ver TransactionForm). */
+  checkDuplicate: (params: { wallet: string; amount: Money; date: string; exclude?: string }) =>
+    api.get<Transaction[]>('/transactions/check-duplicate/', { params }).then((r) => r.data),
+
   /** Bytes del .xlsx de la plantilla (con las carteras/categorías reales del
    * workspace ya cargadas como referencia), para descargarlo. */
   importTemplate: () =>
@@ -523,6 +545,13 @@ export const transactions = {
       })
       .then((r) => r.data);
   },
+};
+
+// --- gente con la que se dividen transacciones -------------------------
+export const people = {
+  list: () => fetchAll<Person>('/people/'),
+  create: (name: string) => api.post<Person>('/people/', { name }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/people/${id}/`).then(() => undefined),
 };
 
 // --- snapshots mensuales (solo lectura) -------------------------------

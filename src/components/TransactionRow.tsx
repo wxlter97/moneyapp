@@ -85,11 +85,12 @@ export function TransactionRow({
 
   const glyph = category?.icon;
   const dotColor = isTransfer ? undefined : category?.color;
-  // Un solo ícono junto al título, no dos: "dividida" importa más para leer
-  // el monto que "tiene recibo", así que gana si ambas son ciertas -- entre
-  // esto y la pill de abajo (presupuesto u origen) quedan como máximo dos
-  // señales visibles por fila, no cuatro.
-  const metaIcon = txn.split_group ? 'split' : txn.has_receipt ? 'camera' : null;
+  // Un solo ícono junto al título, no dos: "dividida" (por categoría o entre
+  // personas) importa más para leer el monto que "tiene recibo", así que
+  // gana si varias son ciertas -- entre esto y la pill de abajo (reembolso,
+  // presupuesto u origen) quedan como máximo dos señales visibles por fila.
+  const metaIcon =
+    txn.split_group || txn.shares.length > 0 ? 'split' : txn.has_receipt ? 'camera' : null;
 
   // Nombre accesible explícito: sin esto, un lector de pantalla anuncia el
   // botón de la fila sin texto (ver auditoría de accesibilidad — cada fila
@@ -100,7 +101,7 @@ export function TransactionRow({
     isTransfer ? 'Transferencia' : isIncome ? 'Ingreso' : 'Gasto',
     isTransfer ? `${walletLabel(wallet)} a ${walletLabel(toWallet)}` : `${title}, ${walletLabel(wallet)}`,
     amountLabel,
-    outOfBudget ? 'fuera de presupuesto' : badge,
+    txn.is_refunded ? 'reembolsado' : txn.is_refundable ? 'reembolsable' : outOfBudget ? 'fuera de presupuesto' : badge,
   ]
     .filter(Boolean)
     .join(', ');
@@ -166,7 +167,15 @@ export function TransactionRow({
               Saldo: {formatMoney(balanceAfter, txn.currency)}
             </Text>
           ) : null}
-          {txn.type === 'expense' && !txn.counts_toward_budget ? (
+          {txn.is_refundable && !txn.is_refunded ? (
+            <View className="rounded-full bg-surface-2 px-2 py-0.5">
+              <Text className="text-warning text-[10px] uppercase tracking-wide">reembolsable</Text>
+            </View>
+          ) : txn.is_refunded ? (
+            <View className="rounded-full bg-surface-2 px-2 py-0.5">
+              <Text className="text-income text-[10px] uppercase tracking-wide">reembolsado</Text>
+            </View>
+          ) : txn.type === 'expense' && !txn.counts_toward_budget ? (
             <View className="rounded-full bg-surface-2 px-2 py-0.5">
               <Text className="text-warning text-[10px] uppercase tracking-wide">s/pres.</Text>
             </View>
