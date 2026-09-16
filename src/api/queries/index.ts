@@ -19,10 +19,12 @@ import type {
   EmailImportStatus,
   ISODate,
   InstallmentPurchaseInput,
+  Money,
   MyPlan,
   NotificationPreferences,
   RecurringExpenseInput,
   SetForwardBudgetInput,
+  SplitPeopleInput,
   TransactionInput,
   TransactionSplitPart,
   WalletInput,
@@ -786,6 +788,64 @@ export function useSplitTransaction() {
       res.transactions.split(id, parts),
     onSuccess: invalidate,
   });
+}
+
+// --- dividir transacciones entre personas -----------------------------
+export function usePeople() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).people(),
+    queryFn: () => res.people.list(),
+    enabled: !!ws,
+  });
+}
+
+export function useCreatePerson() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => res.people.create(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.ws(ws).people() }),
+  });
+}
+
+export function useSplitTransactionPeople() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: SplitPeopleInput }) =>
+      res.transactions.splitPeople(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSettleShare() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, shareId, isSettled }: { id: string; shareId: string; isSettled: boolean }) =>
+      res.transactions.settleShare(id, shareId, isSettled),
+    onSuccess: invalidate,
+  });
+}
+
+export function usePersonBalances() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).personBalances(),
+    queryFn: () => res.transactions.balances(),
+    enabled: !!ws,
+  });
+}
+
+/** Chequeo puntual (no un hook de React Query -- se llama a mano justo
+ * antes de guardar, ver TransactionForm) de si ya existe una transacción
+ * parecida, para avisar sin bloquear el alta manual. */
+export function checkDuplicateTransaction(params: {
+  wallet: string;
+  amount: Money;
+  date: string;
+  exclude?: string;
+}) {
+  return res.transactions.checkDuplicate(params);
 }
 
 /** Bytes del .xlsx de la plantilla (para descargarlo). No cachea: cada

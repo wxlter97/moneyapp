@@ -408,8 +408,18 @@ export interface Transaction {
   counts_toward_budget: boolean;
   source: TransactionSource;
   is_recurring: boolean;
+  /** Gasto que se espera recuperar (reembolso de trabajo, seguro, etc.). */
+  is_refundable: boolean;
+  /** Sólo tiene sentido si `is_refundable` es true. */
+  is_refunded: boolean;
   /** Compartido por todas las partes de una transacción dividida; null si no lo está. */
   split_group: UUID | null;
+  /** Quién puso el dinero, si se dividió entre personas (ver `shares`); null
+   * si no se dividió. Se asigna solo vía `transactions.splitPeople`. */
+  paid_by: UUID | null;
+  paid_by_name: string | null;
+  /** Partes de cada persona, si se dividió entre personas -- ver `TransactionShare`. */
+  shares: TransactionShare[];
   /** Etiquetas libres asignadas -- ver `tag_names` en TransactionInput para escribirlas. */
   tags: Tag[];
   /** Puntos/cashback/descuento que generó esta transacción (solo lectura) --
@@ -426,6 +436,43 @@ export interface TransactionSplitPart {
   category: UUID;
   amount: Money;
   description?: string;
+}
+
+/** Alguien con quien se divide una transacción -- ver `transactions.splitPeople`. */
+export interface Person {
+  id: UUID;
+  name: string;
+  /** Sólo si es un miembro real del workspace, no alguien externo. */
+  member: UUID | null;
+  /** true si es el `Person` del usuario autenticado. */
+  is_me: boolean;
+  created_at: ISODateTime;
+}
+
+/** La parte de una persona en una transacción dividida entre varias -- ver
+ * `Transaction.shares`. Mientras `is_settled` sea false, `person` le debe
+ * `amount` a `Transaction.paid_by`. */
+export interface TransactionShare {
+  id: UUID;
+  person: UUID;
+  person_name: string;
+  amount: Money;
+  is_settled: boolean;
+  settled_at: ISODateTime | null;
+}
+
+/** Body de `transactions.splitPeople`. */
+export interface SplitPeopleInput {
+  /** Quién puso el dinero -- si se omite, se usa el `Person` del usuario autenticado. */
+  paid_by?: UUID;
+  participants: { person: UUID; amount: Money }[];
+}
+
+/** Fila de `transactions.balances`: `from_person` le debe `amount` a `to_person`. */
+export interface PersonBalance {
+  from_person: Person;
+  to_person: Person;
+  amount: Money;
 }
 
 /** Resultado de `transactions.importXlsx` -- "todo lo que se pueda": las
@@ -452,6 +499,8 @@ export interface TransactionInput {
   description?: string;
   currency?: string;
   counts_toward_budget?: boolean;
+  is_refundable?: boolean;
+  is_refunded?: boolean;
   /** Nombres de etiqueta tal como los escribe el usuario -- se reusan las
    * que ya existen (sin distinguir mayúsculas) y se crean las que no.
    * Omitir deja las etiquetas actuales sin cambios al editar. */

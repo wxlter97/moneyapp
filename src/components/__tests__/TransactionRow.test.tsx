@@ -24,7 +24,12 @@ const baseTxn: Transaction = {
   counts_toward_budget: true,
   source: 'manual',
   is_recurring: false,
+  is_refundable: false,
+  is_refunded: false,
   split_group: null,
+  paid_by: null,
+  paid_by_name: null,
+  shares: [],
   tags: [],
   loyalty_earnings: [],
   created_by: null,
@@ -99,6 +104,35 @@ describe('TransactionRow', () => {
     const txn = { ...baseTxn, counts_toward_budget: false };
     await render(<TransactionRow txn={txn} category={super_} wallet={cuenta} />);
     expect(screen.getByText('s/pres.')).toBeTruthy();
+  });
+
+  it('una transacción reembolsable (sin reembolsar) muestra el badge "reembolsable"', async () => {
+    const txn = { ...baseTxn, is_refundable: true };
+    await render(<TransactionRow txn={txn} category={super_} wallet={cuenta} />);
+    expect(screen.getByText('reembolsable')).toBeTruthy();
+  });
+
+  it('una transacción ya reembolsada muestra el badge "reembolsado" en vez de "reembolsable"', async () => {
+    const txn = { ...baseTxn, is_refundable: true, is_refunded: true };
+    await render(<TransactionRow txn={txn} category={super_} wallet={cuenta} />);
+    expect(screen.getByText('reembolsado')).toBeTruthy();
+    expect(screen.queryByText('reembolsable')).toBeNull();
+  });
+
+  it('el badge de reembolso tiene prioridad sobre "s/pres."', async () => {
+    const txn = { ...baseTxn, is_refundable: true, counts_toward_budget: false };
+    await render(<TransactionRow txn={txn} category={super_} wallet={cuenta} />);
+    expect(screen.getByText('reembolsable')).toBeTruthy();
+    expect(screen.queryByText('s/pres.')).toBeNull();
+  });
+
+  it('una transacción dividida entre personas se renderiza sin errores', async () => {
+    const txn = {
+      ...baseTxn,
+      shares: [{ id: 's1', person: 'p1', person_name: 'Beto', amount: '10.00', is_settled: false, settled_at: null }],
+    };
+    const { toJSON } = await render(<TransactionRow txn={txn} category={super_} wallet={cuenta} />);
+    expect(toJSON()).toBeTruthy();
   });
 
   it('una transacción importada por correo muestra el badge "correo"', async () => {

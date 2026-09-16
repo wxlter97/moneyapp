@@ -1,11 +1,10 @@
 import { useEffect, type ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
-import { Icon } from './Icon';
+import { IconButton } from './IconButton';
 import { useDismissGesture } from './Screen';
-import { haptics } from '@/lib/haptics';
 import { dismissModal } from '@/lib/modal';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -58,29 +57,27 @@ export function ModalHeader({ title, right }: { title: string; right?: ReactNode
             {title}
           </Text>
           {right ? <View className="mr-2">{right}</View> : null}
-          <Pressable
-            onPress={() => {
-              haptics.tap();
-              dismissModal();
-            }}
-            onPressIn={() => {
-              press.value = withSpring(0.88, { damping: 14, stiffness: 320 });
-            }}
-            onPressOut={() => {
-              press.value = withSpring(1, { damping: 14, stiffness: 320 });
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar"
-          >
-            {/* `className` no se resuelve en `Animated.View` de reanimated (nativewind
-                sólo intercepta los primitivos de react-native): el tamaño/color van acá
-                en una View normal, y el `Animated.View` de afuera sólo anima el scale. */}
-            <Animated.View style={closeStyle}>
-              <View className="h-8 w-8 items-center justify-center rounded-full bg-surface-2">
-                <Icon name="close" size={16} color={colors.textMuted} />
-              </View>
-            </Animated.View>
-          </Pressable>
+          {/* `className` no se resuelve en `Animated.View` de reanimated (nativewind
+              sólo intercepta los primitivos de react-native): el `IconButton` de
+              adentro trae su propia `View` normal, y este `Animated.View` sólo
+              anima el scale del conjunto. */}
+          <Animated.View style={closeStyle}>
+            <IconButton
+              icon="close"
+              size={32}
+              iconSize={16}
+              color={colors.textMuted}
+              onPress={dismissModal}
+              onPressIn={() => {
+                press.value = withSpring(0.88, { damping: 14, stiffness: 320 });
+              }}
+              onPressOut={() => {
+                press.value = withSpring(1, { damping: 14, stiffness: 320 });
+              }}
+              accessibilityLabel="Cerrar"
+              className="rounded-full bg-surface-2"
+            />
+          </Animated.View>
         </View>
       </Animated.View>
     </View>

@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { dismissModal } from '@/components/ui/ModalHeader';
 
 import {
+  checkDuplicateTransaction,
   useCardProducts,
   useCategories,
   useCreateTransaction,
@@ -15,7 +16,7 @@ import {
 } from '@/api/queries';
 import { useAssignableWallets, walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
-import type { TransactionInput, TransactionType } from '@/api/types';
+import type { Transaction, TransactionInput, TransactionType } from '@/api/types';
 import { CategoryPickerField } from '@/components/CategoryGrid';
 import { ReceiptField } from '@/components/ReceiptField';
 import { TagPicker } from '@/components/TagPicker';
@@ -23,6 +24,7 @@ import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { FadeInView } from '@/components/ui/FadeInView';
 import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
 import { NumPad } from '@/components/ui/NumPad';
 import { PickerRow } from '@/components/ui/PickerRow';
 import { Segmented } from '@/components/ui/Segmented';
@@ -82,7 +84,13 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const [note, setNote] = useState('');
   const [tagNames, setTagNames] = useState<string[]>([]);
   const [inBudget, setInBudget] = useState(true);
+  const [isRefundable, setIsRefundable] = useState(false);
+  const [isRefunded, setIsRefunded] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Aviso no bloqueante de "esto ya existe" al cargar a mano (ver
+  // `checkDuplicateTransaction`) -- sólo al crear, nunca al editar.
+  const [duplicateWarning, setDuplicateWarning] = useState<Transaction[] | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [prefilled, setPrefilled] = useState(false);
   const [walletDefaulted, setWalletDefaulted] = useState(false);
@@ -126,12 +134,21 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     setNote(t.description ?? '');
     setTagNames((t.tags ?? []).map((tag) => tag.name));
     setInBudget(t.counts_toward_budget);
+    // Sólo al EDITAR (no al duplicar): duplicar una transacción reembolsada
+    // no debería crear la copia ya marcada como reembolsada.
+    if (editing) {
+      setIsRefundable(t.is_refundable);
+      setIsRefunded(t.is_refunded);
+    }
     setPrefilled(true);
     // La nota y el toggle de presupuesto viven arriba, siempre a la vista --
     // no cuentan para decidir si "Más detalles" arranca abierto (ver el
     // bloque de más abajo).
     const hasExtraDetails =
-      (t.tags?.length ?? 0) > 0 || t.has_receipt || (t.loyalty_earnings?.length ?? 0) > 0;
+      (t.tags?.length ?? 0) > 0 ||
+      t.has_receipt ||
+      (t.loyalty_earnings?.length ?? 0) > 0 ||
+      t.is_refundable;
     if (hasExtraDetails) setDetailsOpen(true);
   }, [editing, prefilled, existing.data, categoriesQ.data]);
 
@@ -291,6 +308,32 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
 
   async function onSubmit() {
     if (!walletId) return;
+    // Sólo se chequea al crear (no al editar, donde comparar contra sí misma
+    // no tendría sentido) y sólo la primera vez -- si el usuario ya vio el
+    // aviso y decidió guardar igual, no hay que volver a preguntarle.
+    if (!editing && !duplicateWarning) {
+      setCheckingDuplicate(true);
+      try {
+        const matches = await checkDuplicateTransaction({
+          wallet: walletId,
+          amount: amountNum.toFixed(2),
+          date,
+        });
+        if (matches.length > 0) {
+          setDuplicateWarning(matches);
+          return;
+        }
+      } catch {
+        // Si el chequeo falla, no bloquea el alta -- es sólo una ayuda.
+      } finally {
+        setCheckingDuplicate(false);
+      }
+    }
+    await doSubmit();
+  }
+
+  async function doSubmit() {
+    if (!walletId) return;
     setFormError(null);
     setFields({});
 
@@ -309,6 +352,8 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     } else {
       payload.category = categoryId;
       if (type === 'expense') payload.counts_toward_budget = inBudget;
+      payload.is_refundable = isRefundable;
+      payload.is_refunded = isRefundable && isRefunded;
       if (appliedDiscount) {
         payload.discount_program = appliedDiscount.programId;
         payload.pre_discount_amount = appliedDiscount.original.toFixed(2);
@@ -330,6 +375,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
       }
       dismissModal();
     } catch (err) {
+      setDuplicateWarning(null);
       setFields(fieldErrors(err));
       setFormError(errorMessage(err, 'No se pudo guardar la transacción.'));
     }
@@ -434,17 +480,15 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           {isTransfer ? (
             <>
               <View className="items-center py-1">
-                <Pressable
-                  onPress={() => {
-                    haptics.tap();
-                    swapWallets();
-                  }}
+                <IconButton
+                  icon="swap"
+                  size={32}
+                  iconSize={15}
+                  color={colors.textMuted}
+                  onPress={swapWallets}
                   accessibilityLabel="Intercambiar carteras"
-                  accessibilityRole="button"
-                  className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-70"
-                >
-                  <Icon name="swap" size={15} color={colors.textMuted} />
-                </Pressable>
+                  className="rounded-full bg-surface-2 active:opacity-70"
+                />
               </View>
               <PickerRow
                 label="A"
@@ -588,6 +632,43 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
         {detailsOpen ? (
           <FadeInView>
             <View className="gap-4">
+              {!isTransfer ? (
+                <View className="gap-2">
+                  <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
+                    <View className="flex-1 pr-2">
+                      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                        Reembolsable
+                      </Text>
+                      <Text className="text-text-muted text-xs">
+                        Esperás recuperar este gasto (seguro, trabajo, un adelanto...).
+                      </Text>
+                    </View>
+                    <Switch
+                      value={isRefundable}
+                      onValueChange={(v) => {
+                        setIsRefundable(v);
+                        if (!v) setIsRefunded(false);
+                      }}
+                      trackColor={{ true: colors.primary, false: colors.surface2 }}
+                      thumbColor="#FFFFFF"
+                    />
+                  </View>
+                  {isRefundable ? (
+                    <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
+                      <Text className="text-text flex-1 pr-2 text-sm" style={{ fontFamily: fonts.semibold }}>
+                        Ya me lo reembolsaron
+                      </Text>
+                      <Switch
+                        value={isRefunded}
+                        onValueChange={setIsRefunded}
+                        trackColor={{ true: colors.primary, false: colors.surface2 }}
+                        thumbColor="#FFFFFF"
+                      />
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
               <TagPicker value={tagNames} onChange={setTagNames} />
 
               <ReceiptField
@@ -618,12 +699,35 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           </FadeInView>
         ) : null}
 
-        <Button
-          label={editing ? 'Guardar cambios' : 'Guardar'}
-          loading={create.isPending || update.isPending}
-          disabled={!canSubmit}
-          onPress={onSubmit}
-        />
+        {duplicateWarning ? (
+          <View className="gap-2 rounded-2xl bg-warning/10 p-3">
+            <Text className="text-text text-sm">
+              {duplicateWarning.length === 1
+                ? 'Ya existe una transacción parecida'
+                : `Ya existen ${duplicateWarning.length} transacciones parecidas`}{' '}
+              (misma cartera, monto y fecha cercana). ¿Registrar de todas formas?
+            </Text>
+            <View className="flex-row gap-2">
+              <View className="flex-1">
+                <Button label="Cancelar" variant="ghost" onPress={() => setDuplicateWarning(null)} />
+              </View>
+              <View className="flex-1">
+                <Button
+                  label="Guardar igual"
+                  loading={create.isPending || update.isPending}
+                  onPress={doSubmit}
+                />
+              </View>
+            </View>
+          </View>
+        ) : (
+          <Button
+            label={editing ? 'Guardar cambios' : 'Guardar'}
+            loading={checkingDuplicate || create.isPending || update.isPending}
+            disabled={!canSubmit}
+            onPress={onSubmit}
+          />
+        )}
 
         {editing && !confirmingDelete ? (
           <Pressable
@@ -662,6 +766,24 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
               </Text>
             </Pressable>
           )
+        ) : null}
+
+        {editing && !isTransfer && !confirmingDelete ? (
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              router.push(`/split-people?id=${transactionId}`);
+            }}
+            disabled={busy}
+            className="items-center py-2 active:opacity-60"
+            accessibilityRole="button"
+          >
+            <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+              {(existing.data?.shares?.length ?? 0) > 0
+                ? 'Editar división entre personas'
+                : 'Dividir entre personas'}
+            </Text>
+          </Pressable>
         ) : null}
 
         {editing && !confirmingDelete ? (

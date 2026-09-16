@@ -7,6 +7,7 @@ import { errorMessage } from '@/api/errors';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { ErrorState, LoadingState } from '@/components/ui/states';
@@ -217,15 +218,16 @@ export default function NotificationsScreen() {
                     >
                       {prefs.budget_threshold_pct}%
                     </Text>
-                    <Pressable
+                    <IconButton
+                      icon="plus"
+                      size={36}
+                      iconSize={16}
+                      color={colors.text}
                       onPress={() => onThresholdChange(prefs.budget_threshold_pct + 5)}
                       disabled={prefs.budget_threshold_pct >= 100}
-                      className="h-9 w-9 items-center justify-center rounded-full bg-surface-2 active:opacity-70 disabled:opacity-40"
-                      accessibilityRole="button"
                       accessibilityLabel="Subir umbral"
-                    >
-                      <Icon name="plus" size={16} color={colors.text} />
-                    </Pressable>
+                      className="rounded-full bg-surface-2 active:opacity-70"
+                    />
                   </View>
                 </View>
               </Card>
@@ -257,15 +259,16 @@ export default function NotificationsScreen() {
                     >
                       {prefs.statement_due_days_before}d
                     </Text>
-                    <Pressable
+                    <IconButton
+                      icon="plus"
+                      size={36}
+                      iconSize={16}
+                      color={colors.text}
                       onPress={() => onStatementDaysChange(prefs.statement_due_days_before + 1)}
                       disabled={prefs.statement_due_days_before >= 14}
-                      className="h-9 w-9 items-center justify-center rounded-full bg-surface-2 active:opacity-70 disabled:opacity-40"
-                      accessibilityRole="button"
                       accessibilityLabel="Subir días de anticipación"
-                    >
-                      <Icon name="plus" size={16} color={colors.text} />
-                    </Pressable>
+                      className="rounded-full bg-surface-2 active:opacity-70"
+                    />
                   </View>
                 </View>
               </Card>

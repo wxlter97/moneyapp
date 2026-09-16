@@ -4,7 +4,7 @@ import { Link, Redirect, router } from 'expo-router';
 
 import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { errorMessage, fieldErrors } from '@/api/errors';
@@ -63,14 +63,15 @@ export default function RegisterScreen() {
       >
         <ScrollView contentContainerClassName="grow justify-center gap-6 py-6" keyboardShouldPersistTaps="handled">
           <View className="flex-row items-center gap-3">
-            <Pressable
+            <IconButton
+              icon="chevron-left"
+              size={32}
+              iconSize={18}
+              color={colors.text}
               onPress={() => router.back()}
-              accessibilityRole="button"
               accessibilityLabel="Volver"
-              className="h-8 w-8 items-center justify-center rounded-full bg-surface-2 active:opacity-60"
-            >
-              <Icon name="chevron-left" size={18} color={colors.text} />
-            </Pressable>
+              className="rounded-full bg-surface-2 active:opacity-60"
+            />
             <Text className="text-text text-2xl" style={{ fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
               Crear cuenta
             </Text>
