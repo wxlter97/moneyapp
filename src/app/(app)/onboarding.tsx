@@ -20,7 +20,7 @@ interface Step {
 const STEPS: Step[] = [
   {
     icon: 'gift',
-    title: 'Bienvenido a Porsupuesto',
+    title: 'Bienvenido a porksupuesto',
     // Antes era genérico ("presupuesto personal, sin hojas de cálculo") --
     // no decía en qué se diferencia de cualquier otra app. Estos 3 ganchos
     // (cuotas/recurrentes, varias carteras y monedas, presupuesto por

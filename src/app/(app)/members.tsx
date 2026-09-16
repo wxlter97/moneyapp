@@ -206,7 +206,7 @@ export default function MembersScreen() {
         {isOwner ? (
           <Card title="Invitar por correo">
             <Text className="text-text-muted mb-3 text-sm">
-              Si ya tiene cuenta en Porsupuesto con ese correo, entra directo. Si no,
+              Si ya tiene cuenta en porksupuesto con ese correo, entra directo. Si no,
               le mandamos un correo con un enlace para sumarse en cuanto se registre.
             </Text>
             {inviteSentTo ? (

@@ -33,7 +33,7 @@ export const FEATURE_COPY: Record<FeatureKey, { title: string; description: stri
   import_email: {
     title: 'Importación automática',
     description:
-      'Conectá tu correo bancario para que Porsupuesto cree las transacciones solo, sin escribirlas a mano.',
+      'Conectá tu correo bancario para que porksupuesto cree las transacciones solo, sin escribirlas a mano.',
   },
   import_excel: {
     title: 'Importar desde Excel',

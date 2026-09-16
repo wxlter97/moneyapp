@@ -25,7 +25,7 @@ export function InstallAppCard() {
       {available ? (
         <>
           <Text className="text-text-muted mb-3 text-sm leading-5">
-            Agrega Porsupuesto a tu pantalla de inicio: abre más rápido y ocupa toda la
+            Agrega porksupuesto a tu pantalla de inicio: abre más rápido y ocupa toda la
             pantalla, sin la barra del navegador.
           </Text>
           <Button
