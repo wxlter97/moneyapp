@@ -251,6 +251,21 @@ export const WALLET_KIND_LABEL: Record<WalletKind, string> = {
   custom: 'Personalizada',
 };
 
+export type SavingsInterestRatePeriod = 'monthly' | 'annual';
+export type SavingsInterestCompounding = 'daily' | 'biweekly' | 'monthly' | 'annual';
+
+export const SAVINGS_INTEREST_RATE_PERIOD_LABEL: Record<SavingsInterestRatePeriod, string> = {
+  monthly: 'Mensual',
+  annual: 'Anual',
+};
+
+export const SAVINGS_INTEREST_COMPOUNDING_LABEL: Record<SavingsInterestCompounding, string> = {
+  daily: 'Diaria',
+  biweekly: 'Quincenal',
+  monthly: 'Mensual',
+  annual: 'Anual',
+};
+
 export interface Wallet {
   id: UUID;
   name: string;
@@ -276,6 +291,10 @@ export interface Wallet {
   goal_amount: Money | null;
   goal_date: ISODate | null;
   monthly_contribution: Money | null;
+  /** Tasa de interés a ganar (solo `purpose: 'savings'`). `null` = no configurada. */
+  savings_interest_rate: string | null;
+  savings_interest_rate_period: SavingsInterestRatePeriod;
+  savings_interest_compounding: SavingsInterestCompounding;
   /** current_balance / goal_amount, o null si no hay meta. */
   progress_pct: number | null;
   card_last4: string | null;
@@ -329,6 +348,9 @@ export interface WalletInput {
   goal_amount?: Money | null;
   goal_date?: ISODate | null;
   monthly_contribution?: Money | null;
+  savings_interest_rate?: string | null;
+  savings_interest_rate_period?: SavingsInterestRatePeriod;
+  savings_interest_compounding?: SavingsInterestCompounding;
   card_last4?: string | null;
   extra_cards?: WalletCard[];
   billing_cycle_day?: number | null;
@@ -993,6 +1015,20 @@ export interface CreditCardStatementSummary extends CreditCardStatement {
   card_last4: string | null;
 }
 
+/** Reporte de interés estimado a ganar en un mes -- ver
+ * `wallets/{id}/interest-projection/?year=&month=`. Saldo diario ponderado:
+ * cada día usa el saldo real hasta ese punto y compone según
+ * `compounding`; los días futuros del mes en curso asumen que el saldo se
+ * mantiene igual al último conocido (`is_partial_month`). */
+export interface SavingsInterestProjection {
+  opening_balance: Money;
+  closing_balance: Money;
+  annual_rate_pct: string;
+  compounding: SavingsInterestCompounding;
+  estimated_interest: Money;
+  is_partial_month: boolean;
+}
+
 /**
  * Respaldo completo de un workspace (`workspaces/{id}/backup/`): carteras,
  * categorías, etiquetas, presupuestos, recurrentes, compras a plazo y
@@ -1093,6 +1129,28 @@ export interface SupportTicketInput {
   message: string;
   app_version?: string;
   platform?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Gamificación (racha de días sin gasto, fines de semana sin gastos, badges)
+// ---------------------------------------------------------------------------
+export interface BadgeStatus {
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  earned: boolean;
+}
+
+/** `ws/{id}/gamification/summary` -- ver `GET gamification/summary/`. De
+ * paso otorga cualquier badge nuevo que ya se haya ganado. */
+export interface GamificationSummary {
+  current_streak: number;
+  longest_streak: number;
+  no_spend_weekends: number;
+  /** % de ahorro del mes en curso; `null` sin ingresos ese mes. */
+  monthly_savings_pct: string | null;
+  badges: BadgeStatus[];
 }
 
 // ---------------------------------------------------------------------------
