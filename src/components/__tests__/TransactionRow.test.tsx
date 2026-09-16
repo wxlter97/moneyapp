@@ -135,6 +135,14 @@ describe('TransactionRow', () => {
     expect(toJSON()).toBeTruthy();
   });
 
+  it('no explota si el backend todavía no manda `shares` (campo nuevo, backend viejo)', async () => {
+    const { shares, ...txnWithoutShares } = baseTxn;
+    const { toJSON } = await render(
+      <TransactionRow txn={txnWithoutShares as Transaction} category={super_} wallet={cuenta} />,
+    );
+    expect(toJSON()).toBeTruthy();
+  });
+
   it('una transacción importada por correo muestra el badge "correo"', async () => {
     const txn = { ...baseTxn, source: 'email_import' as const };
     await render(<TransactionRow txn={txn} category={super_} wallet={cuenta} />);

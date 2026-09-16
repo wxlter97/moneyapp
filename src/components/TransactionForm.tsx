@@ -137,8 +137,8 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     // Sólo al EDITAR (no al duplicar): duplicar una transacción reembolsada
     // no debería crear la copia ya marcada como reembolsada.
     if (editing) {
-      setIsRefundable(t.is_refundable);
-      setIsRefunded(t.is_refunded);
+      setIsRefundable(t.is_refundable ?? false);
+      setIsRefunded(t.is_refunded ?? false);
     }
     setPrefilled(true);
     // La nota y el toggle de presupuesto viven arriba, siempre a la vista --
