@@ -18,12 +18,14 @@ const mockMyPlanQuery = jest.fn();
 const mockPlansQuery = jest.fn();
 const mockCheckout = jest.fn();
 const mockCancel = jest.fn();
+const mockRedeem = jest.fn();
 
 jest.mock('@/api/queries', () => ({
   useMyPlan: () => mockMyPlanQuery(),
   usePlans: () => mockPlansQuery(),
   useCheckout: () => ({ mutateAsync: mockCheckout, isPending: false }),
   useCancelSubscription: () => ({ mutateAsync: mockCancel, isPending: false }),
+  useRedeemPromoCode: () => ({ mutateAsync: mockRedeem, isPending: false }),
 }));
 
 const FREE_PLAN: Plan = {
@@ -85,6 +87,7 @@ describe('ProScreen', () => {
   beforeEach(() => {
     mockCheckout.mockReset().mockResolvedValue({ checkout_url: 'https://pay.example.com/x', subscription_id: 's1' });
     mockCancel.mockReset().mockResolvedValue({ id: 's1', status: 'canceled' });
+    mockRedeem.mockReset();
     mockPlansQuery.mockReset().mockReturnValue({ data: [FREE_PLAN, PRO_PLAN], isLoading: false });
     jest.spyOn(Linking, 'openURL').mockReset().mockResolvedValue(true as never);
   });
@@ -167,5 +170,61 @@ describe('ProScreen', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Cancelar suscripción' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Cancelar suscripción' }));
     expect(mockCancel).toHaveBeenCalled();
+  });
+
+  it('canjear un código válido muestra confirmación con el plan obtenido', async () => {
+    mockRedeem.mockResolvedValue({
+      id: 'sub-promo',
+      plan: PRO_PLAN,
+      billing_period: null,
+      status: 'active',
+      provider: 'manual',
+      current_period_end: null,
+      canceled_at: null,
+      created_at: '2026-01-01T00:00:00Z',
+    });
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    await fireEvent.changeText(screen.getByLabelText('Código'), 'beta2026');
+    await fireEvent.press(screen.getByRole('button', { name: 'Canjear' }));
+
+    expect(mockRedeem).toHaveBeenCalledWith('beta2026');
+    expect(await screen.findByText('¡Listo! Ya tenés Pro.')).toBeTruthy();
+  });
+
+  it('un código inválido muestra el error del backend sin tocar el plan', async () => {
+    mockRedeem.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { code: ['Código inválido o vencido.'] } },
+    });
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    await fireEvent.changeText(screen.getByLabelText('Código'), 'NOEXISTE');
+    await fireEvent.press(screen.getByRole('button', { name: 'Canjear' }));
+
+    expect(await screen.findByText('Código inválido o vencido.')).toBeTruthy();
+  });
+
+  it('con una suscripción activa, no ofrece canjear un código', async () => {
+    mockMyPlanQuery.mockReturnValue(
+      myPlan({
+        plan: PRO_PLAN,
+        subscription: {
+          id: 's1',
+          plan: PRO_PLAN,
+          billing_period: 'monthly',
+          status: 'active',
+          provider: 'manual',
+          current_period_end: null,
+          canceled_at: null,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }),
+    );
+    await render(<ProScreen />);
+
+    expect(screen.queryByLabelText('Código')).toBeNull();
   });
 });

@@ -315,6 +315,10 @@ export const billing = {
    * período ya pagado (el proveedor no reembolsa el resto). */
   cancel: () =>
     api.post<Subscription>('/billing/cancel/', {}, { skipWorkspace: true }).then((r) => r.data),
+  /** Canjea un código de invitación: acceso gratis a un plan, sin pasar por
+   * el proveedor de pago. Un solo canje por usuario en toda su vida. */
+  redeem: (code: string) =>
+    api.post<Subscription>('/billing/redeem/', { code }, { skipWorkspace: true }).then((r) => r.data),
 };
 
 // --- carteras (wallets) -------------------------------------------------
