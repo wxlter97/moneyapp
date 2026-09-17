@@ -401,6 +401,18 @@ export function useCancelSubscription() {
   });
 }
 
+/** Canjear un código de invitación reemplaza el plan efectivo directo (a
+ * diferencia de cancelar, acá `subscription.plan` puede ser distinto del
+ * que tenía antes -- por eso no hace merge parcial, pisa los dos campos). */
+export function useRedeemPromoCode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => res.billing.redeem(code),
+    onSuccess: (subscription) =>
+      qc.setQueryData(qk.myPlan(), { plan: subscription.plan, subscription }),
+  });
+}
+
 // --- tokens personales (Atajos de Apple Shortcuts) --------------------
 export function usePersonalTokens() {
   const ws = useActiveWs();

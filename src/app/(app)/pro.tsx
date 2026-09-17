@@ -3,7 +3,13 @@ import { Linking, ScrollView, Text, View } from 'react-native';
 import * as ExpoLinking from 'expo-linking';
 import { router } from 'expo-router';
 
-import { useCancelSubscription, useCheckout, useMyPlan, usePlans } from '@/api/queries';
+import {
+  useCancelSubscription,
+  useCheckout,
+  useMyPlan,
+  usePlans,
+  useRedeemPromoCode,
+} from '@/api/queries';
 import { errorMessage } from '@/api/errors';
 import type { BillingPeriod, Plan, PlanPrice } from '@/api/types';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +17,7 @@ import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
+import { TextField } from '@/components/ui/TextField';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { formatMoney } from '@/lib/money';
@@ -65,10 +72,14 @@ export default function ProScreen() {
   const plansQuery = usePlans();
   const checkout = useCheckout();
   const cancel = useCancelSubscription();
+  const redeem = useRedeemPromoCode();
 
   const [pendingPriceId, setPendingPriceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoSuccess, setPromoSuccess] = useState<string | null>(null);
 
   const currentPlan = myPlan.data?.plan;
   // Cualquier plan que no sea el default (gratis) cuenta como "pago", sin
@@ -94,6 +105,21 @@ export default function ProScreen() {
       setError(errorMessage(err, 'No se pudo iniciar el pago.'));
     } finally {
       setPendingPriceId(null);
+    }
+  }
+
+  async function onRedeem() {
+    const code = promoCode.trim();
+    if (!code) return;
+    setPromoError(null);
+    try {
+      const subscription = await redeem.mutateAsync(code);
+      haptics.success();
+      setPromoCode('');
+      setPromoSuccess(`¡Listo! Ya tenés ${subscription.plan.name}.`);
+    } catch (err) {
+      haptics.error();
+      setPromoError(errorMessage(err, 'No se pudo canjear el código.'));
     }
   }
 
@@ -259,6 +285,35 @@ export default function ProScreen() {
                   </Text>
                   .
                 </Text>
+
+                <Card title="¿Tenés un código de invitación?">
+                  <View className="gap-3">
+                    <TextField
+                      label="Código"
+                      placeholder="p. ej. BETA2026"
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      value={promoCode}
+                      onChangeText={(t) => {
+                        setPromoCode(t);
+                        if (promoError) setPromoError(null);
+                        if (promoSuccess) setPromoSuccess(null);
+                      }}
+                    />
+                    {promoError ? <Text className="text-expense text-xs">{promoError}</Text> : null}
+                    {promoSuccess ? (
+                      <Text className="text-income text-xs">{promoSuccess}</Text>
+                    ) : (
+                      <Button
+                        label="Canjear"
+                        variant="ghost"
+                        loading={redeem.isPending}
+                        disabled={!promoCode.trim()}
+                        onPress={onRedeem}
+                      />
+                    )}
+                  </View>
+                </Card>
               </>
             )}
           </>
