@@ -48,6 +48,7 @@ const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
   installment: 'cuota',
   quick_add: 'atajo',
   excel_import: 'excel',
+  refund: 'reembolso',
 };
 
 /**

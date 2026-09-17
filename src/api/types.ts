@@ -410,7 +410,8 @@ export type TransactionSource =
   | 'recurring'
   | 'installment'
   | 'quick_add'
-  | 'excel_import';
+  | 'excel_import'
+  | 'refund';
 
 export interface Transaction {
   id: UUID;
@@ -430,10 +431,18 @@ export interface Transaction {
   counts_toward_budget: boolean;
   source: TransactionSource;
   is_recurring: boolean;
-  /** Gasto que se espera recuperar (reembolso de trabajo, seguro, etc.). */
+  /** Gasto que se espera recuperar (reembolso de trabajo, seguro, etc.).
+   * Editable -- es sólo un marcador para llevar control, no mueve plata. */
   is_refundable: boolean;
-  /** Sólo tiene sentido si `is_refundable` es true. */
+  /** De sólo lectura: hay una transacción de ingreso real que lo reembolsa
+   * (ver `transactions.registerRefund` / `refund_transaction_id`). */
   is_refunded: boolean;
+  /** Sólo poblado en la transacción de ingreso que reembolsa a otra -- el id
+   * del gasto original. */
+  refund_of: UUID | null;
+  /** Sólo poblado en el gasto ya reembolsado -- el id de la transacción de
+   * ingreso que lo reembolsó. */
+  refund_transaction_id: UUID | null;
   /** Compartido por todas las partes de una transacción dividida; null si no lo está. */
   split_group: UUID | null;
   /** Quién puso el dinero, si se dividió entre personas (ver `shares`); null
@@ -451,6 +460,15 @@ export interface Transaction {
   created_by: number | null;
   created_at: ISODateTime;
   updated_at: ISODateTime;
+}
+
+/** Body de `transactions.registerRefund` -- crea la transacción de ingreso
+ * real que devuelve la plata de un gasto (ver `Transaction.is_refunded`). */
+export interface RegisterRefundInput {
+  amount: Money;
+  date: ISODate;
+  /** Default: la misma cartera del gasto original. */
+  wallet?: UUID;
 }
 
 /** Una parte al dividir una transacción — ver `transactions.split`. */
@@ -522,7 +540,6 @@ export interface TransactionInput {
   currency?: string;
   counts_toward_budget?: boolean;
   is_refundable?: boolean;
-  is_refunded?: boolean;
   /** Nombres de etiqueta tal como los escribe el usuario -- se reusan las
    * que ya existen (sin distinguir mayúsculas) y se crean las que no.
    * Omitir deja las etiquetas actuales sin cambios al editar. */

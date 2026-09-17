@@ -47,6 +47,7 @@ import type {
   RecurringExpense,
   RecurringExpenseInput,
   RecurringSuggestion,
+  RegisterRefundInput,
   SavingsInterestProjection,
   ScheduledItem,
   SetForwardBudgetInput,
@@ -541,6 +542,12 @@ export const transactions = {
     api
       .post<Transaction>(`/transactions/${id}/settle-share/${shareId}/`, { is_settled: isSettled })
       .then((r) => r.data),
+
+  /** Crea la transacción de ingreso real que devuelve la plata de este
+   * gasto y lo marca `is_refunded` (ver `Transaction.is_refunded`). Devuelve
+   * esa nueva transacción, no la original. */
+  registerRefund: (id: string, input: RegisterRefundInput) =>
+    api.post<Transaction>(`/transactions/${id}/register-refund/`, input).then((r) => r.data),
 
   /** Quién le debe cuánto a quién en el workspace activo. */
   balances: () => api.get<PersonBalance[]>('/transactions/balances/').then((r) => r.data),

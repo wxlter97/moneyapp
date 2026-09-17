@@ -23,6 +23,7 @@ import type {
   MyPlan,
   NotificationPreferences,
   RecurringExpenseInput,
+  RegisterRefundInput,
   SetForwardBudgetInput,
   SplitPeopleInput,
   SupportTicketInput,
@@ -828,6 +829,18 @@ export function useSplitTransaction() {
   return useMutation({
     mutationFn: ({ id, parts }: { id: string; parts: TransactionSplitPart[] }) =>
       res.transactions.split(id, parts),
+    onSuccess: invalidate,
+  });
+}
+
+/** Crea la transacción de ingreso que devuelve la plata de un gasto -- igual
+ * que cualquier alta de transacción, invalida todo el workspace (mueve el
+ * saldo de una cartera real, no sólo un flag). */
+export function useRegisterRefund() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: RegisterRefundInput }) =>
+      res.transactions.registerRefund(id, input),
     onSuccess: invalidate,
   });
 }
