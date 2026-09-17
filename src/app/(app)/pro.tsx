@@ -11,7 +11,7 @@ import {
   useRedeemPromoCode,
 } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
-import type { BillingPeriod, Plan, PlanPrice } from '@/api/types';
+import type { BillingPeriod, Plan, PlanPrice, SubscriptionStatus } from '@/api/types';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
@@ -19,6 +19,7 @@ import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { ErrorState, LoadingState } from '@/components/ui/states';
+import { formatDateTime } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
 import { formatMoney } from '@/lib/money';
 import { FEATURE_LABEL, type FeatureKey } from '@/lib/planFeatures';
@@ -30,6 +31,36 @@ const PERIOD_LABEL: Record<BillingPeriod, string> = {
   annual: 'Anual',
   lifetime: 'De por vida',
 };
+
+const STATUS_LABEL: Record<SubscriptionStatus, string> = {
+  pending: 'Pendiente de confirmación',
+  active: 'Activa',
+  past_due: 'Pago vencido',
+  canceled: 'Cancelada',
+  expired: 'Expirada',
+};
+
+/** `Subscription.provider` es texto libre del backend (`manual`, `wompi`,
+ * el próximo que se agregue) -- si aparece uno que no conocemos, mostramos
+ * el valor tal cual en vez de esconderlo, mejor para la transparencia que
+ * pedimos acá que un genérico "otro". */
+const PROVIDER_LABEL: Record<string, string> = {
+  manual: 'Alta manual o código de invitación',
+  wompi: 'Wompi',
+};
+
+/** Fila de "Detalles de tu suscripción" -- toda la data cruda que ya manda
+ * el backend (`SubscriptionSerializer`) y antes se quedaba sin mostrar. */
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-row items-center justify-between py-1">
+      <Text className="text-text-muted text-sm">{label}</Text>
+      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+        {value}
+      </Text>
+    </View>
+  );
+}
 
 /** "Hasta 1 presupuesto, 2 miembros por presupuesto" -- construido a partir
  * de los límites reales del plan gratis, no de un texto fijo, para que
@@ -172,7 +203,50 @@ export default function ProScreen() {
 
             {isPaid ? (
               <Card title="Tu suscripción">
-                {confirmCancel ? (
+                <View className="mb-3 gap-0.5">
+                  <DetailRow label="Plan" value={currentPlan!.name} />
+                  {myPlan.data?.subscription ? (
+                    <>
+                      <DetailRow
+                        label="Estado"
+                        value={STATUS_LABEL[myPlan.data.subscription.status]}
+                      />
+                      <DetailRow
+                        label="Método"
+                        value={
+                          PROVIDER_LABEL[myPlan.data.subscription.provider] ??
+                          myPlan.data.subscription.provider
+                        }
+                      />
+                      {myPlan.data.subscription.billing_period ? (
+                        <DetailRow
+                          label="Facturación"
+                          value={PERIOD_LABEL[myPlan.data.subscription.billing_period]}
+                        />
+                      ) : null}
+                      <DetailRow
+                        label="Desde"
+                        value={formatDateTime(myPlan.data.subscription.created_at)}
+                      />
+                      <DetailRow
+                        label={myPlan.data.subscription.canceled_at ? 'Vencía' : 'Vence'}
+                        value={
+                          myPlan.data.subscription.current_period_end
+                            ? formatDateTime(myPlan.data.subscription.current_period_end)
+                            : 'Sin fecha de vencimiento'
+                        }
+                      />
+                      {myPlan.data.subscription.canceled_at ? (
+                        <DetailRow
+                          label="Cancelada el"
+                          value={formatDateTime(myPlan.data.subscription.canceled_at)}
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
+
+                {myPlan.data?.subscription?.status === 'canceled' ? null : confirmCancel ? (
                   <View className="gap-3">
                     <Text className="text-text-muted text-sm leading-5">
                       ¿Cancelar tu suscripción {currentPlan!.name}? Seguís teniendo acceso hasta

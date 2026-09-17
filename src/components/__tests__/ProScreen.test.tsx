@@ -207,6 +207,54 @@ describe('ProScreen', () => {
     expect(await screen.findByText('Código inválido o vencido.')).toBeTruthy();
   });
 
+  it('muestra los detalles completos de la suscripción (estado, método, fechas)', async () => {
+    mockMyPlanQuery.mockReturnValue(
+      myPlan({
+        plan: PRO_PLAN,
+        subscription: {
+          id: 's1',
+          plan: PRO_PLAN,
+          billing_period: 'annual',
+          status: 'active',
+          provider: 'wompi',
+          current_period_end: '2027-01-01T00:00:00Z',
+          canceled_at: null,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }),
+    );
+    await render(<ProScreen />);
+
+    expect(screen.getByText('Activa')).toBeTruthy();
+    expect(screen.getByText('Wompi')).toBeTruthy();
+    expect(screen.getByText('Anual')).toBeTruthy();
+    expect(screen.getByText('Vence')).toBeTruthy();
+  });
+
+  it('una suscripción ya cancelada muestra "Vencía"/"Cancelada el" y no ofrece cancelar de nuevo', async () => {
+    mockMyPlanQuery.mockReturnValue(
+      myPlan({
+        plan: PRO_PLAN,
+        subscription: {
+          id: 's1',
+          plan: PRO_PLAN,
+          billing_period: 'monthly',
+          status: 'canceled',
+          provider: 'manual',
+          current_period_end: '2026-02-01T00:00:00Z',
+          canceled_at: '2026-01-15T00:00:00Z',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }),
+    );
+    await render(<ProScreen />);
+
+    expect(screen.getByText('Cancelada')).toBeTruthy();
+    expect(screen.getByText('Vencía')).toBeTruthy();
+    expect(screen.getByText('Cancelada el')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Cancelar suscripción' })).toBeNull();
+  });
+
   it('con una suscripción activa, no ofrece canjear un código', async () => {
     mockMyPlanQuery.mockReturnValue(
       myPlan({

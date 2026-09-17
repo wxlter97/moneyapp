@@ -7,7 +7,7 @@ import { haptics } from '@/lib/haptics';
 import { fonts } from '@/theme/typography';
 
 const CONTACT_EMAIL = 'me@wxlter.dev';
-const LAST_UPDATED = '13 de septiembre de 2026';
+const LAST_UPDATED = '17 de septiembre de 2026';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -45,6 +45,25 @@ export default function PrivacyScreen() {
           No accedemos a tu cuenta bancaria real, no vemos tu número de tarjeta completo
           (el cobro de Pro lo procesa un proveedor externo, hoy Wompi) y no vendemos tus
           datos a nadie.
+        </Section>
+
+        <Section title="Cookies y almacenamiento local">
+          No usamos cookies ni rastreadores de publicidad, ni de nosotros ni de terceros --
+          no hay nada que vender ni ningún anunciante al que rendirle cuentas. En la versión
+          web (PWA) guardamos en el almacenamiento local de tu navegador (`localStorage`,
+          nunca cookies) tu sesión iniciada, el presupuesto activo, el tema (claro/oscuro) y
+          una copia de tus datos más recientes para que la app abra al instante en vez de en
+          blanco; en la app nativa es el equivalente del sistema operativo (SecureStore /
+          AsyncStorage). Nada de esto sale de tu dispositivo salvo lo que ya se sincroniza
+          con nuestro servidor de todas formas (tus transacciones, carteras, etc). Si activás
+          notificaciones push guardamos el token que nos da Apple/Google/el navegador para
+          poder enviártelas -- ver la sección de arriba sobre qué datos recolectamos. Usamos
+          Sentry para
+          enterarnos si la app se cae o tira un error (versión de la app, modelo de
+          dispositivo, y el error en sí) -- no arma un perfil tuyo ni cruza esos datos con
+          publicidad. Podés borrar todo este almacenamiento local vos mismo cerrando sesión,
+          desinstalando la app, o borrando los datos del sitio desde la configuración de tu
+          navegador.
         </Section>
 
         <Section title="Con quién los compartimos">
