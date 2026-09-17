@@ -4,6 +4,7 @@
  * Los tokens NO viven aquí (los maneja `api/client` + `api/tokenStorage`).
  * Aquí sólo el `User` y si ya sabemos o no si hay sesión.
  */
+import axios from 'axios';
 import { create } from 'zustand';
 
 import * as authApi from '@/api/auth';
@@ -57,8 +58,28 @@ export const useAuthStore = create<AuthState>()((set) => ({
     try {
       const user = await authApi.me();
       set({ status: 'authenticated', user });
-    } catch {
-      // token inválido/expirado sin refresh posible -> el interceptor ya limpió
+    } catch (err) {
+      // Sin `err.response` = la request nunca llegó a resolverse contra el
+      // server (sin red todavía, DNS/Wi-Fi reconectando justo al reabrir la
+      // PWA desde cero, timeout) -- NO significa que el token sea inválido.
+      // Tratarlo igual que un 401 real desloguea con la sesión todavía viva
+      // (hallazgo real: "pide login de nuevo al volver a abrir la app" pese
+      // a que el refresh dura 60 días -- el bug estaba acá, no en la
+      // duración del token). Un 401/403 de verdad ya pasó antes por el
+      // interceptor de `api/client.ts`, que intentó refrescar y sólo deja
+      // pasar el error si el refresh también falló -- ahí sí es sesión
+      // muerta. Un solo reintento corto alcanza para el caso común de "la
+      // red todavía no está lista".
+      if (axios.isAxiosError(err) && !err.response) {
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          const user = await authApi.me();
+          set({ status: 'authenticated', user });
+          return;
+        } catch {
+          // sigue sin poder confirmar sesión -- ver nota abajo.
+        }
+      }
       set({ status: 'anonymous', user: null });
     }
   },
