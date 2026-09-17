@@ -4,7 +4,7 @@
  * Los tokens NO viven aquí (los maneja `api/client` + `api/tokenStorage`).
  * Aquí sólo el `User` y si ya sabemos o no si hay sesión.
  */
-import axios from 'axios';
+import { isAxiosError } from 'axios';
 import { create } from 'zustand';
 
 import * as authApi from '@/api/auth';
@@ -70,7 +70,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       // pasar el error si el refresh también falló -- ahí sí es sesión
       // muerta. Un solo reintento corto alcanza para el caso común de "la
       // red todavía no está lista".
-      if (axios.isAxiosError(err) && !err.response) {
+      if (isAxiosError(err) && !err.response) {
         try {
           await new Promise((resolve) => setTimeout(resolve, 1500));
           const user = await authApi.me();

@@ -31,6 +31,7 @@ const FREE_PLAN: Plan = {
   code: 'free',
   name: 'Gratis',
   description: '',
+  is_default: true,
   max_workspaces_owned: 1,
   max_members_per_workspace: 2,
   max_active_recurring: 5,
@@ -43,6 +44,7 @@ const PRO_PLAN: Plan = {
   code: 'pro',
   name: 'Pro',
   description: '',
+  is_default: false,
   max_workspaces_owned: null,
   max_members_per_workspace: null,
   max_active_recurring: null,
@@ -50,6 +52,21 @@ const PRO_PLAN: Plan = {
   prices: [
     { id: 'price-monthly', billing_period: 'monthly', amount: 1.99, currency: 'USD', is_active: true },
     { id: 'price-annual', billing_period: 'annual', amount: 19.99, currency: 'USD', is_active: true },
+  ],
+};
+
+const PLUS_PLAN: Plan = {
+  id: 'plan-plus',
+  code: 'plus',
+  name: 'Plus',
+  description: '',
+  is_default: false,
+  max_workspaces_owned: 2,
+  max_members_per_workspace: 5,
+  max_active_recurring: 15,
+  features: { export: true, net_worth_history: true, import_email: false },
+  prices: [
+    { id: 'price-plus-monthly', billing_period: 'monthly', amount: 0.99, currency: 'USD', is_active: true },
   ],
 };
 
@@ -88,6 +105,19 @@ describe('ProScreen', () => {
 
     expect(screen.getByRole('button', { name: 'Mensual · USD 1.99' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Anual · USD 19.99' })).toBeTruthy();
+  });
+
+  it('con más de un plan pago, muestra cada uno con sus propias features y precios', async () => {
+    mockPlansQuery.mockReturnValue({ data: [FREE_PLAN, PRO_PLAN, PLUS_PLAN], isLoading: false });
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    // Plus (USD 0.99) va antes que Pro (USD 1.99): más barato primero.
+    // ("Pro" también es el título del header, así que no se busca por ese texto solo.)
+    expect(screen.getByText('Plus')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Mensual · USD 0.99' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Mensual · USD 1.99' })).toBeTruthy();
+    expect(screen.getByText('Historial de patrimonio neto')).toBeTruthy(); // feature de Plus
   });
 
   it('elegir un precio arranca el checkout y abre la URL devuelta', async () => {

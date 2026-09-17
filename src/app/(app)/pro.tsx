@@ -42,14 +42,22 @@ function limitsSummary(plan: Plan | null | undefined): string {
   return bits.length ? `Hasta ${bits.join(', ')}` : 'Sin límites';
 }
 
+/** Precio activo más barato de un plan (para ordenar el catálogo de menor a
+ * mayor); un plan sin precios activos va al final. */
+function cheapestActivePrice(plan: Plan): number {
+  const amounts = (plan.prices ?? []).filter((p) => p.is_active).map((p) => p.amount);
+  return amounts.length > 0 ? Math.min(...amounts) : Infinity;
+}
+
 /**
  * Herramientas → Cuenta → Pro. Muestra el plan efectivo del usuario y, si
- * está en el gratis, el catálogo de precios (`GET /plans/`) para suscribirse
- * -- nada de nombre/límite/precio está hardcodeado acá, todo sale del
- * backend para poder ajustarlo sin subir versión nueva. El checkout
- * redirige al proveedor de pago (Wompi); al volver, la app reabre acá
- * mismo (`ExpoLinking.createURL('/pro')`) y el estado se refresca solo la
- * próxima vez que se abra esta pantalla.
+ * está en el gratis, el catálogo de planes pagos (`GET /plans/`, puede haber
+ * más de uno -- p. ej. Plus y Pro) para suscribirse -- nada de nombre/
+ * límite/precio está hardcodeado acá, todo sale del backend para poder
+ * ajustarlo sin subir versión nueva. El checkout redirige al proveedor de
+ * pago (Wompi); al volver, la app reabre acá mismo
+ * (`ExpoLinking.createURL('/pro')`) y el estado se refresca solo la próxima
+ * vez que se abra esta pantalla.
  */
 export default function ProScreen() {
   const colors = useColors();
@@ -62,10 +70,13 @@ export default function ProScreen() {
   const [error, setError] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
-  const isPro = myPlan.data?.plan?.code === 'pro';
-  const proPlan = plansQuery.data?.find((p) => p.code === 'pro');
-  const prices = (proPlan?.prices ?? []).filter((p) => p.is_active);
-  const proFeatures = Object.keys(proPlan?.features ?? {}).filter((key) => proPlan?.features[key]);
+  const currentPlan = myPlan.data?.plan;
+  // Cualquier plan que no sea el default (gratis) cuenta como "pago", sin
+  // asumir que el único pago se llama "pro" -- puede haber varios tiers.
+  const isPaid = currentPlan != null && !currentPlan.is_default;
+  const paidPlans = [...(plansQuery.data ?? [])]
+    .filter((p) => !p.is_default)
+    .sort((a, b) => cheapestActivePrice(a) - cheapestActivePrice(b));
 
   async function onSubscribe(price: PlanPrice) {
     setError(null);
@@ -112,34 +123,34 @@ export default function ProScreen() {
               <View className="flex-row items-center gap-3">
                 <View
                   className="h-10 w-10 items-center justify-center rounded-full"
-                  style={{ backgroundColor: isPro ? colors.primary : colors.surface2 }}
+                  style={{ backgroundColor: isPaid ? colors.primary : colors.surface2 }}
                 >
-                  <Icon name="star" size={18} color={isPro ? '#FFFFFF' : colors.textMuted} />
+                  <Icon name="star" size={18} color={isPaid ? '#FFFFFF' : colors.textMuted} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-text text-base" style={{ fontFamily: fonts.bold }}>
-                    {isPro ? 'Tenés Pro' : 'Estás en el plan Gratis'}
+                    {isPaid ? `Tenés ${currentPlan!.name}` : 'Estás en el plan Gratis'}
                   </Text>
                   <Text className="text-text-muted text-xs">
-                    {isPro
+                    {isPaid
                       ? myPlan.data?.subscription?.current_period_end
                         ? `Renueva el ${new Date(
                             myPlan.data.subscription.current_period_end,
                           ).toLocaleDateString('es')}`
                         : 'Sin fecha de vencimiento'
-                      : limitsSummary(myPlan.data?.plan)}
+                      : limitsSummary(currentPlan)}
                   </Text>
                 </View>
               </View>
             </Card>
 
-            {isPro ? (
+            {isPaid ? (
               <Card title="Tu suscripción">
                 {confirmCancel ? (
                   <View className="gap-3">
                     <Text className="text-text-muted text-sm leading-5">
-                      ¿Cancelar tu suscripción Pro? Seguís teniendo acceso hasta que termine el
-                      período ya pagado.
+                      ¿Cancelar tu suscripción {currentPlan!.name}? Seguís teniendo acceso hasta
+                      que termine el período ya pagado.
                     </Text>
                     {error ? <Text className="text-expense text-xs">{error}</Text> : null}
                     <View className="flex-row gap-2">
@@ -169,46 +180,61 @@ export default function ProScreen() {
               </Card>
             ) : (
               <>
-                {proFeatures.length > 0 ? (
-                  <Card title="Con Pro conseguís">
-                    <View className="gap-2.5">
-                      {proFeatures.map((key) => (
-                        <View key={key} className="flex-row items-center gap-2">
-                          <Icon name="check" size={14} color={colors.income} />
-                          <Text className="text-text-muted flex-1 text-sm">
-                            {FEATURE_LABEL[key as FeatureKey] ?? key}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </Card>
-                ) : null}
-
-                <Card title="Elegí tu plan">
-                  {plansQuery.isLoading ? (
+                {plansQuery.isLoading ? (
+                  <Card title="Elegí tu plan">
                     <LoadingState />
-                  ) : prices.length === 0 ? (
+                  </Card>
+                ) : paidPlans.length === 0 ? (
+                  <Card title="Elegí tu plan">
                     <Text className="text-text-muted text-sm">
-                      Todavía no hay precios configurados.
+                      Todavía no hay planes configurados.
                     </Text>
-                  ) : (
-                    <View className="gap-2">
-                      {prices.map((price) => (
-                        <Button
-                          key={price.id}
-                          label={`${PERIOD_LABEL[price.billing_period]} · ${formatMoney(
-                            price.amount,
-                            price.currency,
-                          )}`}
-                          loading={pendingPriceId === price.id}
-                          disabled={checkout.isPending}
-                          onPress={() => onSubscribe(price)}
-                        />
-                      ))}
-                    </View>
-                  )}
-                  {error ? <Text className="text-expense mt-2 text-xs">{error}</Text> : null}
-                </Card>
+                  </Card>
+                ) : (
+                  paidPlans.map((plan) => {
+                    const planFeatures = Object.keys(plan.features ?? {}).filter(
+                      (key) => plan.features[key],
+                    );
+                    const planPrices = (plan.prices ?? []).filter((p) => p.is_active);
+                    return (
+                      <Card key={plan.id} title={plan.name}>
+                        {planFeatures.length > 0 ? (
+                          <View className="mb-3 gap-2.5">
+                            {planFeatures.map((key) => (
+                              <View key={key} className="flex-row items-center gap-2">
+                                <Icon name="check" size={14} color={colors.income} />
+                                <Text className="text-text-muted flex-1 text-sm">
+                                  {FEATURE_LABEL[key as FeatureKey] ?? key}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        ) : null}
+                        {planPrices.length === 0 ? (
+                          <Text className="text-text-muted text-sm">
+                            Todavía no hay precios configurados.
+                          </Text>
+                        ) : (
+                          <View className="gap-2">
+                            {planPrices.map((price) => (
+                              <Button
+                                key={price.id}
+                                label={`${PERIOD_LABEL[price.billing_period]} · ${formatMoney(
+                                  price.amount,
+                                  price.currency,
+                                )}`}
+                                loading={pendingPriceId === price.id}
+                                disabled={checkout.isPending}
+                                onPress={() => onSubscribe(price)}
+                              />
+                            ))}
+                          </View>
+                        )}
+                      </Card>
+                    );
+                  })
+                )}
+                {error ? <Text className="text-expense px-2 text-xs">{error}</Text> : null}
 
                 <Text className="text-text-muted px-2 text-center text-xs leading-4">
                   Al suscribirte aceptás los{' '}
