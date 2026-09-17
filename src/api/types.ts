@@ -1062,6 +1062,10 @@ export interface Plan {
   code: string;
   name: string;
   description: string;
+  /** El plan que recibe cualquiera sin suscripción vigente (el gratis). Para
+   * distinguirlo del resto sin hardcodear un `code` -- puede haber más de un
+   * plan pago (p. ej. Plus y Pro). */
+  is_default: boolean;
   max_workspaces_owned: number | null;
   max_members_per_workspace: number | null;
   max_active_recurring: number | null;
