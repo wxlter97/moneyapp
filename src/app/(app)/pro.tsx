@@ -9,9 +9,10 @@ import {
   useMyPlan,
   usePlans,
   useRedeemPromoCode,
+  useStartTrial,
 } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
-import type { BillingPeriod, Plan, PlanPrice, SubscriptionStatus } from '@/api/types';
+import type { BillingPeriod, Plan, PlanPrice, Subscription, SubscriptionStatus } from '@/api/types';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
@@ -48,6 +49,19 @@ const PROVIDER_LABEL: Record<string, string> = {
   manual: 'Alta manual o código de invitación',
   wompi: 'Wompi',
 };
+
+/** "Activa" a secas confunde si ya pidió cancelar y sólo le queda correr el
+ * reloj hasta `current_period_end` -- se nota en el estado (no en
+ * `canceled_at` solo) para que sea imposible de pasar por alto. */
+function subscriptionStatusLabel(sub: Subscription): string {
+  const base = STATUS_LABEL[sub.status];
+  return sub.canceled_at && sub.status !== 'canceled' ? `${base} · no se renueva` : base;
+}
+
+function subscriptionMethodLabel(sub: Subscription): string {
+  if (sub.is_trial) return 'Prueba gratis';
+  return PROVIDER_LABEL[sub.provider] ?? sub.provider;
+}
 
 /** Fila de "Detalles de tu suscripción" -- toda la data cruda que ya manda
  * el backend (`SubscriptionSerializer`) y antes se quedaba sin mostrar. */
@@ -104,8 +118,10 @@ export default function ProScreen() {
   const checkout = useCheckout();
   const cancel = useCancelSubscription();
   const redeem = useRedeemPromoCode();
+  const startTrial = useStartTrial();
 
   const [pendingPriceId, setPendingPriceId] = useState<string | null>(null);
+  const [pendingTrialPlanId, setPendingTrialPlanId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [promoCode, setPromoCode] = useState('');
@@ -136,6 +152,20 @@ export default function ProScreen() {
       setError(errorMessage(err, 'No se pudo iniciar el pago.'));
     } finally {
       setPendingPriceId(null);
+    }
+  }
+
+  async function onStartTrial(plan: Plan) {
+    setError(null);
+    setPendingTrialPlanId(plan.id);
+    try {
+      await startTrial.mutateAsync(plan.id);
+      haptics.success();
+    } catch (err) {
+      haptics.error();
+      setError(errorMessage(err, 'No se pudo empezar la prueba.'));
+    } finally {
+      setPendingTrialPlanId(null);
     }
   }
 
@@ -209,14 +239,11 @@ export default function ProScreen() {
                     <>
                       <DetailRow
                         label="Estado"
-                        value={STATUS_LABEL[myPlan.data.subscription.status]}
+                        value={subscriptionStatusLabel(myPlan.data.subscription)}
                       />
                       <DetailRow
                         label="Método"
-                        value={
-                          PROVIDER_LABEL[myPlan.data.subscription.provider] ??
-                          myPlan.data.subscription.provider
-                        }
+                        value={subscriptionMethodLabel(myPlan.data.subscription)}
                       />
                       {myPlan.data.subscription.billing_period ? (
                         <DetailRow
@@ -246,7 +273,7 @@ export default function ProScreen() {
                   ) : null}
                 </View>
 
-                {myPlan.data?.subscription?.status === 'canceled' ? null : confirmCancel ? (
+                {myPlan.data?.subscription?.canceled_at ? null : confirmCancel ? (
                   <View className="gap-3">
                     <Text className="text-text-muted text-sm leading-5">
                       ¿Cancelar tu suscripción {currentPlan!.name}? Seguís teniendo acceso hasta
@@ -308,6 +335,19 @@ export default function ProScreen() {
                                 </Text>
                               </View>
                             ))}
+                          </View>
+                        ) : null}
+                        {plan.trial_days ? (
+                          <View className="mb-2">
+                            <Button
+                              label={`Probar gratis ${plan.trial_days} día${
+                                plan.trial_days === 1 ? '' : 's'
+                              }`}
+                              variant="ghost"
+                              loading={pendingTrialPlanId === plan.id}
+                              disabled={startTrial.isPending}
+                              onPress={() => onStartTrial(plan)}
+                            />
                           </View>
                         ) : null}
                         {planPrices.length === 0 ? (

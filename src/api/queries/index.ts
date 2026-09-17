@@ -413,6 +413,17 @@ export function useRedeemPromoCode() {
   });
 }
 
+/** Arrancar una prueba gratis reemplaza el plan efectivo directo, igual que
+ * canjear un código -- mismo motivo: el plan puede cambiar del todo. */
+export function useStartTrial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) => res.billing.startTrial(planId),
+    onSuccess: (subscription) =>
+      qc.setQueryData(qk.myPlan(), { plan: subscription.plan, subscription }),
+  });
+}
+
 // --- tokens personales (Atajos de Apple Shortcuts) --------------------
 export function usePersonalTokens() {
   const ws = useActiveWs();

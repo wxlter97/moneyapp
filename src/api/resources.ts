@@ -319,6 +319,12 @@ export const billing = {
    * el proveedor de pago. Un solo canje por usuario en toda su vida. */
   redeem: (code: string) =>
     api.post<Subscription>('/billing/redeem/', { code }, { skipWorkspace: true }).then((r) => r.data),
+  /** Arranca la prueba gratis de un plan (`plan.trial_days`), sin código ni
+   * proveedor de pago. Una sola prueba por usuario en toda su vida. */
+  startTrial: (planId: string) =>
+    api
+      .post<Subscription>('/billing/trial/', { plan: planId }, { skipWorkspace: true })
+      .then((r) => r.data),
 };
 
 // --- carteras (wallets) -------------------------------------------------

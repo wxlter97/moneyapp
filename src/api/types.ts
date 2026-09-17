@@ -1066,6 +1066,9 @@ export interface Plan {
    * distinguirlo del resto sin hardcodear un `code` -- puede haber más de un
    * plan pago (p. ej. Plus y Pro). */
   is_default: boolean;
+  /** Días de prueba gratis de este plan sin pasar por el proveedor de pago
+   * (ver `useStartTrial`). `null` o `0` = no ofrece prueba. */
+  trial_days: number | null;
   max_workspaces_owned: number | null;
   max_members_per_workspace: number | null;
   max_active_recurring: number | null;
@@ -1081,6 +1084,9 @@ export interface Subscription {
   billing_period: BillingPeriod | null;
   status: SubscriptionStatus;
   provider: string;
+  /** Otorgada por un período de prueba (`POST /billing/trial/`), no por
+   * pago ni código de invitación. */
+  is_trial: boolean;
   current_period_end: ISODateTime | null;
   canceled_at: ISODateTime | null;
   created_at: ISODateTime;
