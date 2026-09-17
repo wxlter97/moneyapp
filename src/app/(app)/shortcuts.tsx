@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 
@@ -31,6 +31,25 @@ import { fonts } from '@/theme/typography';
 const QUICK_ADD_URL = `${config.apiUrl}/quick-add/`;
 
 /**
+ * Un iPhone/iPad, sea la app nativa o la PWA. En la PWA `Platform.OS` es
+ * 'web', así que hay que mirar el user agent; y a diferencia de
+ * `isIosSafari` (lib/pwaInstall), acá no importa el navegador: la app
+ * Shortcuts es del sistema, así que el link de iCloud abre ahí igual venga
+ * de Safari, Chrome o la pantalla de inicio.
+ */
+function isAppleMobile(): boolean {
+  if (Platform.OS === 'ios') return true;
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+  return /iP(hone|ad|od)/.test(navigator.userAgent);
+}
+
+async function openShortcutLink() {
+  if (!config.shortcutUrl) return;
+  haptics.tap();
+  await Linking.openURL(config.shortcutUrl);
+}
+
+/**
  * Tokens personales para agregar gastos desde un Atajo de Apple Shortcuts
  * (p. ej. disparado por la notificación de Apple Pay) sin abrir la app. El
  * JWT normal dura minutos y se renueva solo — un Atajo necesita algo que
@@ -56,6 +75,10 @@ export default function ShortcutsScreen() {
     () => (walletsQ.data ?? []).map((w) => ({ value: w.id, label: walletLabel(w) })),
     [walletsQ.data],
   );
+
+  // Sin link configurado (`EXPO_PUBLIC_SHORTCUT_URL`), o fuera de un
+  // dispositivo Apple, sólo quedan las instrucciones para armarlo a mano.
+  const canInstall = Boolean(config.shortcutUrl) && isAppleMobile();
 
   async function onCreate() {
     const trimmed = name.trim();
@@ -103,7 +126,11 @@ export default function ShortcutsScreen() {
         </Card>
 
         {justCreated ? (
-          <RevealedTokenCard token={justCreated} onDismiss={() => setJustCreated(null)} />
+          <RevealedTokenCard
+            token={justCreated}
+            canInstall={canInstall}
+            onDismiss={() => setJustCreated(null)}
+          />
         ) : null}
 
         {tokensQ.isLoading ? (
@@ -170,7 +197,9 @@ export default function ShortcutsScreen() {
           </View>
         </Card>
 
-        <SetupInstructionsCard />
+        {canInstall ? <InstallShortcutCard /> : null}
+
+        <SetupInstructionsCard manualAlternative={canInstall} />
       </ScrollView>
     </Screen>
   );
@@ -239,21 +268,45 @@ function TokenRow({
   );
 }
 
+/** Instalar el Atajo ya armado, desde el link de iCloud. Sólo se muestra en
+ * dispositivos Apple y con `config.shortcutUrl` cargado. */
+function InstallShortcutCard() {
+  return (
+    <Card title="Instalar el atajo">
+      <View className="gap-3">
+        <Text className="text-text-muted text-sm leading-5">
+          Al importarlo, Shortcuts te va a pedir el token. Copialo antes de tocar el botón —
+          si ya no lo tenés a mano, generá uno nuevo acá arriba (por seguridad no volvemos a
+          mostrar los viejos).
+        </Text>
+        <Button label="Instalar atajo" onPress={openShortcutLink} />
+      </View>
+    </Card>
+  );
+}
+
 function RevealedTokenCard({
   token,
+  canInstall,
   onDismiss,
 }: {
   token: PersonalAccessToken;
+  canInstall: boolean;
   onDismiss: () => void;
 }) {
   const colors = useColors();
   const [copied, setCopied] = useState(false);
+  // `copied` se apaga solo a los 2s (es el feedback del ícono); este otro no,
+  // porque habilita el botón de instalar: el Atajo pide el token al
+  // importarse, así que instalar antes de copiarlo deja el paso a medias.
+  const [copiedOnce, setCopiedOnce] = useState(false);
 
   async function onCopy() {
     if (!token.token) return;
     await Clipboard.setStringAsync(token.token);
     haptics.success();
     setCopied(true);
+    setCopiedOnce(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
@@ -263,7 +316,9 @@ function RevealedTokenCard({
         Guardalo ahora — no lo vamos a volver a mostrar
       </Text>
       <Text className="text-text-muted mt-1 text-xs leading-4">
-        Pegalo en el paso "Obtener contenido de URL" del Atajo, en el header Authorization.
+        {canInstall
+          ? 'Copialo y después instalá el Atajo: te lo va a pedir al importarlo.'
+          : 'Pegalo en el paso "Obtener contenido de URL" del Atajo, en el header Authorization.'}
       </Text>
 
       <Pressable
@@ -282,6 +337,16 @@ function RevealedTokenCard({
         <Icon name={copied ? 'check' : 'copy'} size={16} color={copied ? colors.income : colors.textMuted} />
       </Pressable>
 
+      {canInstall ? (
+        <View className="mt-3">
+          <Button
+            label="Instalar atajo"
+            disabled={!copiedOnce}
+            onPress={openShortcutLink}
+          />
+        </View>
+      ) : null}
+
       <Pressable onPress={onDismiss} className="mt-3 self-start py-1 active:opacity-60" accessibilityRole="button">
         <Text className="text-text-muted text-xs">Ya lo guardé</Text>
       </Pressable>
@@ -289,9 +354,9 @@ function RevealedTokenCard({
   );
 }
 
-function SetupInstructionsCard() {
+function SetupInstructionsCard({ manualAlternative }: { manualAlternative: boolean }) {
   return (
-    <Card title="Cómo armarlo en Shortcuts">
+    <Card title={manualAlternative ? 'O armalo a mano' : 'Cómo armarlo en Shortcuts'}>
       <View className="gap-3">
         <Step n={1} text="Disparador: “Cuando reciba una notificación” de Wallet (o corré el Atajo a mano)." />
         <Step n={2} text="Obtené el monto y el comercio del texto de la notificación." />
