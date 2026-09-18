@@ -23,6 +23,10 @@
    (requiere WhatsApp Business API, verificación de negocio y costo por conversación).
 4. **Analítica: web ahora, nativo cuando exista build de tiendas.** Hoy el uso real es la web
    en Vercel y no hay ni `extra.eas.projectId` en `app.json`.
+5. **Hosting del front: mover a Cloudflare Pages.** El plan Hobby de Vercel no permite uso
+   comercial, y el build es estático (`expo export -p web`), así que Pages hace lo mismo gratis,
+   con banda ilimitada y sin esa restricción. Pasos en `budget-app-django/DEPLOY.md` §3 opción C;
+   comparación de opciones en `budget-app-django/COSTOS-Y-ESCALA.md`.
 
 ---
 
