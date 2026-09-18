@@ -552,6 +552,16 @@ export const transactions = {
   /** Quién le debe cuánto a quién en el workspace activo. */
   balances: () => api.get<PersonBalance[]>('/transactions/balances/').then((r) => r.data),
 
+  /** Salda de una sola vez toda la deuda pendiente entre estas dos personas
+   * (en cualquier dirección) -- devuelve los saldos ya actualizados. */
+  settleBalance: (fromPersonId: string, toPersonId: string) =>
+    api
+      .post<PersonBalance[]>('/transactions/settle-balance/', {
+        from_person: fromPersonId,
+        to_person: toPersonId,
+      })
+      .then((r) => r.data),
+
   /** Transacciones existentes que podrían ser la misma que se está por
    * cargar a mano -- no bloquea nada, sólo informa (ver TransactionForm). */
   checkDuplicate: (params: { wallet: string; amount: Money; date: string; exclude?: string }) =>

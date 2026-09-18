@@ -891,6 +891,25 @@ export function usePersonBalances() {
   });
 }
 
+export function useSettleBalance() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ fromPersonId, toPersonId }: { fromPersonId: string; toPersonId: string }) =>
+      res.transactions.settleBalance(fromPersonId, toPersonId),
+    onSuccess: (balances) => qc.setQueryData(qk.ws(ws).personBalances(), balances),
+  });
+}
+
+export function useDeletePerson() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.people.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.ws(ws).people() }),
+  });
+}
+
 /** Chequeo puntual (no un hook de React Query -- se llama a mano justo
  * antes de guardar, ver TransactionForm) de si ya existe una transacción
  * parecida, para avisar sin bloquear el alta manual. */
