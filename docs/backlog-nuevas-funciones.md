@@ -10,6 +10,9 @@
 >
 > Lo ya implementado que está esperando configuración tuya vive en otro archivo:
 > `budget-app-django/CONFIG-PENDIENTE.md`.
+>
+> **Para saber qué sigue y en qué orden, empezá por `budget-app-django/ROADMAP.md`**, que junta
+> esto con todo lo que falta para salir a producción y lleva el estimado de tiempo.
 
 ## Decisiones tomadas (18 sep 2026)
 
