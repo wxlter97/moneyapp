@@ -4,6 +4,19 @@ import type { Category, Transaction, Wallet } from '@/api/types';
 import { TransactionRow } from '@/components/TransactionRow';
 import { formatMoney, formatParens } from '@/lib/money';
 
+// Sólo para poder distinguir QUÉ ícono se eligió (`Icon` de por sí renderiza
+// paths de SVG, sin ningún rastro del nombre en el árbol) -- no cambia nada
+// de lo que ya prueban el resto de los tests de este archivo (sólo texto).
+// `require` adentro del factory (no un `import` de arriba) porque
+// `jest.mock` se hoistea por encima de los imports del módulo.
+jest.mock('@/components/ui/Icon', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- ver comentario de arriba
+  const mockReactNative = require('react-native');
+  return {
+    Icon: ({ name }: { name: string }) => <mockReactNative.Text>{`icon:${name}`}</mockReactNative.Text>,
+  };
+});
+
 const wallet = (id: string, name: string): Wallet =>
   ({ id, name, currency: 'USD' }) as Wallet;
 
@@ -143,6 +156,26 @@ describe('TransactionRow', () => {
     expect(toJSON()).toBeTruthy();
   });
 
+  // HALLAZGO: dividir en categorías (`split_group`) y dividir entre personas
+  // (`shares`) usaban el mismo ícono -- "no queda claro en la transacción
+  // cómo funciona". Ahora cada uno tiene el suyo.
+  it('dividida entre categorías y dividida entre personas usan íconos distintos', async () => {
+    const porCategoria = { ...baseTxn, split_group: 'g1' };
+    await render(<TransactionRow txn={porCategoria} category={super_} wallet={cuenta} />);
+    expect(screen.getByText('icon:split')).toBeTruthy();
+    expect(screen.queryByText('icon:users')).toBeNull();
+  });
+
+  it('dividida entre personas usa el ícono de "users", no el de "split"', async () => {
+    const porPersonas = {
+      ...baseTxn,
+      shares: [{ id: 's1', person: 'p1', person_name: 'Beto', amount: '10.00', is_settled: false, settled_at: null }],
+    };
+    await render(<TransactionRow txn={porPersonas} category={super_} wallet={cuenta} />);
+    expect(screen.getByText('icon:users')).toBeTruthy();
+    expect(screen.queryByText('icon:split')).toBeNull();
+  });
+
   it('una transacción importada por correo muestra el badge "correo"', async () => {
     const txn = { ...baseTxn, source: 'email_import' as const };
     await render(<TransactionRow txn={txn} category={super_} wallet={cuenta} />);
@@ -185,6 +218,19 @@ describe('TransactionRow', () => {
       expect(
         screen.getByLabelText(
           `Gasto, Supermercado, Cuenta principal, ${formatMoney(45.5, 'USD')}, fuera de presupuesto`,
+        ),
+      ).toBeTruthy();
+    });
+
+    it('dividida entre personas agrega "dividida entre personas" al final', async () => {
+      const txn = {
+        ...baseTxn,
+        shares: [{ id: 's1', person: 'p1', person_name: 'Beto', amount: '10.00', is_settled: false, settled_at: null }],
+      };
+      await render(<TransactionRow txn={txn} category={super_} wallet={cuenta} onPress={jest.fn()} />);
+      expect(
+        screen.getByLabelText(
+          `Gasto, Supermercado, Cuenta principal, ${formatMoney(45.5, 'USD')}, dividida entre personas`,
         ),
       ).toBeTruthy();
     });

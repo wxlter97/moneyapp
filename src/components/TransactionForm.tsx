@@ -870,13 +870,19 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
               router.push(`/split-people?id=${transactionId}`);
             }}
             disabled={busy}
-            className="items-center py-2 active:opacity-60"
+            className="items-center gap-0.5 py-2 active:opacity-60"
             accessibilityRole="button"
           >
             <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
               {(existing.data?.shares?.length ?? 0) > 0
                 ? 'Editar división entre personas'
                 : 'Dividir entre personas'}
+            </Text>
+            {/* No confundir con "Dividir en varias categorías" de arriba: no
+                toca el monto/categoría de esta transacción, sólo registra
+                quién puso el dinero y cuánto le debe cada quién. */}
+            <Text className="text-text-muted text-center text-xs">
+              Registrar quién pagó y cuánto le debe cada uno (no cambia esta transacción)
             </Text>
           </Pressable>
         ) : null}
