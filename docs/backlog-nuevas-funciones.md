@@ -39,9 +39,10 @@ habla con Gemini. Todo lo demás la usa por dentro.
       apagan solas** y la app no muestra sus entradas, igual que se hace hoy con Sentry, VAPID
       y el botón de Google.
 - [ ] Throttle propio (`THROTTLE_AI`, scope `ai`) además del límite normal de DRF.
-- [ ] **Tope de consumo por usuario y por mes**, atado al plan de `apps.billing`. Sin esto, una
-      sola cuenta puede gastarte la factura del mes. Contador en base (no en cache) porque hay
-      que poder mostrarle al usuario "te quedan N de N" y el cache de prod es por instancia.
+- [ ] **Tope de consumo por usuario y por mes**, atado al plan de `apps.billing` (números
+      concretos en "Costos de IA y topes por plan", más abajo). Sin esto, una sola cuenta puede
+      gastarte la factura del mes. Contador en base (no en cache) porque hay que poder mostrarle
+      al usuario "te quedan N de N" y el cache de prod es por instancia.
 - [ ] Registro de cada llamada (modelo, tokens, costo estimado, latencia, éxito/error) para
       poder ver qué se está gastando. Sin datos personales en el log.
 
@@ -257,6 +258,70 @@ saberlo antes de invertir en esto:
   ninguna competencia local suele tener: workspaces compartidos con carteras privadas,
   importación por correo bancario, programas de lealtad de tarjetas por categoría,
   multi-moneda con tasas propias, y los insights de comportamiento.
+
+---
+
+## Costos de IA y topes por plan
+
+Calculado el 18 sep 2026 con los precios de la API de Gemini de esa fecha (tier de pago) y
+los precios de plan que siembra `manage.py seed_billing_plans`: **Plus $0.99/mes · $9.99/año**,
+**Pro $1.99/mes · $14.99/año · $19.99 lifetime**.
+
+**Precio de los modelos** (por millón de tokens): 2.5 Flash-Lite `$0.10` entrada / `$0.40`
+salida · 2.5 Flash `$0.30` / `$2.50`, audio de entrada `$1.00` · 3.5 Flash `$1.50` / `$9.00` ·
+3.1 Pro `$2.00` / `$12.00`. **Los precios de los Flash son promocionales hasta fin de 2026**,
+así que el tope y el registro de consumo van en código desde el día uno, no en una planilla.
+
+**Costo por operación** (estimado; los tokens de una imagen dependen de su tamaño):
+
+| Operación | Modelo | Tokens aprox. | Costo |
+|---|---|---|---|
+| Parseo de texto libre | 2.5 Flash-Lite | 630 in / 120 out | ~$0.0001 |
+| Dictado de voz (5 s ≈ 160 tokens de audio) | 2.5 Flash | 800 in / 120 out | ~$0.0005 |
+| Recibo (foto) | 2.5 Flash | 1.5–3k in / 300 out | ~$0.0017 |
+| Pregunta de chat (2 vueltas con herramientas) | 2.5 Flash | ~4k in / 400 out | ~$0.0022 |
+| Resumen mensual | 2.5 Flash | 1.2k in / 400 out | ~$0.0014 |
+
+**Costo de IA por usuario al mes:**
+
+| Perfil | Uso mensual | Costo | Sobre Plus ($0.99) |
+|---|---|---|---|
+| Ligero | 5 parseos, 2 recibos, 1 resumen | ~$0.004 | 0.4% |
+| Medio | 25 entradas (5 por voz), 10 recibos, 5 chats, resumen | ~$0.03 | 3% |
+| Intensivo | 80 entradas (20 por voz), 40 recibos, 30 chats, resumen | ~$0.12 | 12% |
+| Sin tope | 500 recibos + 500 chats | ~$1.95 | **197% — pérdida** |
+
+**Conclusiones que mandan sobre el diseño:**
+
+1. **El chat es más de la mitad del costo del usuario intensivo.** Corriéndolo en Flash-Lite baja
+   de `$0.0022` a `~$0.0006` por pregunta. Y como el prompt de sistema y el esquema de funciones
+   son idénticos en todas las llamadas, el *context caching* recorta otra parte grande de la
+   entrada. Con las dos cosas, el intensivo cae de ~12 ¢ a ~5 ¢.
+2. **El riesgo es el tope, no el precio unitario.** Una cuenta sin límite se come el plan entero.
+3. **El lifetime de $19.99 es la exposición real:** un usuario intensivo son ~14 años de IA sólo
+   para empatar ese pago único. Decisión tomada: **el lifetime no lleva IA ilimitada**, lleva la
+   misma cuota mensual que Pro.
+4. **Free no lleva IA** (o a lo sumo 3 recibos al mes de muestra): ahí es pérdida pura.
+5. **La capa gratis de Gemini usa los datos para entrenar** — sólo sirve para probar con datos
+   propios, nunca con datos de usuarios.
+
+**Topes por plan** (dejan el techo de costo acotado sin molestar al 95% de la gente):
+
+| Plan | Recibos/mes | Parseos (texto+voz)/mes | Chats/mes | Techo de costo | Sobre el precio |
+|---|---|---|---|---|---|
+| Free | 3 | 10 | 0 | ~$0.006 | — |
+| Plus | 30 | 50 | 20 | ~$0.085 | 9% de $0.99 |
+| Pro | 100 | 200 | 100 | ~$0.36 | 18% de $1.99 |
+
+- [ ] Guardar estos límites como `features` del plan en `seed_billing_plans.py` (mismo lugar que
+      `import_email`, `quick_add`, etc.), no cableados en el código de IA.
+- [ ] Mostrar "te quedan N de N" en la app antes de que el usuario choque con el tope.
+
+> Aparte de la IA: a un precio de $0.99 al mes, **la comisión del procesador de pagos pesa más
+> que todos los tokens juntos** (un fijo de ~$0.30 por cargo se lleva ~un tercio del ingreso
+> mensual, contra ~6% en el anual de $9.99). Verificar la tarifa real de Wompi y empujar el plan
+> anual. La capacidad y el costo de la infraestructura están en
+> `budget-app-django/COSTOS-Y-ESCALA.md`.
 
 ---
 
