@@ -20,6 +20,11 @@ export function routeForNotification(data: Record<string, unknown>): Href {
       return '/invitations';
     case 'email_import_pending':
       return '/imports';
+    case 'insight':
+      // Sin pantalla propia todavía (ver `apps.reports.services.
+      // behavior_insights` en el backend) -- el dashboard ya muestra el
+      // resumen de gasto que le da contexto al patrón detectado.
+      return '/dashboard';
     default:
       return '/dashboard';
   }

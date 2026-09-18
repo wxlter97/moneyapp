@@ -191,6 +191,10 @@ export interface NotificationPreferences {
   warn_statement_due: boolean;
   /** Con cuántos días de anticipación avisar (1-14). */
   statement_due_days_before: number;
+  /** Patrones de comportamiento de gasto (fin de semana, post-cobro, gasto
+   * hormiga, día pico, categoría/frecuencia en alza) -- un solo toggle para
+   * los seis, ver `apps.reports.services.behavior_insights` en el backend. */
+  warn_insights: boolean;
 }
 
 export type NotificationKind =
@@ -200,7 +204,8 @@ export type NotificationKind =
   | 'installment_due'
   | 'budget_threshold'
   | 'low_balance'
-  | 'statement_due';
+  | 'statement_due'
+  | 'insight';
 
 /** `resolved` = ya se resolvió desde su propia pantalla (invitación
  * aceptada/rechazada, correo confirmado/rechazado) -- sigue en el

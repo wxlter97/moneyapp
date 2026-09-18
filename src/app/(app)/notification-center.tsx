@@ -28,6 +28,7 @@ const KIND_ICON: Record<NotificationKind, IconName> = {
   budget_threshold: 'bars',
   low_balance: 'card',
   statement_due: 'card',
+  insight: 'trending',
 };
 
 /**
