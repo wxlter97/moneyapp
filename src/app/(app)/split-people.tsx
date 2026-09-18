@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -146,9 +146,33 @@ export default function SplitPeopleScreen() {
   const [paidBy, setPaidBy] = useState<string>(ME);
   const [participants, setParticipants] = useState<ParticipantDraft[]>(() => [emptyParticipant()]);
   const [error, setError] = useState<string | null>(null);
+  // HALLAZGO: esta pantalla arrancaba siempre en blanco (un participante
+  // vacío, "Yo" como pagador), incluso al abrir "Editar división entre
+  // personas" -- nunca leía `txn.shares`/`txn.paid_by`, así que "Guardar"
+  // pisaba la división existente con datos vacíos en vez de dejar
+  // ajustarla. Se hidrata una sola vez, cuando ya llegaron tanto la
+  // transacción como la lista de personas (para poder reconocer si
+  // `paid_by` es la fila "Yo").
+  const [hydrated, setHydrated] = useState(false);
 
   const txn = txnQ.data;
-  const people = peopleQ.data ?? [];
+  const people = useMemo(() => peopleQ.data ?? [], [peopleQ.data]);
+
+  useEffect(() => {
+    if (hydrated || !txn || peopleQ.isLoading) return;
+    if ((txn.shares?.length ?? 0) > 0) {
+      const payer = people.find((p) => p.id === txn.paid_by);
+      setPaidBy(payer?.is_me ? ME : (txn.paid_by ?? ME));
+      setParticipants(
+        txn.shares.map((s) => ({
+          key: String(nextKey++),
+          personId: s.person,
+          amount: String(Number(s.amount).toFixed(2)),
+        })),
+      );
+    }
+    setHydrated(true);
+  }, [hydrated, txn, people, peopleQ.isLoading]);
   const total = toNumber(txn?.amount);
   const assigned = participants.reduce((sum, p) => sum + toNumber(p.amount), 0);
   const myShare = Math.round((total - assigned) * 100) / 100;
@@ -222,6 +246,12 @@ export default function SplitPeopleScreen() {
           </Text>
           <Money value={txn?.amount} currency={txn?.currency} className="text-2xl font-semibold" />
         </Card>
+
+        <Text className="text-text-muted px-1 text-xs leading-4">
+          Esto NO cambia el monto ni la categoría de esta transacción — sólo registra quién puso
+          el dinero y cuánto le toca devolver a cada uno de los demás. Lo que no le asignes a
+          nadie queda como la parte de quien pagó. Se refleja en Herramientas → Personas.
+        </Text>
 
         <Card title="¿Quién pagó?">
           <PersonChips people={payerOptions} value={paidBy} onChange={setPaidBy} excludeIds={[]} />

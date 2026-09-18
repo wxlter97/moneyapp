@@ -70,7 +70,13 @@ export default function NotificationsScreen() {
   }
 
   async function onToggle(
-    field: 'remind_recurring' | 'remind_installments' | 'warn_budget' | 'remind_low_balance' | 'warn_statement_due',
+    field:
+      | 'remind_recurring'
+      | 'remind_installments'
+      | 'warn_budget'
+      | 'remind_low_balance'
+      | 'warn_statement_due'
+      | 'warn_insights',
     value: boolean,
   ) {
     setSaveError(null);
@@ -190,6 +196,13 @@ export default function NotificationsScreen() {
                 hint="El pago de contado completo, no cuota por cuota."
                 value={prefs.warn_statement_due}
                 onChange={(v) => onToggle('warn_statement_due', v)}
+              />
+              <View className="h-px bg-border/30" />
+              <ToggleRow
+                title="Patrones de gasto"
+                hint="Fin de semana, después de cobrar, gasto hormiga, día pico, categorías en alza."
+                value={prefs.warn_insights}
+                onChange={(v) => onToggle('warn_insights', v)}
               />
             </Card>
 

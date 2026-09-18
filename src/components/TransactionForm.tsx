@@ -10,6 +10,7 @@ import {
   useCategories,
   useCreateTransaction,
   useDeleteTransaction,
+  useRegisterRefund,
   useTransaction,
   useUpdateTransaction,
   useUploadReceipt,
@@ -58,7 +59,7 @@ interface TransactionFormProps {
   prefill?: TransactionPrefill;
 }
 
-type OpenRow = 'category' | 'from' | 'to' | null;
+type OpenRow = 'category' | 'from' | 'to' | 'refundWallet' | null;
 
 export function TransactionForm({ transactionId, duplicateFromId, prefill }: TransactionFormProps) {
   const colors = useColors();
@@ -73,6 +74,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const update = useUpdateTransaction();
   const remove = useDeleteTransaction();
   const uploadReceipt = useUploadReceipt();
+  const registerRefund = useRegisterRefund();
   const showSnackbar = useSnackbarStore((s) => s.show);
 
   const [type, setType] = useState<TransactionType>('expense');
@@ -85,8 +87,16 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const [tagNames, setTagNames] = useState<string[]>([]);
   const [inBudget, setInBudget] = useState(true);
   const [isRefundable, setIsRefundable] = useState(false);
-  const [isRefunded, setIsRefunded] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Mini-formulario inline de "Registrar reembolso" -- ver más abajo. No es
+  // un campo de la transacción: crea OTRA transacción (el ingreso real que
+  // devuelve la plata, ver `useRegisterRefund`), así que vive fuera de
+  // `payload`/`doSubmit`.
+  const [registeringRefund, setRegisteringRefund] = useState(false);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundDate, setRefundDate] = useState(todayISO());
+  const [refundWalletId, setRefundWalletId] = useState<string | null>(null);
+  const [refundError, setRefundError] = useState<string | null>(null);
   // Aviso no bloqueante de "esto ya existe" al cargar a mano (ver
   // `checkDuplicateTransaction`) -- sólo al crear, nunca al editar.
   const [duplicateWarning, setDuplicateWarning] = useState<Transaction[] | null>(null);
@@ -135,10 +145,9 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     setTagNames((t.tags ?? []).map((tag) => tag.name));
     setInBudget(t.counts_toward_budget);
     // Sólo al EDITAR (no al duplicar): duplicar una transacción reembolsada
-    // no debería crear la copia ya marcada como reembolsada.
+    // no debería crear la copia ya marcada como reembolsable.
     if (editing) {
       setIsRefundable(t.is_refundable ?? false);
-      setIsRefunded(t.is_refunded ?? false);
     }
     setPrefilled(true);
     // La nota y el toggle de presupuesto viven arriba, siempre a la vista --
@@ -353,7 +362,6 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
       payload.category = categoryId;
       if (type === 'expense') payload.counts_toward_budget = inBudget;
       payload.is_refundable = isRefundable;
-      payload.is_refunded = isRefundable && isRefunded;
       if (appliedDiscount) {
         payload.discount_program = appliedDiscount.programId;
         payload.pre_discount_amount = appliedDiscount.original.toFixed(2);
@@ -378,6 +386,36 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
       setDuplicateWarning(null);
       setFields(fieldErrors(err));
       setFormError(errorMessage(err, 'No se pudo guardar la transacción.'));
+    }
+  }
+
+  function openRefundForm() {
+    haptics.tap();
+    setRefundAmount(amount);
+    setRefundDate(todayISO());
+    setRefundWalletId(walletId);
+    setRefundError(null);
+    setRegisteringRefund(true);
+  }
+
+  async function onConfirmRefund() {
+    if (!transactionId) return;
+    setRefundError(null);
+    const value = Number(refundAmount.replace(',', '.'));
+    if (!Number.isFinite(value) || value <= 0) {
+      setRefundError('Ingresá un monto válido.');
+      return;
+    }
+    try {
+      await registerRefund.mutateAsync({
+        id: transactionId,
+        input: { amount: value.toFixed(2), date: refundDate, wallet: refundWalletId ?? undefined },
+      });
+      haptics.success();
+      setRegisteringRefund(false);
+    } catch (err) {
+      haptics.error();
+      setRefundError(errorMessage(err, 'No se pudo registrar el reembolso.'));
     }
   }
 
@@ -645,27 +683,11 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
                     </View>
                     <Switch
                       value={isRefundable}
-                      onValueChange={(v) => {
-                        setIsRefundable(v);
-                        if (!v) setIsRefunded(false);
-                      }}
+                      onValueChange={setIsRefundable}
                       trackColor={{ true: colors.primary, false: colors.surface2 }}
                       thumbColor="#FFFFFF"
                     />
                   </View>
-                  {isRefundable ? (
-                    <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
-                      <Text className="text-text flex-1 pr-2 text-sm" style={{ fontFamily: fonts.semibold }}>
-                        Ya me lo reembolsaron
-                      </Text>
-                      <Switch
-                        value={isRefunded}
-                        onValueChange={setIsRefunded}
-                        trackColor={{ true: colors.primary, false: colors.surface2 }}
-                        thumbColor="#FFFFFF"
-                      />
-                    </View>
-                  ) : null}
                 </View>
               ) : null}
 
@@ -746,6 +768,79 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           </Pressable>
         ) : null}
 
+        {editing && type === 'expense' && !confirmingDelete ? (
+          existing.data?.is_refunded ? (
+            <Pressable
+              onPress={() => {
+                haptics.tap();
+                if (existing.data?.refund_transaction_id) {
+                  router.push(`/transaction/${existing.data.refund_transaction_id}`);
+                }
+              }}
+              className="flex-row items-center justify-center gap-1.5 py-2 active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Icon name="reset" size={14} color={colors.income} />
+              <Text className="text-income text-sm" style={{ fontFamily: fonts.semibold }}>
+                Ver reembolso registrado
+              </Text>
+            </Pressable>
+          ) : registeringRefund ? (
+            <View className="gap-3 rounded-2xl bg-income/10 p-3">
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                Registrar reembolso
+              </Text>
+              <TextField
+                label="Monto recibido"
+                keyboardType="decimal-pad"
+                value={refundAmount}
+                onChangeText={setRefundAmount}
+              />
+              <DateField label="Fecha" value={refundDate} onChange={setRefundDate} />
+              <PickerRow
+                label="Acreditar a"
+                options={walletOptions}
+                value={refundWalletId}
+                onChange={(v) => {
+                  setRefundWalletId(v);
+                  setOpenRow(null);
+                }}
+                open={openRow === 'refundWallet'}
+                onToggle={() => toggleRow('refundWallet')}
+              />
+              {refundError ? <Text className="text-expense text-xs">{refundError}</Text> : null}
+              <View className="flex-row gap-2">
+                <View className="flex-1">
+                  <Button
+                    label="Cancelar"
+                    variant="ghost"
+                    onPress={() => setRegisteringRefund(false)}
+                  />
+                </View>
+                <View className="flex-1">
+                  <Button
+                    label="Confirmar"
+                    loading={registerRefund.isPending}
+                    onPress={onConfirmRefund}
+                  />
+                </View>
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              onPress={openRefundForm}
+              disabled={busy}
+              className="flex-row items-center justify-center gap-1.5 py-2 active:opacity-60"
+              accessibilityRole="button"
+            >
+              <Icon name="reset" size={14} color={colors.primary} />
+              <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                Registrar reembolso
+              </Text>
+            </Pressable>
+          )
+        ) : null}
+
         {editing && !isTransfer && !confirmingDelete ? (
           existing.data?.split_group ? (
             <Text className="text-text-muted text-center text-xs">
@@ -775,13 +870,19 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
               router.push(`/split-people?id=${transactionId}`);
             }}
             disabled={busy}
-            className="items-center py-2 active:opacity-60"
+            className="items-center gap-0.5 py-2 active:opacity-60"
             accessibilityRole="button"
           >
             <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
               {(existing.data?.shares?.length ?? 0) > 0
                 ? 'Editar división entre personas'
                 : 'Dividir entre personas'}
+            </Text>
+            {/* No confundir con "Dividir en varias categorías" de arriba: no
+                toca el monto/categoría de esta transacción, sólo registra
+                quién puso el dinero y cuánto le debe cada quién. */}
+            <Text className="text-text-muted text-center text-xs">
+              Registrar quién pagó y cuánto le debe cada uno (no cambia esta transacción)
             </Text>
           </Pressable>
         ) : null}

@@ -47,6 +47,7 @@ import type {
   RecurringExpense,
   RecurringExpenseInput,
   RecurringSuggestion,
+  RegisterRefundInput,
   SavingsInterestProjection,
   ScheduledItem,
   SetForwardBudgetInput,
@@ -319,6 +320,12 @@ export const billing = {
    * el proveedor de pago. Un solo canje por usuario en toda su vida. */
   redeem: (code: string) =>
     api.post<Subscription>('/billing/redeem/', { code }, { skipWorkspace: true }).then((r) => r.data),
+  /** Arranca la prueba gratis de un plan (`plan.trial_days`), sin código ni
+   * proveedor de pago. Una sola prueba por usuario en toda su vida. */
+  startTrial: (planId: string) =>
+    api
+      .post<Subscription>('/billing/trial/', { plan: planId }, { skipWorkspace: true })
+      .then((r) => r.data),
 };
 
 // --- carteras (wallets) -------------------------------------------------
@@ -536,8 +543,24 @@ export const transactions = {
       .post<Transaction>(`/transactions/${id}/settle-share/${shareId}/`, { is_settled: isSettled })
       .then((r) => r.data),
 
+  /** Crea la transacción de ingreso real que devuelve la plata de este
+   * gasto y lo marca `is_refunded` (ver `Transaction.is_refunded`). Devuelve
+   * esa nueva transacción, no la original. */
+  registerRefund: (id: string, input: RegisterRefundInput) =>
+    api.post<Transaction>(`/transactions/${id}/register-refund/`, input).then((r) => r.data),
+
   /** Quién le debe cuánto a quién en el workspace activo. */
   balances: () => api.get<PersonBalance[]>('/transactions/balances/').then((r) => r.data),
+
+  /** Salda de una sola vez toda la deuda pendiente entre estas dos personas
+   * (en cualquier dirección) -- devuelve los saldos ya actualizados. */
+  settleBalance: (fromPersonId: string, toPersonId: string) =>
+    api
+      .post<PersonBalance[]>('/transactions/settle-balance/', {
+        from_person: fromPersonId,
+        to_person: toPersonId,
+      })
+      .then((r) => r.data),
 
   /** Transacciones existentes que podrían ser la misma que se está por
    * cargar a mano -- no bloquea nada, sólo informa (ver TransactionForm). */

@@ -1,10 +1,19 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { useCreatePerson, usePeople, usePersonBalances } from '@/api/queries';
+import {
+  useCreatePerson,
+  useDeletePerson,
+  usePeople,
+  usePersonBalances,
+  useSettleBalance,
+} from '@/api/queries';
 import { errorMessage } from '@/api/errors';
+import type { Person, PersonBalance } from '@/api/types';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
 import { Money } from '@/components/ui/Money';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
@@ -26,12 +35,17 @@ export default function BalancesScreen() {
   const balancesQ = usePersonBalances();
   const peopleQ = usePeople();
   const createPerson = useCreatePerson();
+  const settleBalance = useSettleBalance();
+  const deletePerson = useDeletePerson();
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
 
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [confirmSettleKey, setConfirmSettleKey] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const refresh = usePullRefresh(
     (balancesQ.isFetching || peopleQ.isFetching) && !balancesQ.isLoading && !peopleQ.isLoading,
@@ -52,6 +66,29 @@ export default function BalancesScreen() {
       haptics.success();
     } catch (err) {
       setDraftError(errorMessage(err, 'No se pudo agregar a la persona.'));
+    }
+  }
+
+  async function onSettle(b: PersonBalance) {
+    try {
+      await settleBalance.mutateAsync({ fromPersonId: b.from_person.id, toPersonId: b.to_person.id });
+      haptics.success();
+    } catch {
+      haptics.error();
+    } finally {
+      setConfirmSettleKey(null);
+    }
+  }
+
+  async function onDeletePerson(id: string) {
+    setDeleteError(null);
+    try {
+      await deletePerson.mutateAsync(id);
+      haptics.success();
+      setConfirmDeleteId(null);
+    } catch (err) {
+      haptics.error();
+      setDeleteError(errorMessage(err, 'No se pudo borrar a esta persona.'));
     }
   }
 
@@ -117,21 +154,59 @@ export default function BalancesScreen() {
               Nadie le debe nada a nadie por ahora.
             </Text>
           ) : (
-            <View className="gap-3">
-              {balances.map((b) => (
-                <View key={`${b.from_person.id}-${b.to_person.id}`} className="flex-row items-center gap-2">
-                  <Text className="text-text flex-1 text-sm" numberOfLines={2}>
-                    <Text style={{ fontFamily: fonts.semibold }}>
-                      {b.from_person.is_me ? 'Vos' : b.from_person.name}
-                    </Text>
-                    {' le debés a '}
-                    <Text style={{ fontFamily: fonts.semibold }}>
-                      {b.to_person.is_me ? 'vos' : b.to_person.name}
-                    </Text>
-                  </Text>
-                  <Money value={b.amount} currency={currency} className="font-semibold" />
-                </View>
-              ))}
+            <View className="gap-1">
+              {balances.map((b, i) => {
+                const key = `${b.from_person.id}-${b.to_person.id}`;
+                return (
+                  <View key={key} className={i === 0 ? '' : 'border-t border-border/30 pt-3'}>
+                    <View className="flex-row items-center gap-2">
+                      <Text className="text-text flex-1 text-sm" numberOfLines={2}>
+                        <Text style={{ fontFamily: fonts.semibold }}>
+                          {b.from_person.is_me ? 'Vos' : b.from_person.name}
+                        </Text>
+                        {' le debés a '}
+                        <Text style={{ fontFamily: fonts.semibold }}>
+                          {b.to_person.is_me ? 'vos' : b.to_person.name}
+                        </Text>
+                      </Text>
+                      <Money value={b.amount} currency={currency} className="font-semibold" />
+                    </View>
+
+                    {confirmSettleKey === key ? (
+                      <View className="mt-2 gap-2 rounded-2xl bg-income/10 p-3">
+                        <Text className="text-text text-xs">
+                          ¿Marcar como saldado? Se da por pagada toda la deuda entre estas dos
+                          personas -- si en realidad pagaron sólo una parte, esperá a que
+                          terminen de saldar el resto.
+                        </Text>
+                        <View className="flex-row gap-2">
+                          <View className="flex-1">
+                            <Button label="Cancelar" variant="ghost" onPress={() => setConfirmSettleKey(null)} />
+                          </View>
+                          <View className="flex-1">
+                            <Button
+                              label="Ya saldamos"
+                              loading={settleBalance.isPending}
+                              onPress={() => onSettle(b)}
+                            />
+                          </View>
+                        </View>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={() => {
+                          haptics.tap();
+                          setConfirmSettleKey(key);
+                        }}
+                        className="mt-1 self-start py-1 active:opacity-60"
+                        accessibilityRole="button"
+                      >
+                        <Text className="text-primary text-xs">Marcar como saldado</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           )}
         </Card>
@@ -147,20 +222,87 @@ export default function BalancesScreen() {
           ) : (
             <View>
               {people.map((person, i) => (
-                <View
+                <PersonRow
                   key={person.id}
-                  className={`flex-row items-center gap-2 py-2.5 ${i === 0 ? '' : 'border-t border-border/30'}`}
-                >
-                  <Icon name="users" size={16} color={colors.textMuted} />
-                  <Text className="text-text flex-1 text-sm" numberOfLines={1}>
-                    {person.name}
-                  </Text>
-                </View>
+                  person={person}
+                  isFirst={i === 0}
+                  confirming={confirmDeleteId === person.id}
+                  deleting={deletePerson.isPending && confirmDeleteId === person.id}
+                  onAskDelete={() => {
+                    setDeleteError(null);
+                    setConfirmDeleteId(person.id);
+                  }}
+                  onCancelDelete={() => {
+                    setDeleteError(null);
+                    setConfirmDeleteId(null);
+                  }}
+                  onDelete={() => onDeletePerson(person.id)}
+                  error={confirmDeleteId === person.id ? deleteError : null}
+                />
               ))}
             </View>
           )}
         </Card>
       </ScrollView>
     </Screen>
+  );
+}
+
+function PersonRow({
+  person,
+  isFirst,
+  confirming,
+  deleting,
+  onAskDelete,
+  onCancelDelete,
+  onDelete,
+  error,
+}: {
+  person: Person;
+  isFirst: boolean;
+  confirming: boolean;
+  deleting: boolean;
+  onAskDelete: () => void;
+  onCancelDelete: () => void;
+  onDelete: () => void;
+  error: string | null;
+}) {
+  const colors = useColors();
+
+  return (
+    <View className={`py-2.5 ${isFirst ? '' : 'border-t border-border/30'}`}>
+      <View className="flex-row items-center gap-2">
+        <Icon name="users" size={16} color={colors.textMuted} />
+        <Text className="text-text flex-1 text-sm" numberOfLines={1}>
+          {person.name}
+        </Text>
+        <IconButton
+          icon="trash"
+          size={28}
+          iconSize={15}
+          color={colors.textMuted}
+          accessibilityLabel={`Borrar a ${person.name}`}
+          onPress={onAskDelete}
+        />
+      </View>
+
+      {confirming ? (
+        <View className="mt-2 gap-2 rounded-2xl bg-expense/10 p-3">
+          <Text className="text-text text-xs">
+            ¿Borrar a «{person.name}»? Sólo se puede si no tiene ninguna transacción dividida
+            asociada.
+          </Text>
+          {error ? <Text className="text-expense text-xs">{error}</Text> : null}
+          <View className="flex-row gap-2">
+            <View className="flex-1">
+              <Button label="Cancelar" variant="ghost" onPress={onCancelDelete} />
+            </View>
+            <View className="flex-1">
+              <Button label="Borrar" loading={deleting} onPress={onDelete} />
+            </View>
+          </View>
+        </View>
+      ) : null}
+    </View>
   );
 }

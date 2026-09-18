@@ -16,7 +16,7 @@ jest.mock('@/api/queries', () => ({
 
 function planWith(features: Record<string, boolean>): Plan {
   return {
-    id: 'p1', code: 'free', name: 'Gratis', description: '', is_default: true,
+    id: 'p1', code: 'free', name: 'Gratis', description: '', is_default: true, trial_days: null,
     max_workspaces_owned: null, max_members_per_workspace: null, max_active_recurring: null,
     features, prices: [],
   };

@@ -9,6 +9,7 @@ describe('routeForNotification', () => {
     ['installment_due', '/dashboard'],
     ['low_balance', '/dashboard'],
     ['statement_due', '/dashboard'],
+    ['insight', '/dashboard'],
   ])('%s -> %s', (type, expected) => {
     expect(routeForNotification({ type })).toBe(expected);
   });

@@ -23,6 +23,7 @@ import type {
   MyPlan,
   NotificationPreferences,
   RecurringExpenseInput,
+  RegisterRefundInput,
   SetForwardBudgetInput,
   SplitPeopleInput,
   SupportTicketInput,
@@ -408,6 +409,17 @@ export function useRedeemPromoCode() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (code: string) => res.billing.redeem(code),
+    onSuccess: (subscription) =>
+      qc.setQueryData(qk.myPlan(), { plan: subscription.plan, subscription }),
+  });
+}
+
+/** Arrancar una prueba gratis reemplaza el plan efectivo directo, igual que
+ * canjear un código -- mismo motivo: el plan puede cambiar del todo. */
+export function useStartTrial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) => res.billing.startTrial(planId),
     onSuccess: (subscription) =>
       qc.setQueryData(qk.myPlan(), { plan: subscription.plan, subscription }),
   });
@@ -821,6 +833,18 @@ export function useSplitTransaction() {
   });
 }
 
+/** Crea la transacción de ingreso que devuelve la plata de un gasto -- igual
+ * que cualquier alta de transacción, invalida todo el workspace (mueve el
+ * saldo de una cartera real, no sólo un flag). */
+export function useRegisterRefund() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: RegisterRefundInput }) =>
+      res.transactions.registerRefund(id, input),
+    onSuccess: invalidate,
+  });
+}
+
 // --- dividir transacciones entre personas -----------------------------
 export function usePeople() {
   const ws = useActiveWs();
@@ -864,6 +888,25 @@ export function usePersonBalances() {
     queryKey: qk.ws(ws).personBalances(),
     queryFn: () => res.transactions.balances(),
     enabled: !!ws,
+  });
+}
+
+export function useSettleBalance() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ fromPersonId, toPersonId }: { fromPersonId: string; toPersonId: string }) =>
+      res.transactions.settleBalance(fromPersonId, toPersonId),
+    onSuccess: (balances) => qc.setQueryData(qk.ws(ws).personBalances(), balances),
+  });
+}
+
+export function useDeletePerson() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.people.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.ws(ws).people() }),
   });
 }
 

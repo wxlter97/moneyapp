@@ -19,6 +19,7 @@ const mockPlansQuery = jest.fn();
 const mockCheckout = jest.fn();
 const mockCancel = jest.fn();
 const mockRedeem = jest.fn();
+const mockStartTrial = jest.fn();
 
 jest.mock('@/api/queries', () => ({
   useMyPlan: () => mockMyPlanQuery(),
@@ -26,6 +27,7 @@ jest.mock('@/api/queries', () => ({
   useCheckout: () => ({ mutateAsync: mockCheckout, isPending: false }),
   useCancelSubscription: () => ({ mutateAsync: mockCancel, isPending: false }),
   useRedeemPromoCode: () => ({ mutateAsync: mockRedeem, isPending: false }),
+  useStartTrial: () => ({ mutateAsync: mockStartTrial, isPending: false }),
 }));
 
 const FREE_PLAN: Plan = {
@@ -34,6 +36,7 @@ const FREE_PLAN: Plan = {
   name: 'Gratis',
   description: '',
   is_default: true,
+  trial_days: null,
   max_workspaces_owned: 1,
   max_members_per_workspace: 2,
   max_active_recurring: 5,
@@ -47,6 +50,7 @@ const PRO_PLAN: Plan = {
   name: 'Pro',
   description: '',
   is_default: false,
+  trial_days: 14,
   max_workspaces_owned: null,
   max_members_per_workspace: null,
   max_active_recurring: null,
@@ -63,6 +67,7 @@ const PLUS_PLAN: Plan = {
   name: 'Plus',
   description: '',
   is_default: false,
+  trial_days: null,
   max_workspaces_owned: 2,
   max_members_per_workspace: 5,
   max_active_recurring: 15,
@@ -88,6 +93,7 @@ describe('ProScreen', () => {
     mockCheckout.mockReset().mockResolvedValue({ checkout_url: 'https://pay.example.com/x', subscription_id: 's1' });
     mockCancel.mockReset().mockResolvedValue({ id: 's1', status: 'canceled' });
     mockRedeem.mockReset();
+    mockStartTrial.mockReset();
     mockPlansQuery.mockReset().mockReturnValue({ data: [FREE_PLAN, PRO_PLAN], isLoading: false });
     jest.spyOn(Linking, 'openURL').mockReset().mockResolvedValue(true as never);
   });
@@ -156,6 +162,7 @@ describe('ProScreen', () => {
           billing_period: 'monthly',
           status: 'active',
           provider: 'manual',
+          is_trial: false,
           current_period_end: null,
           canceled_at: null,
           created_at: '2026-01-01T00:00:00Z',
@@ -179,6 +186,7 @@ describe('ProScreen', () => {
       billing_period: null,
       status: 'active',
       provider: 'manual',
+      is_trial: false,
       current_period_end: null,
       canceled_at: null,
       created_at: '2026-01-01T00:00:00Z',
@@ -207,6 +215,80 @@ describe('ProScreen', () => {
     expect(await screen.findByText('Código inválido o vencido.')).toBeTruthy();
   });
 
+  it('muestra los detalles completos de la suscripción (estado, método, fechas)', async () => {
+    mockMyPlanQuery.mockReturnValue(
+      myPlan({
+        plan: PRO_PLAN,
+        subscription: {
+          id: 's1',
+          plan: PRO_PLAN,
+          billing_period: 'annual',
+          status: 'active',
+          provider: 'wompi',
+          is_trial: false,
+          current_period_end: '2027-01-01T00:00:00Z',
+          canceled_at: null,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }),
+    );
+    await render(<ProScreen />);
+
+    expect(screen.getByText('Activa')).toBeTruthy();
+    expect(screen.getByText('Wompi')).toBeTruthy();
+    expect(screen.getByText('Anual')).toBeTruthy();
+    expect(screen.getByText('Vence')).toBeTruthy();
+  });
+
+  it('cancelada pero con fecha de vencimiento futura sigue activa y lo aclara', async () => {
+    mockMyPlanQuery.mockReturnValue(
+      myPlan({
+        plan: PRO_PLAN,
+        subscription: {
+          id: 's1',
+          plan: PRO_PLAN,
+          billing_period: 'monthly',
+          status: 'active',
+          provider: 'manual',
+          is_trial: false,
+          current_period_end: '2026-02-01T00:00:00Z',
+          canceled_at: '2026-01-15T00:00:00Z',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }),
+    );
+    await render(<ProScreen />);
+
+    expect(screen.getByText('Activa · no se renueva')).toBeTruthy();
+    expect(screen.getByText('Vencía')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Cancelar suscripción' })).toBeNull();
+  });
+
+  it('una suscripción ya cancelada muestra "Vencía"/"Cancelada el" y no ofrece cancelar de nuevo', async () => {
+    mockMyPlanQuery.mockReturnValue(
+      myPlan({
+        plan: PRO_PLAN,
+        subscription: {
+          id: 's1',
+          plan: PRO_PLAN,
+          billing_period: 'monthly',
+          status: 'canceled',
+          provider: 'manual',
+          is_trial: false,
+          current_period_end: '2026-02-01T00:00:00Z',
+          canceled_at: '2026-01-15T00:00:00Z',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }),
+    );
+    await render(<ProScreen />);
+
+    expect(screen.getByText('Cancelada')).toBeTruthy();
+    expect(screen.getByText('Vencía')).toBeTruthy();
+    expect(screen.getByText('Cancelada el')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Cancelar suscripción' })).toBeNull();
+  });
+
   it('con una suscripción activa, no ofrece canjear un código', async () => {
     mockMyPlanQuery.mockReturnValue(
       myPlan({
@@ -217,6 +299,7 @@ describe('ProScreen', () => {
           billing_period: 'monthly',
           status: 'active',
           provider: 'manual',
+          is_trial: false,
           current_period_end: null,
           canceled_at: null,
           created_at: '2026-01-01T00:00:00Z',
@@ -226,5 +309,39 @@ describe('ProScreen', () => {
     await render(<ProScreen />);
 
     expect(screen.queryByLabelText('Código')).toBeNull();
+  });
+
+  it('un plan con prueba gratis ofrece "Probar gratis" y arranca la prueba', async () => {
+    mockStartTrial.mockResolvedValue({
+      id: 'sub-trial',
+      plan: PRO_PLAN,
+      billing_period: null,
+      status: 'active',
+      provider: 'manual',
+      is_trial: true,
+      current_period_end: '2026-02-01T00:00:00Z',
+      canceled_at: null,
+      created_at: '2026-01-01T00:00:00Z',
+    });
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    // Plus (fixture del beforeEach no la incluye) no tiene trial_days -- sólo Pro ofrece el botón.
+    await fireEvent.press(screen.getByRole('button', { name: 'Probar gratis 14 días' }));
+
+    expect(mockStartTrial).toHaveBeenCalledWith('plan-pro');
+  });
+
+  it('si empezar la prueba falla, muestra el error del backend', async () => {
+    mockStartTrial.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { plan: ['Ya usaste tu período de prueba gratis.'] } },
+    });
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Probar gratis 14 días' }));
+
+    expect(await screen.findByText('Ya usaste tu período de prueba gratis.')).toBeTruthy();
   });
 });

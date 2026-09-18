@@ -48,6 +48,7 @@ const SOURCE_LABEL: Record<Transaction['source'], string | null> = {
   installment: 'cuota',
   quick_add: 'atajo',
   excel_import: 'excel',
+  refund: 'reembolso',
 };
 
 /**
@@ -89,11 +90,21 @@ export function TransactionRow({
   // personas) importa más para leer el monto que "tiene recibo", así que
   // gana si varias son ciertas -- entre esto y la pill de abajo (reembolso,
   // presupuesto u origen) quedan como máximo dos señales visibles por fila.
+  // Dos conceptos DISTINTOS con el mismo ícono confundía (HALLAZGO: "no
+  // queda claro en la transacción cómo funciona") -- `split_group` reparte
+  // el MONTO entre categorías (ver `TransactionViewSet.split`), `shares`
+  // reparte quién LE DEBE a quién sin tocar el monto (`split_people`);
+  // `users` es el mismo ícono que ya usa "Personas" en Herramientas.
   // `shares` puede venir ausente si el cliente ya se actualizó pero el
   // backend todavía no (o viceversa) -- optional chaining para no romper
   // toda la lista de transacciones por un campo nuevo.
-  const metaIcon =
-    txn.split_group || (txn.shares?.length ?? 0) > 0 ? 'split' : txn.has_receipt ? 'camera' : null;
+  const metaIcon = txn.split_group
+    ? 'split'
+    : (txn.shares?.length ?? 0) > 0
+      ? 'users'
+      : txn.has_receipt
+        ? 'camera'
+        : null;
 
   // Nombre accesible explícito: sin esto, un lector de pantalla anuncia el
   // botón de la fila sin texto (ver auditoría de accesibilidad — cada fila
@@ -104,6 +115,11 @@ export function TransactionRow({
     isTransfer ? 'Transferencia' : isIncome ? 'Ingreso' : 'Gasto',
     isTransfer ? `${walletLabel(wallet)} a ${walletLabel(toWallet)}` : `${title}, ${walletLabel(wallet)}`,
     amountLabel,
+    txn.split_group
+      ? 'dividida entre categorías'
+      : (txn.shares?.length ?? 0) > 0
+        ? 'dividida entre personas'
+        : null,
     txn.is_refunded ? 'reembolsado' : txn.is_refundable ? 'reembolsable' : outOfBudget ? 'fuera de presupuesto' : badge,
   ]
     .filter(Boolean)
