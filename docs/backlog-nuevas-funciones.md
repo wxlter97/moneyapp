@@ -1,8 +1,8 @@
 # Backlog — funciones nuevas (18 sep 2026)
 
-> **Nada de esto está implementado todavía.** Este archivo existe para tener el diseño
-> mapeado en el repo y poder retomarlo sin volver a discutirlo. Formato: `[ ]` pendiente,
-> `[x]` hecho. Las referencias entre backticks son archivos reales, leídos del repo.
+> **Estado: el punto 1 (base de IA) está implementado; del 2 al 8 siguen siendo diseño.** Este
+> archivo existe para tener el diseño mapeado en el repo y poder retomarlo sin volver a
+> discutirlo. Formato: `[ ]` pendiente, `[x]` hecho. Las referencias entre backticks son archivos reales, leídos del repo.
 >
 > Abarca los dos repos: `moneyapp` (Expo/RN) y `budget-app-django` (backend). Cada punto
 > separa el trabajo por repo y, aparte, **lo que hay que configurar por fuera del código**
@@ -35,28 +35,38 @@
 
 ## 1. Base de IA (hace falta antes de los puntos 2 a 5)
 
+> **Implementada el 18 sep 2026.** Falta sólo la key y las dos decisiones de privacidad de más
+> abajo. Lo que sigue queda como registro de qué se hizo y por qué.
+
 Una app nueva `apps/ai` en el backend, que es el único lugar que conoce la key y el único que
 habla con Gemini. Todo lo demás la usa por dentro.
 
 **Backend (`budget-app-django`)**
-- [ ] `apps/ai/client.py` — envoltorio fino sobre la API de Gemini: timeout, reintento,
-      y traducir cualquier fallo a un error propio (que la IA se caiga nunca debe tumbar el
-      alta de una transacción; el camino manual siempre tiene que seguir andando).
-- [ ] `GEMINI_API_KEY` en `settings` + `.env.example`. **Vacío = todas las funciones de IA se
-      apagan solas** y la app no muestra sus entradas, igual que se hace hoy con Sentry, VAPID
-      y el botón de Google.
-- [ ] Throttle propio (`THROTTLE_AI`, scope `ai`) además del límite normal de DRF.
-- [ ] **Tope de consumo por usuario y por mes**, atado al plan de `apps.billing` (números
-      concretos en "Costos de IA y topes por plan", más abajo). Sin esto, una sola cuenta puede
-      gastarte la factura del mes. Contador en base (no en cache) porque hay que poder mostrarle
-      al usuario "te quedan N de N" y el cache de prod es por instancia.
-- [ ] Registro de cada llamada (modelo, tokens, costo estimado, latencia, éxito/error) para
-      poder ver qué se está gastando. Sin datos personales en el log.
+- [x] `apps/ai/client.py` — envoltorio fino sobre la API REST de Gemini: timeout, **un** reintento
+      (sólo de lo que tiene sentido reintentar: red, timeout, 429/5xx; un 400 va a fallar igual),
+      y todo fallo traducido a `AIUnavailable`. Nada de lo que devuelve Google — ni el cuerpo del
+      error, que puede traer el prompt de vuelta — llega al usuario.
+- [x] `GEMINI_API_KEY` en `settings` + `.env.example`. **Vacía = todas las funciones de IA se
+      apagan solas** y `GET /api/v1/ai/status/` responde `enabled: false`.
+- [x] Throttle propio (`THROTTLE_AI`, scope `ai`, 12/min por defecto) además del límite normal
+      de DRF. Es contra la ráfaga; el tope real es la cuota mensual.
+- [x] **Tope de consumo por usuario y por mes**, atado al plan (`apps/ai/quotas.py`). Los números
+      viven en `Plan.features` (`ai_receipts_per_month`, `ai_parses_per_month`,
+      `ai_chats_per_month`), sembrados por `seed_billing_plans`, así que ajustarlos no lleva
+      deploy. **Fail-closed a propósito**, al revés que el resto de los feature flags de
+      `apps.billing`: un plan sin esas claves aplica los números del gratis, porque acá el costo
+      de equivocarse es una factura y no una pantalla de más.
+- [x] Registro de cada llamada en `AIUsage` (operación, modelo, tokens, costo estimado en
+      millonésimas de dólar, latencia, éxito/error). **Sin nada de lo que el usuario escribió ni
+      de lo que la IA respondió.** La misma tabla es el contador de la cuota: un contador aparte
+      terminaría discrepando con el log.
+- [x] `services.run()` como único camino: chequea cuota → llama → registra. Una llamada que falla
+      del lado de Google se registra pero **no le come la cuota al usuario**.
 
 **Frontend (`moneyapp`)**
-- [ ] Un solo lugar que pregunte al backend si la IA está disponible y cuánto queda del tope
-      (mismo patrón que `vapidPublicKey()` en `src/lib/notifications.ts`), para que las
-      entradas de IA no aparezcan cuando no hay key.
+- [x] `useAIStatus()` (`src/api/queries/index.ts`) — el único lugar que pregunta si la IA existe
+      y cuánto queda, igual que `vapidPublicKey()` con los push. Todas las entradas de IA van a
+      colgar de acá, así que sin key en el backend simplemente no aparecen.
 
 **Privacidad — decidir antes de escribir código**
 - [ ] `src/app/(app)/privacy.tsx` va a necesitar una sección nueva: qué se manda a Gemini,
@@ -320,8 +330,10 @@ así que el tope y el registro de consumo van en código desde el día uno, no e
 | Plus | 30 | 50 | 20 | ~$0.085 | 9% de $0.99 |
 | Pro | 100 | 200 | 100 | ~$0.36 | 18% de $1.99 |
 
-- [ ] Guardar estos límites como `features` del plan en `seed_billing_plans.py` (mismo lugar que
-      `import_email`, `quick_add`, etc.), no cableados en el código de IA.
+- [x] Guardar estos límites como `features` del plan en `seed_billing_plans.py` (mismo lugar que
+      `import_email`, `quick_add`, etc.), no cableados en el código de IA. **Hecho**: claves
+      `ai_receipts_per_month`, `ai_parses_per_month` y `ai_chats_per_month`; `apps/ai/quotas.py`
+      las lee de ahí.
 - [ ] Mostrar "te quedan N de N" en la app antes de que el usuario choque con el tope.
 
 > Aparte de la IA: a un precio de $0.99 al mes, **la comisión del procesador de pagos pesa más

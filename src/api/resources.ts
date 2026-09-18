@@ -6,6 +6,7 @@
  */
 import { api } from './client';
 import type {
+  AIStatus,
   AppNotification,
   Bank,
   BankEmailSchema,
@@ -659,4 +660,12 @@ export const supportTickets = {
 // --- gamificación (racha, badges) ---------------------------------------
 export const gamification = {
   summary: () => api.get<GamificationSummary>('/gamification/summary/').then((r) => r.data),
+};
+
+// --- IA (disponibilidad y cuota) ----------------------------------------
+export const ai = {
+  /** No lleva workspace: la cuota es del usuario, no del presupuesto — quien
+   * paga es el dueño del plan y la misma cuota se gasta desde cualquiera de
+   * sus workspaces. */
+  status: () => api.get<AIStatus>('/ai/status/', { skipWorkspace: true }).then((r) => r.data),
 };

@@ -1192,3 +1192,28 @@ export interface GamificationSummary {
 export type DRFErrorBody =
   | { detail: string }
   | Record<string, string[] | string>;
+
+// ---------------------------------------------------------------------------
+// IA (Gemini)
+// ---------------------------------------------------------------------------
+/** Operaciones de IA que gastan cuota. El resumen mensual lo dispara el
+ * servidor y no consume la del usuario, así que no aparece acá. */
+export type AIOperation = 'receipt' | 'parse' | 'chat';
+
+export interface AIQuota {
+  /** Tope del mes; `null` = sin tope. */
+  limit: number | null;
+  used: number;
+  /** `null` cuando no hay tope. */
+  remaining: number | null;
+}
+
+/** `GET ai/status/` — ver `apps/ai/api.py`. */
+export interface AIStatus {
+  /** `false` = esta instalación no tiene `GEMINI_API_KEY`: hay que esconder
+   * todo lo de IA en vez de mostrarlo y que falle al tocarlo. */
+  enabled: boolean;
+  quotas: Record<AIOperation, AIQuota>;
+  /** Cuándo vuelven a cero los contadores (día 1 del mes que viene). */
+  resets_at: string;
+}
