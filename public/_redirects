@@ -1,0 +1,19 @@
+# Reescritura SPA para Cloudflare Pages (y Netlify, que usa el mismo formato).
+#
+# Con `web.output: "single"` el build es una sola página: todas las rutas de
+# expo-router se resuelven en el cliente, así que cualquier URL que no sea un
+# archivo del build tiene que devolver index.html con estado 200 (no 301, o el
+# navegador se queda con el redirect cacheado, y no 404, o se pierde el deep
+# link al recargar /transactions).
+#
+# Es el equivalente exacto del `rewrites` de vercel.json. Los dos conviven sin
+# molestarse: Vercel ignora este archivo y Pages ignora vercel.json, así que
+# se puede mover el hosting sin tocar el build.
+#
+# Expo copia `public/` tal cual a `dist/`, y Pages lee el archivo desde la raíz
+# del output y no lo sirve como contenido.
+#
+# Ojo con el orden: las reglas se evalúan de arriba abajo y los archivos que sí
+# existen (assets, sw.js, manifest) ganan sin necesidad de excepciones acá.
+
+/*    /index.html   200

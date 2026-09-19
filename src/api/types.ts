@@ -1192,3 +1192,92 @@ export interface GamificationSummary {
 export type DRFErrorBody =
   | { detail: string }
   | Record<string, string[] | string>;
+
+// ---------------------------------------------------------------------------
+// IA (Gemini)
+// ---------------------------------------------------------------------------
+/** Operaciones de IA que gastan cuota. El resumen mensual lo dispara el
+ * servidor y no consume la del usuario, así que no aparece acá. */
+export type AIOperation = 'receipt' | 'parse' | 'chat';
+
+export interface AIQuota {
+  /** Tope del mes; `null` = sin tope. */
+  limit: number | null;
+  used: number;
+  /** `null` cuando no hay tope. */
+  remaining: number | null;
+}
+
+/** `GET ai/status/` — ver `apps/ai/api.py`. */
+export interface AIStatus {
+  /** `false` = esta instalación no tiene `GEMINI_API_KEY`: hay que esconder
+   * todo lo de IA en vez de mostrarlo y que falle al tocarlo. */
+  enabled: boolean;
+  quotas: Record<AIOperation, AIQuota>;
+  /** Cuándo vuelven a cero los contadores (día 1 del mes que viene). */
+  resets_at: string;
+}
+
+/** Un renglón del detalle del recibo, cuando el ticket lo trae. */
+export interface ReceiptItem {
+  description: string;
+  quantity: string | null;
+  amount: string | null;
+}
+
+/** Transacción ya registrada que se parece a la del recibo. */
+export interface PossibleDuplicate {
+  id: string;
+  date: ISODate;
+  amount: string;
+  description: string;
+}
+
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+
+/**
+ * `POST ai/receipt/` — lo que la IA leyó de un recibo. Es una **candidata**:
+ * todos los campos son editables y nada se guarda hasta que el usuario
+ * confirma. Ver `apps/ai/receipts.py`.
+ */
+export interface ReceiptCandidate {
+  /** `null` cuando no se pudo leer: el usuario lo llena. */
+  amount: string | null;
+  tax_amount: string | null;
+  /** Lo que dice el recibo. La moneda real sale de la cartera. */
+  currency: string | null;
+  date: ISODate;
+  merchant: string;
+  description: string;
+  category: string | null;
+  /** `history` = cómo categorizaste ese comercio antes (se intenta primero),
+   * `ai` = sugerencia del modelo, `null` = no se resolvió. */
+  category_source: 'history' | 'ai' | null;
+  items: ReceiptItem[];
+  /** Por campo (`amount`, `date`, `merchant`). `low` = marcalo para que el
+   * usuario lo revise antes de guardar. */
+  confidence: Record<string, ConfidenceLevel>;
+  possible_duplicates: PossibleDuplicate[];
+}
+
+/**
+ * `POST ai/parse/` — lo que la IA entendió de una frase suelta. Mismo contrato
+ * que `ReceiptCandidate` (editable, con confianza por campo, nada guardado),
+ * más el tipo y la cartera: una frase puede nombrar las dos cosas y un recibo
+ * no. Ver `apps/ai/parsing.py`.
+ */
+export interface ParseCandidate {
+  type: TransactionType;
+  amount: string | null;
+  currency: string | null;
+  date: ISODate;
+  merchant: string;
+  description: string;
+  /** La cartera que nombró la frase; `null` = el cliente se queda con la suya. */
+  wallet: string | null;
+  wallet_source: 'text' | null;
+  category: string | null;
+  category_source: 'history' | 'ai' | null;
+  confidence: Record<string, ConfidenceLevel>;
+  possible_duplicates: PossibleDuplicate[];
+}

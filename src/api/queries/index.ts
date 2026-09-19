@@ -1264,3 +1264,57 @@ export function useGamificationSummary() {
     enabled: !!ws,
   });
 }
+
+// --- IA (disponibilidad y cuota) ----------------------------------------
+/**
+ * Si la IA está disponible en esta instalación y cuánta cuota le queda al
+ * usuario este mes. **Es el único lugar que se pregunta eso**: todas las
+ * entradas de IA de la app cuelgan de acá, así que sin `GEMINI_API_KEY` en el
+ * backend simplemente no aparecen, en vez de aparecer y fallar al tocarlas
+ * (mismo patrón que `vapidPublicKey` con los push).
+ *
+ * `staleTime` alto porque la respuesta casi no cambia dentro de una sesión: el
+ * `enabled` es fijo por instalación y los contadores se refrescan solos al
+ * invalidar la key después de cada operación de IA.
+ */
+export function useAIStatus() {
+  return useQuery({
+    queryKey: qk.aiStatus(),
+    queryFn: () => res.ai.status(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Manda un recibo a leer y devuelve la candidata. No crea nada: el alta y la
+ * subida del archivo siguen pasando por los endpoints de siempre cuando el
+ * usuario confirma (ver `TransactionForm`).
+ *
+ * Invalida `aiStatus` porque cada escaneo gasta una unidad de la cuota del
+ * mes, y el contador que se le muestra al usuario tiene que reflejarlo al
+ * toque — si no, la primera noticia de que se acabó es un 429.
+ */
+export function useScanReceipt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      wallet,
+    }: {
+      file: { uri: string; name: string; type: string };
+      wallet?: string | null;
+    }) => res.ai.scanReceipt(file, wallet),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
+  });
+}
+
+/** Manda una frase a parsear. Igual que `useScanReceipt`: no crea nada, y
+ * invalida `aiStatus` porque gasta una unidad de la cuota de parseos. */
+export function useParseText() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ text, wallet }: { text: string; wallet?: string | null }) =>
+      res.ai.parseText(text, wallet),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
+  });
+}

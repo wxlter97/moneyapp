@@ -1,8 +1,10 @@
 # Backlog — funciones nuevas (18 sep 2026)
 
-> **Nada de esto está implementado todavía.** Este archivo existe para tener el diseño
-> mapeado en el repo y poder retomarlo sin volver a discutirlo. Formato: `[ ]` pendiente,
-> `[x]` hecho. Las referencias entre backticks son archivos reales, leídos del repo.
+> **Estado: implementados el 1 (base de IA), el 2 (recibos) y el parser del 3 (texto libre).
+> Los canales del 3 (Telegram, voz) y del 4 al 8 siguen siendo diseño.** Este archivo existe
+> para tener el diseño mapeado en el repo y poder retomarlo sin volver a discutirlo. Formato:
+> `[ ]` pendiente, `[x]` hecho. Las referencias entre backticks son archivos reales, leídos
+> del repo.
 >
 > Abarca los dos repos: `moneyapp` (Expo/RN) y `budget-app-django` (backend). Cada punto
 > separa el trabajo por repo y, aparte, **lo que hay que configurar por fuera del código**
@@ -35,28 +37,38 @@
 
 ## 1. Base de IA (hace falta antes de los puntos 2 a 5)
 
+> **Implementada el 18 sep 2026.** Falta sólo la key y las dos decisiones de privacidad de más
+> abajo. Lo que sigue queda como registro de qué se hizo y por qué.
+
 Una app nueva `apps/ai` en el backend, que es el único lugar que conoce la key y el único que
 habla con Gemini. Todo lo demás la usa por dentro.
 
 **Backend (`budget-app-django`)**
-- [ ] `apps/ai/client.py` — envoltorio fino sobre la API de Gemini: timeout, reintento,
-      y traducir cualquier fallo a un error propio (que la IA se caiga nunca debe tumbar el
-      alta de una transacción; el camino manual siempre tiene que seguir andando).
-- [ ] `GEMINI_API_KEY` en `settings` + `.env.example`. **Vacío = todas las funciones de IA se
-      apagan solas** y la app no muestra sus entradas, igual que se hace hoy con Sentry, VAPID
-      y el botón de Google.
-- [ ] Throttle propio (`THROTTLE_AI`, scope `ai`) además del límite normal de DRF.
-- [ ] **Tope de consumo por usuario y por mes**, atado al plan de `apps.billing` (números
-      concretos en "Costos de IA y topes por plan", más abajo). Sin esto, una sola cuenta puede
-      gastarte la factura del mes. Contador en base (no en cache) porque hay que poder mostrarle
-      al usuario "te quedan N de N" y el cache de prod es por instancia.
-- [ ] Registro de cada llamada (modelo, tokens, costo estimado, latencia, éxito/error) para
-      poder ver qué se está gastando. Sin datos personales en el log.
+- [x] `apps/ai/client.py` — envoltorio fino sobre la API REST de Gemini: timeout, **un** reintento
+      (sólo de lo que tiene sentido reintentar: red, timeout, 429/5xx; un 400 va a fallar igual),
+      y todo fallo traducido a `AIUnavailable`. Nada de lo que devuelve Google — ni el cuerpo del
+      error, que puede traer el prompt de vuelta — llega al usuario.
+- [x] `GEMINI_API_KEY` en `settings` + `.env.example`. **Vacía = todas las funciones de IA se
+      apagan solas** y `GET /api/v1/ai/status/` responde `enabled: false`.
+- [x] Throttle propio (`THROTTLE_AI`, scope `ai`, 12/min por defecto) además del límite normal
+      de DRF. Es contra la ráfaga; el tope real es la cuota mensual.
+- [x] **Tope de consumo por usuario y por mes**, atado al plan (`apps/ai/quotas.py`). Los números
+      viven en `Plan.features` (`ai_receipts_per_month`, `ai_parses_per_month`,
+      `ai_chats_per_month`), sembrados por `seed_billing_plans`, así que ajustarlos no lleva
+      deploy. **Fail-closed a propósito**, al revés que el resto de los feature flags de
+      `apps.billing`: un plan sin esas claves aplica los números del gratis, porque acá el costo
+      de equivocarse es una factura y no una pantalla de más.
+- [x] Registro de cada llamada en `AIUsage` (operación, modelo, tokens, costo estimado en
+      millonésimas de dólar, latencia, éxito/error). **Sin nada de lo que el usuario escribió ni
+      de lo que la IA respondió.** La misma tabla es el contador de la cuota: un contador aparte
+      terminaría discrepando con el log.
+- [x] `services.run()` como único camino: chequea cuota → llama → registra. Una llamada que falla
+      del lado de Google se registra pero **no le come la cuota al usuario**.
 
 **Frontend (`moneyapp`)**
-- [ ] Un solo lugar que pregunte al backend si la IA está disponible y cuánto queda del tope
-      (mismo patrón que `vapidPublicKey()` en `src/lib/notifications.ts`), para que las
-      entradas de IA no aparezcan cuando no hay key.
+- [x] `useAIStatus()` (`src/api/queries/index.ts`) — el único lugar que pregunta si la IA existe
+      y cuánto queda, igual que `vapidPublicKey()` con los push. Todas las entradas de IA van a
+      colgar de acá, así que sin key en el backend simplemente no aparecen.
 
 **Privacidad — decidir antes de escribir código**
 - [ ] `src/app/(app)/privacy.tsx` va a necesitar una sección nueva: qué se manda a Gemini,
@@ -71,26 +83,40 @@ habla con Gemini. Todo lo demás la usa por dentro.
 
 ## 2. Leer y clasificar recibos
 
+> **Implementado el 19 sep 2026.** Sólo falta la `GEMINI_API_KEY` (y `GS_BUCKET_NAME`, o los
+> recibos confirmados se borran en cada deploy).
+
 **Lo que ya existe y se reusa (no hay que construirlo)**
 - `Transaction.receipt` (`FileField`) con su `receipt_upload_path`, servido por el propio API
   en `/transactions/{id}/receipt/` y nunca por una URL directa del storage.
 - `expo-image-picker` ya configurado en `app.json`, con permisos de cámara y fotos en español.
 - `guess_category_by_merchant` y `find_possible_duplicates` en `apps/transactions/services.py`.
 
-**Backend**
-- [ ] `POST /api/v1/ai/receipt/` — recibe la imagen o PDF, devuelve una **candidata** (monto,
+**Backend** (`apps/ai/receipts.py`)
+- [x] `POST /api/v1/ai/receipt/` — recibe la imagen o PDF, devuelve una **candidata** (monto,
       fecha, comercio, moneda, categoría sugerida y, si se puede leer, los ítems) con un nivel
       de confianza por campo. **No crea la transacción.**
-- [ ] Orden de resolución de la categoría: primero `guess_category_by_merchant` (gratis y
-      determinista), y recién si no acierta, la sugerencia de la IA. Nunca al revés.
-- [ ] Pasar la candidata por `find_possible_duplicates` antes de devolverla, para que la app
+- [x] Orden de resolución de la categoría: primero `guess_category_by_merchant` (gratis y
+      determinista), y recién si no acierta, la sugerencia de la IA. Nunca al revés. La
+      sugerencia del modelo sólo matchea categorías **asignables** del workspace: sugerir un
+      grupo daría una transacción que no se puede guardar.
+- [x] Pasar la candidata por `find_possible_duplicates` antes de devolverla, para que la app
       pueda avisar "esto parece que ya lo registraste".
-- [ ] Guardar el recibo como `Transaction.receipt` cuando el usuario confirma, no antes.
+- [x] Guardar el recibo como `Transaction.receipt` cuando el usuario confirma, no antes. Un
+      escaneo descartado no deja nada en el bucket.
+- [x] **Normalización defensiva**, que resultó ser lo más importante: un monto que no parsea,
+      negativo o absurdo queda vacío y marcado en vez de inventado; una fecha futura o de hace
+      más de dos años (típico año mal leído en tickets térmicos) cae a hoy; el modelo no puede
+      declararse seguro de un campo que no se pudo usar.
 
-**Frontend**
-- [ ] En el alta de transacción: botón "Escanear recibo" → cámara → pantalla de confirmación
-      con los campos ya llenos y **editables**, marcando los de baja confianza. El usuario
-      siempre confirma; nada se guarda solo.
+**Frontend** (`src/components/ReceiptScanButton.tsx`)
+- [x] En el alta de transacción: botón "Escanear recibo" → cámara/galería/PDF → los campos del
+      mismo formulario ya llenos y **editables**, con un resumen que nombra los de baja
+      confianza. El usuario siempre confirma; nada se guarda solo.
+- [x] El botón no aparece si el backend no tiene IA; con la cuota agotada queda deshabilitado
+      diciendo por qué, en vez de desaparecer como si la función no existiera.
+- [x] El archivo escaneado queda como `pendingReceipt` y se sube solo al confirmar: el usuario
+      no elige la foto dos veces.
 
 **Configuración externa:** ninguna aparte de `GEMINI_API_KEY`. Ojo: esto **necesita**
 `GS_BUCKET_NAME` configurado, o los recibos se pierden en cada deploy (ver `CONFIG-PENDIENTE.md`).
@@ -99,17 +125,38 @@ habla con Gemini. Todo lo demás la usa por dentro.
 
 ## 3. Entrada por texto libre (NLP) y canales
 
+> **El parser está implementado el 19 sep 2026.** Los canales (Telegram, voz) siguen
+> pendientes y entran por el mismo endpoint, sin formato nuevo.
+
 **Lo que ya existe y se reusa**
 - `apps/quickadd` completo: `PersonalAccessToken` por cartera, endpoint de alta rápida con su
   propio throttle (`quick_add`) y `AUTO_CATEGORY` para dejar que el backend elija categoría.
   Es exactamente la puerta que ya usa el Atajo de Apple.
 - `guess_category_by_merchant` y `find_possible_duplicates`.
 
-**Backend**
-- [ ] `POST /api/v1/ai/parse/` — texto libre ("gasté 12.50 en almuerzo con la tarjeta", "me
+**Backend** (`apps/ai/parsing.py`)
+- [x] `POST /api/v1/ai/parse/` — texto libre ("gasté 12.50 en almuerzo con la tarjeta", "me
       pagaron 800") → candidata estructurada (tipo, monto, moneda, fecha relativa resuelta,
-      cartera si la nombra, categoría, nota). Devuelve candidata, no transacción.
-- [ ] Reusar `find_possible_duplicates` igual que en los recibos.
+      cartera si la nombra, categoría, nota). Devuelve candidata, no transacción. **Misma forma
+      de respuesta que `/ai/receipt/`**, para que el cliente la muestre con la misma pantalla y
+      los canales que vienen no inventen un formato nuevo.
+- [x] Reusar `find_possible_duplicates` igual que en los recibos, contra la cartera que nombró
+      la frase o, si no nombró ninguna, la que el cliente ya tenía elegida.
+- [x] **Al modelo se le dan los nombres reales de carteras y categorías** y se le pide que elija
+      de esa lista. Sin eso, "con la tarjeta" vuelve como texto libre que hay que adivinar.
+      Las carteras privadas ajenas **no entran al prompt**: que el modelo las viera ya sería
+      filtrarlas. Y lo que responde se matchea contra esa misma lista, nunca contra la base de
+      nuevo, así que no puede resolver algo que el usuario no podía elegir.
+- [x] La normalización que ya usaban los recibos se mudó a `apps/ai/normalize.py`, compartida
+      por las dos entradas (y por la voz, que es la misma con audio).
+
+**Frontend** (`src/components/ParseTextField.tsx`)
+- [x] Campo de una línea en el alta: se escribe la frase, se llenan los campos del mismo
+      formulario. Mismas reglas que el escaneo: no aparece sin IA en el backend, con la cuota
+      agotada queda deshabilitado diciendo por qué, y si falla la frase queda escrita para
+      reintentar sin volver a tipearla.
+- [x] Sirve para gasto e ingreso (la frase puede decir "me pagaron"), a diferencia del escaneo,
+      que es sólo gasto.
 
 ### 3.1 Telegram
 - [ ] Bot con token de @BotFather (gratis), webhook a `POST /api/v1/channels/telegram/`,
@@ -320,8 +367,10 @@ así que el tope y el registro de consumo van en código desde el día uno, no e
 | Plus | 30 | 50 | 20 | ~$0.085 | 9% de $0.99 |
 | Pro | 100 | 200 | 100 | ~$0.36 | 18% de $1.99 |
 
-- [ ] Guardar estos límites como `features` del plan en `seed_billing_plans.py` (mismo lugar que
-      `import_email`, `quick_add`, etc.), no cableados en el código de IA.
+- [x] Guardar estos límites como `features` del plan en `seed_billing_plans.py` (mismo lugar que
+      `import_email`, `quick_add`, etc.), no cableados en el código de IA. **Hecho**: claves
+      `ai_receipts_per_month`, `ai_parses_per_month` y `ai_chats_per_month`; `apps/ai/quotas.py`
+      las lee de ahí.
 - [ ] Mostrar "te quedan N de N" en la app antes de que el usuario choque con el tope.
 
 > Aparte de la IA: a un precio de $0.99 al mes, **la comisión del procesador de pagos pesa más

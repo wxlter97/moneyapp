@@ -6,6 +6,7 @@
  */
 import { api } from './client';
 import type {
+  AIStatus,
   AppNotification,
   Bank,
   BankEmailSchema,
@@ -44,6 +45,8 @@ import type {
   PersonalAccessToken,
   PersonBalance,
   Plan,
+  ParseCandidate,
+  ReceiptCandidate,
   RecurringExpense,
   RecurringExpenseInput,
   RecurringSuggestion,
@@ -659,4 +662,43 @@ export const supportTickets = {
 // --- gamificación (racha, badges) ---------------------------------------
 export const gamification = {
   summary: () => api.get<GamificationSummary>('/gamification/summary/').then((r) => r.data),
+};
+
+// --- IA (disponibilidad y cuota) ----------------------------------------
+export const ai = {
+  /** No lleva workspace: la cuota es del usuario, no del presupuesto — quien
+   * paga es el dueño del plan y la misma cuota se gasta desde cualquiera de
+   * sus workspaces. */
+  status: () => api.get<AIStatus>('/ai/status/', { skipWorkspace: true }).then((r) => r.data),
+
+  /**
+   * Manda el recibo a leer y devuelve una candidata editable. **No crea la
+   * transacción ni guarda el archivo**: eso pasa después, por los endpoints
+   * de siempre, cuando el usuario confirma.
+   *
+   * El `fetch(uri)` para sacar un Blob es el mismo truco que `uploadReceipt`
+   * — es lo único que funciona igual en nativo (`file://`) y en web
+   * (`blob:`/`data:`).
+   *
+   * `wallet` es opcional y sirve para que la respuesta traiga los posibles
+   * duplicados de esa cartera.
+   */
+  scanReceipt: async (file: { uri: string; name: string; type: string }, wallet?: string | null) => {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    const form = new FormData();
+    form.append('file', blob, file.name);
+    if (wallet) form.append('wallet', wallet);
+    return api
+      .post<ReceiptCandidate>('/ai/receipt/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
+
+  /** Igual que `scanReceipt` pero desde una frase ("gasté 12.50 en almuerzo
+   * con la tarjeta"). Devuelve candidata, no transacción. */
+  parseText: (text: string, wallet?: string | null) =>
+    api
+      .post<ParseCandidate>('/ai/parse/', { text, ...(wallet ? { wallet } : {}) })
+      .then((r) => r.data),
 };
