@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { useMyPlan } from '@/api/queries';
+import { useHasFeature } from '@/api/queries';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
@@ -30,17 +30,13 @@ interface ProFeatureGateProps {
  */
 export function ProFeatureGate({ feature, children, variant = 'screen' }: ProFeatureGateProps) {
   const colors = useColors();
-  const myPlan = useMyPlan();
+  const enabled = useHasFeature(feature);
   const copy = FEATURE_COPY[feature];
 
-  if (myPlan.isLoading) {
+  if (enabled === undefined) {
     return variant === 'screen' ? <LoadingState /> : null;
   }
 
-  // Sin plan resuelto (entorno sin seedear), igual de "fail-open" que el
-  // backend -- una feature ausente en `features` si HAY plan es `false`.
-  const plan = myPlan.data?.plan;
-  const enabled = plan ? Boolean(plan.features[feature]) : true;
   if (enabled) return <>{children}</>;
 
   const upsellButton = (

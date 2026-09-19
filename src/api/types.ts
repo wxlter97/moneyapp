@@ -1218,6 +1218,14 @@ export interface AIStatus {
   resets_at: string;
 }
 
+/** `GET module-flags/` — ver `apps/common/api.py`. Interruptor manual por
+ * módulo, aparte de Pro: `disabled[key]` presente = ese módulo está apagado
+ * a mano desde el admin ahora mismo, con el mensaje a mostrar. Una clave
+ * ausente está habilitada. */
+export interface ModuleFlagsStatus {
+  disabled: Record<string, string>;
+}
+
 /** Un renglón del detalle del recibo, cuando el ticket lo trae. */
 export interface ReceiptItem {
   description: string;

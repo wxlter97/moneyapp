@@ -22,6 +22,8 @@ export const qk = {
   cardProducts: () => ['card-products'] as const,
   /** No va por workspace: la cuota de IA es del usuario, no del presupuesto. */
   aiStatus: () => ['ai', 'status'] as const,
+  /** No va por workspace: es un interruptor de la instalación entera. */
+  moduleFlags: () => ['module-flags'] as const,
 
   ws: (ws: string | null) => ({
     all: ['ws', ws] as const,

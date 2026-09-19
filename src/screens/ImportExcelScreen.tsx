@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform, ScrollView, Text, View } from 'react-native';
 
-import { useImportTemplate, useImportTransactionsXlsx } from '@/api/queries';
+import { useImportTemplate, useImportTransactionsXlsx, useModuleDisabled } from '@/api/queries';
 import type { TransactionImportResult } from '@/api/types';
 import { errorMessage } from '@/api/errors';
 import { Button } from '@/components/ui/Button';
@@ -27,6 +27,7 @@ const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.s
 export default function ImportExcelScreen() {
   const template = useImportTemplate();
   const importXlsx = useImportTransactionsXlsx();
+  const disabledMessage = useModuleDisabled('excel_import');
 
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [downloadedAs, setDownloadedAs] = useState<string | null>(null);
@@ -116,7 +117,9 @@ export default function ImportExcelScreen() {
         </Card>
 
         <Card title="2. Importar la plantilla llena">
-          {Platform.OS !== 'web' ? (
+          {disabledMessage ? (
+            <Text className="text-warning text-sm">{disabledMessage}</Text>
+          ) : Platform.OS !== 'web' ? (
             <Text className="text-warning text-sm">
               Importar desde un archivo solo está disponible en la versión web.
             </Text>

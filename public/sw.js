@@ -1,8 +1,13 @@
 /* Service worker de Budget (PWA).
  *
  * Estrategia:
- *  - navegaciones (HTML): network-first con fallback al index.html cacheado
- *    (permite abrir la app sin conexión; los datos los maneja la app).
+ *  - navegaciones (HTML): stale-while-revalidate -- responde con el
+ *    index.html cacheado al toque (reabrir la PWA no espera una vuelta de
+ *    red) y de yapa dispara un fetch en segundo plano que actualiza la
+ *    caché para la PRÓXIMA apertura. Antes esto era network-first (esperar
+ *    la red siempre, cache sólo si fallaba), que es lo que hacía que
+ *    reabrir la PWA tardara en redes lentas/con latencia alta aunque ya
+ *    hubiera un shell válido guardado localmente.
  *  - estáticos con hash (/_expo/, /assets/, fuentes, imágenes): cache-first.
  *  - API y todo lo demás: se deja pasar a la red (no se cachea: es sensible).
  *
@@ -12,6 +17,8 @@
  * `index.html` viejo cacheado -- que apunta a JS/CSS con hash de un build
  * anterior, ya no disponibles tras el siguiente deploy. Eso deja la app en
  * pantalla en blanco al reabrirla (p. ej. justo después de cerrar sesión).
+ * El revalidate en segundo plano de acá abajo acorta esa ventana: alcanza
+ * con reabrir la PWA una vez para que quede lista la versión nueva.
  */
 const CACHE = 'budget-v1.6.0';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.png'];
@@ -48,18 +55,29 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then((res) => {
-          // Nunca cachear una respuesta de error como si fuera el shell
-          // válido (p. ej. un 502 del proxy durante el deploy) -- eso
-          // dejaría el fallback offline sirviendo un error para siempre.
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put('/index.html', copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match('/index.html').then((r) => r || caches.match('/'))),
+      caches.match('/index.html').then((cached) => {
+        // Nunca cachear una respuesta de error como si fuera el shell válido
+        // (p. ej. un 502 del proxy durante el deploy) -- eso dejaría el
+        // fallback offline sirviendo un error para siempre.
+        const revalidate = fetch(request)
+          .then((res) => {
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put('/index.html', copy));
+            }
+            return res;
+          })
+          .catch(() => cached || caches.match('/'));
+
+        // `waitUntil`, no sólo el `.then` de arriba: sin esto el navegador
+        // puede matar el worker apenas se manda la respuesta cacheada, antes
+        // de que el fetch en segundo plano llegue a actualizar la caché.
+        event.waitUntil(revalidate);
+
+        // Con algo cacheado, listo al toque. Sin nada cacheado todavía
+        // (primera visita), no queda otra que esperar esa misma promesa.
+        return cached || revalidate;
+      }),
     );
     return;
   }
