@@ -17,9 +17,15 @@ import {
 } from '@/api/queries';
 import { useAssignableWallets, walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
-import type { Transaction, TransactionInput, TransactionType } from '@/api/types';
+import type {
+  ReceiptCandidate,
+  Transaction,
+  TransactionInput,
+  TransactionType,
+} from '@/api/types';
 import { CategoryPickerField } from '@/components/CategoryGrid';
 import { ReceiptField } from '@/components/ReceiptField';
+import { ReceiptScanButton } from '@/components/ReceiptScanButton';
 import { TagPicker } from '@/components/TagPicker';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
@@ -107,6 +113,11 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [openRow, setOpenRow] = useState<OpenRow>(null);
   const [pendingReceipt, setPendingReceipt] = useState<PickedFile | null>(null);
+  // Lo último que leyó la IA de un recibo. Sólo se usa para mostrar el
+  // resumen de abajo (qué campos conviene revisar, si esto ya parece
+  // registrado): los valores en sí ya están en los campos del formulario,
+  // editables como cualquier otro, porque el usuario siempre confirma.
+  const [scan, setScan] = useState<ReceiptCandidate | null>(null);
   // El flujo por defecto es monto + nota + categoría + cartera + fecha + el
   // toggle de presupuesto (cuando aplica); etiquetas y recibo quedan
   // colapsados detrás de "Más detalles" salvo que la transacción que se está
@@ -289,11 +300,45 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     setAppliedDiscount(null);
   }
 
+  /**
+   * Vuelca en el formulario lo que la IA leyó del recibo. Todo va a campos
+   * normales y editables: la IA llena, el usuario confirma. Nada se guarda
+   * acá — el alta pasa por el mismo `doSubmit` de siempre, y el archivo se
+   * sube como recibo recién cuando la transacción existe.
+   *
+   * Lo que no se pudo leer no se pisa: si el monto vino vacío, se deja lo que
+   * hubiera (típicamente 0.00) en vez de escribir algo inventado.
+   */
+  function onScanned(candidate: ReceiptCandidate, file: PickedFile) {
+    setScan(candidate);
+    setPendingReceipt(file);
+    setFormError(null);
+    if (candidate.amount) setAmount(Number(candidate.amount).toFixed(2));
+    setDate(candidate.date);
+    if (candidate.merchant) setNote(candidate.merchant);
+    if (candidate.category) setCategoryId(candidate.category);
+    // El recibo suele traer el detalle, y verlo ayuda a confirmar que es el
+    // que uno cree: se deja abierto para no esconderlo detrás de un toque.
+    setDetailsOpen(true);
+  }
+
+  /** Campos que la IA leyó con poca confianza, por su nombre en la pantalla,
+   * para pedirle al usuario que los mire antes de guardar. */
+  const revisar = scan
+    ? (['amount', 'date', 'merchant'] as const)
+        .filter((f) => scan.confidence[f] === 'low')
+        .map((f) => ({ amount: 'el monto', date: 'la fecha', merchant: 'el comercio' })[f])
+    : [];
+
   function onChangeType(next: TransactionType) {
     setType(next);
     setCategoryId(null);
     setOpenRow(null);
     setAppliedDiscount(null);
+    // El resumen del escaneo habla de un gasto: si el usuario cambia a
+    // ingreso o transferencia deja de venir al caso (los campos que llenó
+    // siguen ahí, editables, como cualquier otro dato tipeado).
+    setScan(null);
     if (next !== 'transfer') setToWalletId(null);
   }
 
@@ -451,6 +496,55 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
             { value: 'transfer', label: 'Transfer.' },
           ]}
         />
+
+        {/* Sólo al crear un gasto: escanear para editar una transacción que
+            ya existe no tendría a qué llenar, y un recibo nunca es un
+            ingreso ni una transferencia. El botón se esconde solo si el
+            backend no tiene IA configurada. */}
+        {!editing && type === 'expense' ? (
+          <ReceiptScanButton walletId={walletId} onScanned={onScanned} />
+        ) : null}
+
+        {scan ? (
+          <FadeInView>
+            <View className="gap-1.5 rounded-2xl bg-surface-2 px-3 py-2.5">
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                Listo — revisá antes de guardar
+              </Text>
+              {revisar.length > 0 ? (
+                <Text className="text-warning text-xs">
+                  No se leyó bien {revisar.join(' ni ')}: confirmalo vos.
+                </Text>
+              ) : (
+                <Text className="text-text-muted text-xs">
+                  Todos los campos se leyeron bien, pero podés cambiar lo que quieras.
+                </Text>
+              )}
+              {scan.category_source === 'history' ? (
+                <Text className="text-text-muted text-xs">
+                  La categoría es la que usaste antes en este comercio.
+                </Text>
+              ) : scan.category_source === 'ai' ? (
+                <Text className="text-text-muted text-xs">Categoría sugerida por la lectura.</Text>
+              ) : (
+                <Text className="text-text-muted text-xs">Elegí la categoría vos.</Text>
+              )}
+              {/* Aviso temprano. El chequeo que de verdad frena el guardado
+                  sigue siendo el de `onSubmit`, contra el monto y la fecha
+                  finales — que para entonces el usuario pudo haber cambiado. */}
+              {scan.possible_duplicates.length > 0 ? (
+                <Text className="text-warning text-xs">
+                  Ojo: ya hay {scan.possible_duplicates.length === 1 ? 'una transacción parecida' : `${scan.possible_duplicates.length} transacciones parecidas`} en esta cartera.
+                </Text>
+              ) : null}
+              {scan.items.length > 0 ? (
+                <Text className="text-text-muted text-xs">
+                  {scan.items.length} {scan.items.length === 1 ? 'renglón leído' : 'renglones leídos'} del detalle.
+                </Text>
+              ) : null}
+            </View>
+          </FadeInView>
+        ) : null}
 
         <View className="items-center py-2">
           <TextInput

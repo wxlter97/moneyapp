@@ -1284,3 +1284,26 @@ export function useAIStatus() {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+/**
+ * Manda un recibo a leer y devuelve la candidata. No crea nada: el alta y la
+ * subida del archivo siguen pasando por los endpoints de siempre cuando el
+ * usuario confirma (ver `TransactionForm`).
+ *
+ * Invalida `aiStatus` porque cada escaneo gasta una unidad de la cuota del
+ * mes, y el contador que se le muestra al usuario tiene que reflejarlo al
+ * toque — si no, la primera noticia de que se acabó es un 429.
+ */
+export function useScanReceipt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      wallet,
+    }: {
+      file: { uri: string; name: string; type: string };
+      wallet?: string | null;
+    }) => res.ai.scanReceipt(file, wallet),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
+  });
+}

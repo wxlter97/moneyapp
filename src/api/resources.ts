@@ -45,6 +45,7 @@ import type {
   PersonalAccessToken,
   PersonBalance,
   Plan,
+  ReceiptCandidate,
   RecurringExpense,
   RecurringExpenseInput,
   RecurringSuggestion,
@@ -668,4 +669,28 @@ export const ai = {
    * paga es el dueño del plan y la misma cuota se gasta desde cualquiera de
    * sus workspaces. */
   status: () => api.get<AIStatus>('/ai/status/', { skipWorkspace: true }).then((r) => r.data),
+
+  /**
+   * Manda el recibo a leer y devuelve una candidata editable. **No crea la
+   * transacción ni guarda el archivo**: eso pasa después, por los endpoints
+   * de siempre, cuando el usuario confirma.
+   *
+   * El `fetch(uri)` para sacar un Blob es el mismo truco que `uploadReceipt`
+   * — es lo único que funciona igual en nativo (`file://`) y en web
+   * (`blob:`/`data:`).
+   *
+   * `wallet` es opcional y sirve para que la respuesta traiga los posibles
+   * duplicados de esa cartera.
+   */
+  scanReceipt: async (file: { uri: string; name: string; type: string }, wallet?: string | null) => {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    const form = new FormData();
+    form.append('file', blob, file.name);
+    if (wallet) form.append('wallet', wallet);
+    return api
+      .post<ReceiptCandidate>('/ai/receipt/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
 };

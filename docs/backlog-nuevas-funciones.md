@@ -1,8 +1,9 @@
 # Backlog — funciones nuevas (18 sep 2026)
 
-> **Estado: el punto 1 (base de IA) está implementado; del 2 al 8 siguen siendo diseño.** Este
-> archivo existe para tener el diseño mapeado en el repo y poder retomarlo sin volver a
-> discutirlo. Formato: `[ ]` pendiente, `[x]` hecho. Las referencias entre backticks son archivos reales, leídos del repo.
+> **Estado: los puntos 1 (base de IA) y 2 (recibos) están implementados; del 3 al 8 siguen
+> siendo diseño.** Este archivo existe para tener el diseño mapeado en el repo y poder
+> retomarlo sin volver a discutirlo. Formato: `[ ]` pendiente, `[x]` hecho. Las referencias
+> entre backticks son archivos reales, leídos del repo.
 >
 > Abarca los dos repos: `moneyapp` (Expo/RN) y `budget-app-django` (backend). Cada punto
 > separa el trabajo por repo y, aparte, **lo que hay que configurar por fuera del código**
@@ -81,26 +82,40 @@ habla con Gemini. Todo lo demás la usa por dentro.
 
 ## 2. Leer y clasificar recibos
 
+> **Implementado el 19 sep 2026.** Sólo falta la `GEMINI_API_KEY` (y `GS_BUCKET_NAME`, o los
+> recibos confirmados se borran en cada deploy).
+
 **Lo que ya existe y se reusa (no hay que construirlo)**
 - `Transaction.receipt` (`FileField`) con su `receipt_upload_path`, servido por el propio API
   en `/transactions/{id}/receipt/` y nunca por una URL directa del storage.
 - `expo-image-picker` ya configurado en `app.json`, con permisos de cámara y fotos en español.
 - `guess_category_by_merchant` y `find_possible_duplicates` en `apps/transactions/services.py`.
 
-**Backend**
-- [ ] `POST /api/v1/ai/receipt/` — recibe la imagen o PDF, devuelve una **candidata** (monto,
+**Backend** (`apps/ai/receipts.py`)
+- [x] `POST /api/v1/ai/receipt/` — recibe la imagen o PDF, devuelve una **candidata** (monto,
       fecha, comercio, moneda, categoría sugerida y, si se puede leer, los ítems) con un nivel
       de confianza por campo. **No crea la transacción.**
-- [ ] Orden de resolución de la categoría: primero `guess_category_by_merchant` (gratis y
-      determinista), y recién si no acierta, la sugerencia de la IA. Nunca al revés.
-- [ ] Pasar la candidata por `find_possible_duplicates` antes de devolverla, para que la app
+- [x] Orden de resolución de la categoría: primero `guess_category_by_merchant` (gratis y
+      determinista), y recién si no acierta, la sugerencia de la IA. Nunca al revés. La
+      sugerencia del modelo sólo matchea categorías **asignables** del workspace: sugerir un
+      grupo daría una transacción que no se puede guardar.
+- [x] Pasar la candidata por `find_possible_duplicates` antes de devolverla, para que la app
       pueda avisar "esto parece que ya lo registraste".
-- [ ] Guardar el recibo como `Transaction.receipt` cuando el usuario confirma, no antes.
+- [x] Guardar el recibo como `Transaction.receipt` cuando el usuario confirma, no antes. Un
+      escaneo descartado no deja nada en el bucket.
+- [x] **Normalización defensiva**, que resultó ser lo más importante: un monto que no parsea,
+      negativo o absurdo queda vacío y marcado en vez de inventado; una fecha futura o de hace
+      más de dos años (típico año mal leído en tickets térmicos) cae a hoy; el modelo no puede
+      declararse seguro de un campo que no se pudo usar.
 
-**Frontend**
-- [ ] En el alta de transacción: botón "Escanear recibo" → cámara → pantalla de confirmación
-      con los campos ya llenos y **editables**, marcando los de baja confianza. El usuario
-      siempre confirma; nada se guarda solo.
+**Frontend** (`src/components/ReceiptScanButton.tsx`)
+- [x] En el alta de transacción: botón "Escanear recibo" → cámara/galería/PDF → los campos del
+      mismo formulario ya llenos y **editables**, con un resumen que nombra los de baja
+      confianza. El usuario siempre confirma; nada se guarda solo.
+- [x] El botón no aparece si el backend no tiene IA; con la cuota agotada queda deshabilitado
+      diciendo por qué, en vez de desaparecer como si la función no existiera.
+- [x] El archivo escaneado queda como `pendingReceipt` y se sube solo al confirmar: el usuario
+      no elige la foto dos veces.
 
 **Configuración externa:** ninguna aparte de `GEMINI_API_KEY`. Ojo: esto **necesita**
 `GS_BUCKET_NAME` configurado, o los recibos se pierden en cada deploy (ver `CONFIG-PENDIENTE.md`).
