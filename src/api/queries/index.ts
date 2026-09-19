@@ -1307,3 +1307,14 @@ export function useScanReceipt() {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
   });
 }
+
+/** Manda una frase a parsear. Igual que `useScanReceipt`: no crea nada, y
+ * invalida `aiStatus` porque gasta una unidad de la cuota de parseos. */
+export function useParseText() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ text, wallet }: { text: string; wallet?: string | null }) =>
+      res.ai.parseText(text, wallet),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
+  });
+}

@@ -1259,3 +1259,25 @@ export interface ReceiptCandidate {
   confidence: Record<string, ConfidenceLevel>;
   possible_duplicates: PossibleDuplicate[];
 }
+
+/**
+ * `POST ai/parse/` — lo que la IA entendió de una frase suelta. Mismo contrato
+ * que `ReceiptCandidate` (editable, con confianza por campo, nada guardado),
+ * más el tipo y la cartera: una frase puede nombrar las dos cosas y un recibo
+ * no. Ver `apps/ai/parsing.py`.
+ */
+export interface ParseCandidate {
+  type: TransactionType;
+  amount: string | null;
+  currency: string | null;
+  date: ISODate;
+  merchant: string;
+  description: string;
+  /** La cartera que nombró la frase; `null` = el cliente se queda con la suya. */
+  wallet: string | null;
+  wallet_source: 'text' | null;
+  category: string | null;
+  category_source: 'history' | 'ai' | null;
+  confidence: Record<string, ConfidenceLevel>;
+  possible_duplicates: PossibleDuplicate[];
+}

@@ -45,6 +45,7 @@ import type {
   PersonalAccessToken,
   PersonBalance,
   Plan,
+  ParseCandidate,
   ReceiptCandidate,
   RecurringExpense,
   RecurringExpenseInput,
@@ -693,4 +694,11 @@ export const ai = {
       })
       .then((r) => r.data);
   },
+
+  /** Igual que `scanReceipt` pero desde una frase ("gasté 12.50 en almuerzo
+   * con la tarjeta"). Devuelve candidata, no transacción. */
+  parseText: (text: string, wallet?: string | null) =>
+    api
+      .post<ParseCandidate>('/ai/parse/', { text, ...(wallet ? { wallet } : {}) })
+      .then((r) => r.data),
 };

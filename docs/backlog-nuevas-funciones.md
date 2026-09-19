@@ -1,9 +1,10 @@
 # Backlog — funciones nuevas (18 sep 2026)
 
-> **Estado: los puntos 1 (base de IA) y 2 (recibos) están implementados; del 3 al 8 siguen
-> siendo diseño.** Este archivo existe para tener el diseño mapeado en el repo y poder
-> retomarlo sin volver a discutirlo. Formato: `[ ]` pendiente, `[x]` hecho. Las referencias
-> entre backticks son archivos reales, leídos del repo.
+> **Estado: implementados el 1 (base de IA), el 2 (recibos) y el parser del 3 (texto libre).
+> Los canales del 3 (Telegram, voz) y del 4 al 8 siguen siendo diseño.** Este archivo existe
+> para tener el diseño mapeado en el repo y poder retomarlo sin volver a discutirlo. Formato:
+> `[ ]` pendiente, `[x]` hecho. Las referencias entre backticks son archivos reales, leídos
+> del repo.
 >
 > Abarca los dos repos: `moneyapp` (Expo/RN) y `budget-app-django` (backend). Cada punto
 > separa el trabajo por repo y, aparte, **lo que hay que configurar por fuera del código**
@@ -124,17 +125,38 @@ habla con Gemini. Todo lo demás la usa por dentro.
 
 ## 3. Entrada por texto libre (NLP) y canales
 
+> **El parser está implementado el 19 sep 2026.** Los canales (Telegram, voz) siguen
+> pendientes y entran por el mismo endpoint, sin formato nuevo.
+
 **Lo que ya existe y se reusa**
 - `apps/quickadd` completo: `PersonalAccessToken` por cartera, endpoint de alta rápida con su
   propio throttle (`quick_add`) y `AUTO_CATEGORY` para dejar que el backend elija categoría.
   Es exactamente la puerta que ya usa el Atajo de Apple.
 - `guess_category_by_merchant` y `find_possible_duplicates`.
 
-**Backend**
-- [ ] `POST /api/v1/ai/parse/` — texto libre ("gasté 12.50 en almuerzo con la tarjeta", "me
+**Backend** (`apps/ai/parsing.py`)
+- [x] `POST /api/v1/ai/parse/` — texto libre ("gasté 12.50 en almuerzo con la tarjeta", "me
       pagaron 800") → candidata estructurada (tipo, monto, moneda, fecha relativa resuelta,
-      cartera si la nombra, categoría, nota). Devuelve candidata, no transacción.
-- [ ] Reusar `find_possible_duplicates` igual que en los recibos.
+      cartera si la nombra, categoría, nota). Devuelve candidata, no transacción. **Misma forma
+      de respuesta que `/ai/receipt/`**, para que el cliente la muestre con la misma pantalla y
+      los canales que vienen no inventen un formato nuevo.
+- [x] Reusar `find_possible_duplicates` igual que en los recibos, contra la cartera que nombró
+      la frase o, si no nombró ninguna, la que el cliente ya tenía elegida.
+- [x] **Al modelo se le dan los nombres reales de carteras y categorías** y se le pide que elija
+      de esa lista. Sin eso, "con la tarjeta" vuelve como texto libre que hay que adivinar.
+      Las carteras privadas ajenas **no entran al prompt**: que el modelo las viera ya sería
+      filtrarlas. Y lo que responde se matchea contra esa misma lista, nunca contra la base de
+      nuevo, así que no puede resolver algo que el usuario no podía elegir.
+- [x] La normalización que ya usaban los recibos se mudó a `apps/ai/normalize.py`, compartida
+      por las dos entradas (y por la voz, que es la misma con audio).
+
+**Frontend** (`src/components/ParseTextField.tsx`)
+- [x] Campo de una línea en el alta: se escribe la frase, se llenan los campos del mismo
+      formulario. Mismas reglas que el escaneo: no aparece sin IA en el backend, con la cuota
+      agotada queda deshabilitado diciendo por qué, y si falla la frase queda escrita para
+      reintentar sin volver a tipearla.
+- [x] Sirve para gasto e ingreso (la frase puede decir "me pagaron"), a diferencia del escaneo,
+      que es sólo gasto.
 
 ### 3.1 Telegram
 - [ ] Bot con token de @BotFather (gratis), webhook a `POST /api/v1/channels/telegram/`,
