@@ -20,10 +20,11 @@ interface SplashOverlayProps {
 }
 
 // Coincide con `backgroundColor` del splash nativo en app.json: el handoff
-// entre el splash del sistema y este overlay es invisible. Papel (wxlter.),
-// no el fondo oscuro del tema interno de la app — el splash es un momento
-// de marca fijo, independiente del tema claro/oscuro que elija el usuario.
-const SPLASH_BG = '#f4f3ef';
+// entre el splash del sistema y este overlay es invisible. Tinta (wxlter.),
+// no el tema claro/oscuro que elija el usuario -- el splash es un momento de
+// marca fijo, y tanto `brand-mark.webp` como `splash-icon.png` ya traen este
+// mismo negro de fondo horneado en el propio archivo.
+const SPLASH_BG = '#111111';
 const MIN_HOLD_MS = 1250;
 
 /**
@@ -76,7 +77,7 @@ export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
           <BrandMark size={112} />
         </Animated.View>
         <Animated.View style={wordStyle}>
-          <Text style={{ color: '#111111', fontSize: 24, fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
+          <Text style={{ color: '#F4F3EF', fontSize: 24, fontFamily: fonts.extrabold, letterSpacing: -0.5 }}>
             porksupuesto
           </Text>
         </Animated.View>

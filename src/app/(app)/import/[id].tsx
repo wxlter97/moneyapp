@@ -6,6 +6,7 @@ import {
   useCategories,
   useConfirmEmailImport,
   useEmailImportLog,
+  useModuleDisabled,
   useWallets,
 } from '@/api/queries';
 import { walletLabel } from '@/api/queries/lookups';
@@ -38,6 +39,7 @@ export default function ConfirmImportScreen() {
   const walletsQ = useWallets();
   const categoriesQ = useCategories();
   const confirm = useConfirmEmailImport();
+  const disabledMessage = useModuleDisabled('email_import');
 
   const [type, setType] = useState<CategoryType>('expense');
   const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -66,7 +68,8 @@ export default function ConfirmImportScreen() {
   const walletOptions = (walletsQ.data ?? []).map((w) => ({ value: w.id, label: walletLabel(w) }));
 
   const amountNum = Number(amount.replace(',', '.'));
-  const canSubmit = Number.isFinite(amountNum) && amountNum > 0 && !!walletId && !!categoryId;
+  const canSubmit =
+    Number.isFinite(amountNum) && amountNum > 0 && !!walletId && !!categoryId && !disabledMessage;
 
   async function onSubmit() {
     if (!id || !categoryId || !walletId) return;
@@ -111,6 +114,7 @@ export default function ConfirmImportScreen() {
             </View>
           ) : null}
 
+          {disabledMessage ? <Text className="text-warning text-sm">{disabledMessage}</Text> : null}
           {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
           {isPlanUpgradeError(formError) ? (
             <Button label="Pasate a Pro" variant="ghost" onPress={() => router.push('/pro')} />

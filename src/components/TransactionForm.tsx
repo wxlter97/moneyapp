@@ -10,6 +10,7 @@ import {
   useCategories,
   useCreateTransaction,
   useDeleteTransaction,
+  useHasFeature,
   useRegisterRefund,
   useTransaction,
   useUpdateTransaction,
@@ -99,6 +100,11 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const { data: assignableWallets, query: walletsQ } = useAssignableWallets();
   const categoriesQ = useCategories();
   const cardProductsQ = useCardProducts();
+  // El catálogo de tarjetas (`cardProductsQ`) es público -- cualquiera lo lee,
+  // pague o no Pro (ver `apps.loyalty.api.IsAdminOrReadOnly`). Sin este
+  // chequeo, la vista previa de puntos/cashback de más abajo mostraría
+  // "recompensas" en Free igual que si tuviera Pro.
+  const hasLoyalty = useHasFeature('loyalty');
   const create = useCreateTransaction();
   const update = useUpdateTransaction();
   const remove = useDeleteTransaction();
@@ -272,7 +278,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     [cardProduct],
   );
   const benefitLines =
-    !editing && !isTransfer && type === 'expense' && amountValid
+    hasLoyalty && !editing && !isTransfer && type === 'expense' && amountValid
       ? autoPrograms
           .map((p) => {
             const rate = rateFor(p);

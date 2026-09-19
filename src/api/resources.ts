@@ -35,6 +35,7 @@ import type {
   LoyaltyCategoryType,
   LoyaltySummary,
   Membership,
+  ModuleFlagsStatus,
   Money,
   MonthlySnapshot,
   MyPlan,
@@ -701,4 +702,12 @@ export const ai = {
     api
       .post<ParseCandidate>('/ai/parse/', { text, ...(wallet ? { wallet } : {}) })
       .then((r) => r.data),
+};
+
+// --- interruptores de módulos (kill switch manual, ver `useModuleFlags`) --
+export const moduleFlags = {
+  /** No lleva workspace: es un interruptor global de la instalación, no de
+   * un presupuesto en particular. */
+  status: () =>
+    api.get<ModuleFlagsStatus>('/module-flags/', { skipWorkspace: true }).then((r) => r.data),
 };

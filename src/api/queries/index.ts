@@ -33,6 +33,7 @@ import type {
   WorkspaceBackup,
 } from '@/api/types';
 import { todayISO } from '@/lib/date';
+import type { FeatureKey } from '@/lib/planFeatures';
 import { periodStart } from '@/lib/periods';
 import { useWorkspaceStore } from '@/store/workspace';
 import { qk } from './keys';
@@ -384,6 +385,45 @@ export function useMyPlan() {
     queryKey: qk.myPlan(),
     queryFn: res.billing.me,
   });
+}
+
+/**
+ * `true`/`false` una vez resuelto el plan, `undefined` mientras carga --
+ * para gatear un fragmento de UI (no una pantalla entera, ver
+ * `ProFeatureGate`) sin arriesgar un parpadeo de contenido Pro antes de
+ * saber si corresponde. Mismo criterio "fail-open" que `ProFeatureGate`
+ * si no hay plan resuelto.
+ */
+export function useHasFeature(feature: FeatureKey): boolean | undefined {
+  const myPlan = useMyPlan();
+  if (myPlan.isLoading) return undefined;
+  const plan = myPlan.data?.plan;
+  return plan ? Boolean(plan.features[feature]) : true;
+}
+
+// --- interruptores de módulos (kill switch manual) ----------------------
+/**
+ * Qué módulos están apagados a mano desde el admin ahora mismo (ver
+ * `apps.common.models.ModuleFlag`), aparte de si el plan los paga. `staleTime`
+ * alto porque es un interruptor de emergencia, no algo que cambie seguido
+ * dentro de una sesión.
+ */
+export function useModuleFlags() {
+  return useQuery({
+    queryKey: qk.moduleFlags(),
+    queryFn: res.moduleFlags.status,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * El mensaje a mostrar si `key` está apagado ahora mismo, o `null` si está
+ * habilitado (incluido mientras carga -- más vale mostrar el botón un
+ * instante de más que esconderlo por una consulta que todavía no volvió).
+ */
+export function useModuleDisabled(key: string): string | null {
+  const flags = useModuleFlags();
+  return flags.data?.disabled[key] ?? null;
 }
 
 export function useCheckout() {
