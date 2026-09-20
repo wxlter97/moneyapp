@@ -82,6 +82,8 @@ export const qk = {
     reportScheduled: (range?: { since?: string; until?: string }) =>
       ['ws', ws, 'reports', 'scheduled', range ?? {}] as const,
 
+    loyaltyMovements: (wallet?: string) => ['ws', ws, 'loyalty-movements', wallet ?? 'all'] as const,
+    loyaltyEarnings: (wallet?: string) => ['ws', ws, 'loyalty-earnings', wallet ?? 'all'] as const,
     loyaltySummary: (range?: { date_after?: string; date_before?: string }) =>
       ['ws', ws, 'loyalty-summary', range ?? {}] as const,
 

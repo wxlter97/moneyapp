@@ -27,6 +27,7 @@ import type {
   SetForwardBudgetInput,
   SplitPeopleInput,
   SupportTicketInput,
+  LoyaltyMovementInput,
   TransactionInput,
   TransactionSplitPart,
   WalletInput,
@@ -551,6 +552,53 @@ export function useLoyaltySummary(
     queryKey: qk.ws(ws).loyaltySummary(range),
     queryFn: () => res.loyaltyEarnings.summary(range),
     enabled: !!ws && enabled,
+  });
+}
+
+/** Canjes y ajustes de una tarjeta (el libro de recompensas). */
+export function useLoyaltyMovements(wallet: string | undefined) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).loyaltyMovements(wallet),
+    queryFn: () => res.loyaltyMovements.list({ wallet }),
+    enabled: !!ws && !!wallet,
+  });
+}
+
+/** Lo que ganó cada compra de una tarjeta. */
+export function useLoyaltyEarnings(wallet: string | undefined) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).loyaltyEarnings(wallet),
+    queryFn: () => res.loyaltyEarnings.list({ wallet }),
+    enabled: !!ws && !!wallet,
+  });
+}
+
+// Canjear/ajustar cambia el disponible, la lista de movimientos y, si se deposita, las
+// transacciones y el saldo de una cartera: se invalida todo el workspace.
+export function useCreateLoyaltyMovement() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (input: LoyaltyMovementInput) => res.loyaltyMovements.create(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateLoyaltyMovement() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: { quantity?: string; date?: string; note?: string } }) =>
+      res.loyaltyMovements.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteLoyaltyMovement() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.loyaltyMovements.remove(id),
+    onSuccess: invalidate,
   });
 }
 

@@ -310,6 +310,18 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="loyalty/[wallet]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="loyalty/redeem"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="loyalty/adjust"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="tags"
           options={{ presentation: 'modal', headerShown: false }}
         />

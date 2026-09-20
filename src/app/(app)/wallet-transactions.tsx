@@ -74,7 +74,7 @@ export default function WalletTransactionsScreen() {
                 size={32}
                 iconSize={14}
                 color={colors.textMuted}
-                onPress={() => router.push('/loyalty')}
+                onPress={() => router.push(`/loyalty/${walletId}`)}
                 accessibilityLabel="Ver recompensas"
                 className="rounded-full bg-surface-2 active:opacity-70"
               />
