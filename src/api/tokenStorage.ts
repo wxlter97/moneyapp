@@ -9,6 +9,8 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
+import { setLocalItemEvicting } from '@/store/kvStorage';
+
 const ACCESS_KEY = 'budget.jwt.access';
 const REFRESH_KEY = 'budget.jwt.refresh';
 
@@ -17,7 +19,11 @@ const isWeb = Platform.OS === 'web';
 async function setItem(key: string, value: string | null): Promise<void> {
   if (isWeb) {
     if (value == null) localStorage.removeItem(key);
-    else localStorage.setItem(key, value);
+    // Si el storage está lleno se libera la caché de consultas y se reintenta: no
+    // guardar el token cerraría la sesión en el siguiente refresh.
+    else if (!setLocalItemEvicting(key, value)) {
+      throw new Error('No se pudo guardar la sesión en este navegador (almacenamiento lleno o bloqueado).');
+    }
     return;
   }
   if (value == null) await SecureStore.deleteItemAsync(key);

@@ -12,6 +12,8 @@ import {
   useNetWorth,
   useScheduled,
   useTags,
+  useInfiniteTransactions,
+  useTransactionTotals,
   useTransactions,
   useWallets,
 } from '@/api/queries';
@@ -24,6 +26,7 @@ import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SubTabs } from '@/components/SubTabs';
 import { SummaryTriple } from '@/components/SummaryTriple';
+import { LoadMoreFooter } from '@/components/ui/LoadMoreFooter';
 import { TransactionRow } from '@/components/TransactionRow';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Card } from '@/components/ui/Card';
@@ -37,7 +40,13 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { currentYearMonth, formatDayHeader, formatShortDate, monthRange, todayISO } from '@/lib/date';
 import { formatMoney, toNumber } from '@/lib/money';
-import { groupByDay, summarizeByType, useSwipeDeleteTransactions } from '@/lib/transactions';
+import { flattenPages, usePagedScroll } from '@/lib/pagedList';
+import {
+  groupByDay,
+  summarizeByType,
+  totalsForCurrency,
+  useSwipeDeleteTransactions,
+} from '@/lib/transactions';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -542,7 +551,7 @@ function openScheduledItem(it: ScheduledItem) {
 // ---------------------------------------------------------------------------
 type TypeFilter = 'all' | 'income' | 'expense' | 'transfer';
 
-function ListaTab({
+export function ListaTab({
   month,
   onMonth,
   currency,
@@ -567,10 +576,13 @@ function ListaTab({
   }, [search]);
   const searching = debouncedSearch.length > 0;
 
-  const txQuery = useTransactions(
-    searching
-      ? { search: debouncedSearch }
-      : { date_after: range.from, date_before: range.to },
+  // Dos modos. Sin texto: el mes completo, que se baja entero porque sus totales y
+  // sus filtros se calculan acá. Con texto: se busca en TODO el historial, que puede
+  // ser enorme -- ahí la lista llega por páginas y los filtros y los totales los
+  // resuelve el servidor (ver `searchFilters`), no lo ya cargado.
+  const monthQuery = useTransactions(
+    { date_after: range.from, date_before: range.to },
+    { enabled: !searching },
   );
   const walletsQuery = useWallets();
   const tagsQuery = useTags();
@@ -615,19 +627,45 @@ function ListaTab({
     setAmountMax('0.00');
   }
 
-  const allItems = txQuery.data ?? [];
+  const searchFilters = useMemo(() => {
+    const min = toNumber(amountMin);
+    const max = toNumber(amountMax);
+    return {
+      search: debouncedSearch,
+      ...(typeFilter !== 'all' ? { type: typeFilter } : {}),
+      ...(walletFilter ? { wallet: walletFilter } : {}),
+      ...(tagFilter ? { tag: tagFilter } : {}),
+      ...(min > 0 ? { amount_min: min } : {}),
+      ...(max > 0 ? { amount_max: max } : {}),
+    };
+  }, [debouncedSearch, typeFilter, walletFilter, tagFilter, amountMin, amountMax]);
+  const searchQuery = useInfiniteTransactions(searchFilters, { enabled: searching });
+  const searchTotalsQuery = useTransactionTotals(searchFilters, { enabled: searching });
+  const paged = usePagedScroll(searchQuery);
+
+  // Lo que se muestra en cada modo, con la misma forma para el resto del componente.
+  const txQuery = searching ? searchQuery : monthQuery;
+  const loaded = useMemo(
+    () => (searching ? flattenPages(searchQuery.data) : (monthQuery.data ?? [])),
+    [searching, searchQuery.data, monthQuery.data],
+  );
+
+  const allItems = loaded;
   const items = useMemo(() => {
     const q = search.trim().toLowerCase();
     const min = toNumber(amountMin);
     const max = toNumber(amountMax);
     return allItems.filter((t) => {
       if (pendingDeleteIds.has(t.id)) return false;
-      if (typeFilter !== 'all' && t.type !== typeFilter) return false;
-      if (walletFilter && t.wallet !== walletFilter) return false;
-      if (tagFilter && !(t.tags ?? []).some((tag) => tag.id === tagFilter)) return false;
-      const amount = toNumber(t.amount);
-      if (min > 0 && amount < min) return false;
-      if (max > 0 && amount > max) return false;
+      if (!searching) {
+        // En modo búsqueda estos filtros ya los aplicó el servidor.
+        if (typeFilter !== 'all' && t.type !== typeFilter) return false;
+        if (walletFilter && t.wallet !== walletFilter) return false;
+        if (tagFilter && !(t.tags ?? []).some((tag) => tag.id === tagFilter)) return false;
+        const amount = toNumber(t.amount);
+        if (min > 0 && amount < min) return false;
+        if (max > 0 && amount > max) return false;
+      }
       if (!q) return true;
       const cat = t.category ? categories.get(t.category)?.name : undefined;
       const haystack = `${t.description ?? ''} ${cat ?? ''} ${wallets.get(t.wallet)?.name ?? ''}`;
@@ -635,6 +673,7 @@ function ListaTab({
     });
   }, [
     allItems,
+    searching,
     pendingDeleteIds,
     typeFilter,
     walletFilter,
@@ -650,18 +689,32 @@ function ListaTab({
   // limita a la moneda base para no mezclar montos de otras carteras; cada
   // fila de la lista de abajo sí muestra su moneda real, sea cual sea.
   const totals = useMemo(
-    () => summarizeByType(items.filter((t) => t.currency === currency)),
-    [items, currency],
+    () =>
+      searching
+        ? // Búsqueda: el total es el de TODOS los resultados (lo dice el servidor), no el
+          // de la página cargada; las filas deslizadas-a-borrar se restan al instante.
+          totalsForCurrency(
+            searchTotalsQuery.data,
+            currency,
+            allItems.filter((t) => pendingDeleteIds.has(t.id)),
+          )
+        : summarizeByType(items.filter((t) => t.currency === currency)),
+    [searching, searchTotalsQuery.data, allItems, pendingDeleteIds, items, currency],
   );
   const days = useMemo(() => groupByDay(items), [items]);
 
-  const refresh = usePullRefresh(txQuery.isFetching && !txQuery.isLoading, () => txQuery.refetch());
+  const refresh = usePullRefresh(txQuery.isFetching && !txQuery.isLoading, () => {
+    void txQuery.refetch();
+    if (searching) void searchTotalsQuery.refetch();
+  });
 
   return (
     <ScrollView
       contentContainerClassName="px-4 pb-36 pt-4 self-center w-full max-w-[560px] gap-3"
       refreshControl={refresh}
       keyboardShouldPersistTaps="handled"
+      onScroll={searching ? paged.onScroll : undefined}
+      scrollEventThrottle={paged.scrollEventThrottle}
     >
       <MonthSwitcher value={month} onChange={onMonth} />
       <SummaryTriple income={totals.income} expenses={totals.expenses} currency={currency} />
@@ -791,7 +844,11 @@ function ListaTab({
       ) : txQuery.isError ? (
         <ErrorState error={txQuery.error} onRetry={txQuery.refetch} />
       ) : allItems.length === 0 ? (
-        <EmptyState title="Sin movimientos este mes" hint="Agrega uno con el botón +." />
+        searching ? (
+          <EmptyState title="Sin resultados" hint="Probá con otro texto o filtro." />
+        ) : (
+          <EmptyState title="Sin movimientos este mes" hint="Agrega uno con el botón +." />
+        )
       ) : items.length === 0 ? (
         <EmptyState title="Sin resultados" hint="Probá con otro texto o filtro." />
       ) : (
@@ -826,6 +883,13 @@ function ListaTab({
           );
         })
       )}
+      {searching ? (
+        <LoadMoreFooter
+          hasNextPage={searchQuery.hasNextPage}
+          isFetchingNextPage={searchQuery.isFetchingNextPage}
+          onLoadMore={paged.loadMore}
+        />
+      ) : null}
     </ScrollView>
   );
 }
