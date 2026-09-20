@@ -13,7 +13,12 @@ import { colorScheme, vars } from 'nativewind';
 import { useFonts } from 'expo-font';
 
 import { queryClient } from '@/lib/queryClient';
-import { QUERY_PERSIST_MAX_AGE, queryPersister, shouldPersistQuery } from '@/lib/queryPersister';
+import {
+  AI_QUERY_PREFIX,
+  QUERY_PERSIST_MAX_AGE,
+  queryPersister,
+  shouldPersistQuery,
+} from '@/lib/queryPersister';
 import { applyGlobalFont } from '@/lib/globalFont';
 import { initSentry } from '@/lib/sentry';
 import { darkColors, lightColors } from '@/theme';
@@ -156,6 +161,13 @@ export default function RootLayout() {
           persister: queryPersister,
           maxAge: QUERY_PERSIST_MAX_AGE,
           dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+        }}
+        // Corre después de restaurar y antes de que los hijos lean nada. Tira la
+        // copia de IA que quedó guardada de antes de que dejara de persistirse
+        // (ver `AI_QUERY_PREFIX`); sin esto, esa copia vieja se restauraría una
+        // vez más y el botón volvería a parpadear.
+        onSuccess={() => {
+          queryClient.removeQueries({ queryKey: [AI_QUERY_PREFIX] });
         }}
       >
         <SafeAreaProvider>

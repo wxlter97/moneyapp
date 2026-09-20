@@ -25,8 +25,21 @@ export const queryPersister = createAsyncStoragePersister({
 /** 24h: mismo horizonte que `gcTime` en `queryClient.ts`. */
 export const QUERY_PERSIST_MAX_AGE = 24 * 60 * 60 * 1000;
 
+/**
+ * Prefijo de las queries de IA (`['ai', 'status']`, ver `qk.aiStatus`): **no se
+ * persisten nunca**. Dicen si la función está encendida, y eso lo puede cambiar
+ * un interruptor del admin en cualquier momento. Restaurada del disco, la copia
+ * vieja pintaba los botones de IA al abrir la pantalla y desaparecían apenas
+ * llegaba la respuesta fresca -- un parpadeo que además hace creer que la
+ * función anda. Sin copia, los botones aparecen sólo cuando el servidor confirmó
+ * que la función está encendida.
+ */
+export const AI_QUERY_PREFIX = 'ai';
+
 export function shouldPersistQuery(query: Query): boolean {
   if (query.state.status !== 'success') return false;
   const key = query.queryKey;
-  return !(Array.isArray(key) && key.includes('receipt'));
+  if (!Array.isArray(key)) return true;
+  if (key.includes('receipt')) return false;
+  return key[0] !== AI_QUERY_PREFIX;
 }
