@@ -98,3 +98,26 @@ export async function unsubscribeWebPush(): Promise<void> {
     // que ya no tiene backend del otro lado -- inofensivo.
   }
 }
+
+/** La suscripción de push vigente de este navegador, o `null`. */
+export async function getWebPushSubscription(): Promise<PushSubscription | null> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    return (await registration?.pushManager.getSubscription()) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Da de baja la suscripción del navegador y devuelve el endpoint que tenía (para
+ * avisarle al backend), o `null` si no había ninguna. Al volver a suscribir se
+ * obtiene un endpoint nuevo: es lo que arregla una suscripción que el navegador
+ * o el servicio de push dejaron de considerar válida. */
+export async function resetWebPushSubscription(): Promise<string | null> {
+  const subscription = await getWebPushSubscription();
+  if (!subscription) return null;
+  const endpoint = subscription.endpoint;
+  await subscription.unsubscribe().catch(() => {});
+  return endpoint;
+}

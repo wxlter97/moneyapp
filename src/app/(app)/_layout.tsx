@@ -13,6 +13,7 @@ import {
   registerForPushNotificationsAsync,
 } from '@/lib/notifications';
 import { routeForNotification } from '@/lib/notificationRouting';
+import { usePushPrefStore } from '@/store/pushPref';
 import { useAuthStore } from '@/store/auth';
 import { useSecurityStore } from '@/store/security';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -58,12 +59,16 @@ export default function AppLayout() {
   // molestar si no hay permiso, es un simulador, o falta el dev build (ver
   // lib/notifications.ts) — el usuario siempre puede reintentar a mano
   // desde Herramientas → Notificaciones.
+  // Respeta el "apagar avisos en este dispositivo" (Notificaciones): sin esperar
+  // a que se lea de disco, un dispositivo apagado se volvería a registrar solo.
+  const pushEnabled = usePushPrefStore((s) => s.enabled);
+  const pushPrefHydrated = usePushPrefStore((s) => s.hydrated);
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    if (status !== 'authenticated' || !pushPrefHydrated || !pushEnabled) return;
     registerForPushNotificationsAsync()
       .then((device) => (device ? registerDevice(device) : undefined))
       .catch(() => {});
-  }, [status]);
+  }, [status, pushEnabled, pushPrefHydrated]);
 
   // Tocar un push (recurrente/cuota/presupuesto) salta al workspace y a la
   // pantalla correspondiente, en vez de simplemente abrir la app.

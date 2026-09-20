@@ -33,6 +33,8 @@ import type {
   InstallmentPurchaseInput,
   Invitation,
   LoyaltyCategoryType,
+  LoyaltyMerchant,
+  PushTestResponse,
   LoyaltySummary,
   Membership,
   ModuleFlagsStatus,
@@ -214,6 +216,10 @@ export const loyaltyCategoryTypes = {
   list: () => fetchAll<LoyaltyCategoryType>('/category-types/', {}),
 };
 
+export const loyaltyMerchants = {
+  list: () => fetchAll<LoyaltyMerchant>('/loyalty-merchants/', {}),
+};
+
 export const cardProducts = {
   list: () => fetchAll<CardProduct>('/card-products/', {}),
 };
@@ -254,6 +260,12 @@ export const pushDevices = {
     api
       .post('/push-devices/unregister/', { token }, { skipWorkspace: true })
       .then(() => undefined),
+  /** Manda un aviso de prueba a todos los dispositivos de la cuenta y dice qué pasó
+   * con cada uno (entregado, rechazado con su código, suscripción vencida…). */
+  test: () =>
+    api
+      .post<PushTestResponse>('/push-devices/test/', {}, { skipWorkspace: true })
+      .then((r) => r.data),
   /** Clave pública VAPID para `PushManager.subscribe({applicationServerKey})`
    * -- pública por diseño, no requiere sesión. */
   vapidPublicKey: () =>

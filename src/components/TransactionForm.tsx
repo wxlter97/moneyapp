@@ -7,6 +7,7 @@ import { dismissModal } from '@/components/ui/ModalHeader';
 import {
   checkDuplicateTransaction,
   useCardProducts,
+  useLoyaltyMerchants,
   useCategories,
   useCreateTransaction,
   useDeleteTransaction,
@@ -46,7 +47,7 @@ import type { PickedFile } from '@/lib/receipt';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
-import { pickRate } from '@/lib/loyaltyRate';
+import { autopayRate, matchMerchant, pickRate, qualifies } from '@/lib/loyaltyRate';
 import { formatMoney, toNumber } from '@/lib/money';
 import { useSnackbarStore } from '@/store/snackbar';
 
@@ -102,6 +103,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const { data: assignableWallets, query: walletsQ } = useAssignableWallets();
   const categoriesQ = useCategories();
   const cardProductsQ = useCardProducts();
+  const merchantsQ = useLoyaltyMerchants();
   // El catálogo de tarjetas (`cardProductsQ`) es público -- cualquiera lo lee,
   // pague o no Pro (ver `apps.loyalty.api.IsAdminOrReadOnly`). Sin este
   // chequeo, la vista previa de puntos/cashback de más abajo mostraría
@@ -124,6 +126,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const [tagNames, setTagNames] = useState<string[]>([]);
   const [inBudget, setInBudget] = useState(true);
   const [isRefundable, setIsRefundable] = useState(false);
+  const [isAutopay, setIsAutopay] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   // Mini-formulario inline de "Registrar reembolso" -- ver más abajo. No es
   // un campo de la transacción: crea OTRA transacción (el ingreso real que
@@ -188,6 +191,8 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     setNote(t.description ?? '');
     setTagNames((t.tags ?? []).map((tag) => tag.name));
     setInBudget(t.counts_toward_budget);
+    // Como `isRefundable`: duplicar un cargo automático no lo copia ya marcado.
+    if (editing) setIsAutopay(t.is_autopay ?? false);
     // Sólo al EDITAR (no al duplicar): duplicar una transacción reembolsada
     // no debería crear la copia ya marcada como reembolsable.
     if (editing) {
@@ -261,8 +266,27 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const selectedCategory = categoriesQ.data?.find((c) => c.id === categoryId);
   const cardProduct = cardProductsQ.data?.find((p) => p.id === selectedWallet?.card_product);
 
+  // El comercio reconocido en la descripción manda sobre la categoría, igual que
+  // en el servidor (ver `apps.loyalty.signals`): "Comida" mezcla restaurantes con
+  // supermercados.
+  const merchant = matchMerchant(note, merchantsQ.data ?? []);
+  // Tasas que sólo valen para cargos automáticos (Pagos Automáticos de servicios):
+  // no se pueden deducir de la descripción, así que se PREGUNTA (ver el interruptor
+  // más abajo) en vez de suponerlo, y se pregunta también al editar por si quedó mal.
+  const categoryTypeForRate = merchant?.category_type ?? selectedCategory?.category_type;
+  const autopayOffer = useMemo(() => {
+    if (!hasLoyalty || isTransfer || type !== 'expense') return null;
+    for (const p of cardProduct?.programs ?? []) {
+      if (!p.is_active) continue;
+      const rate = autopayRate(p, categoryTypeForRate, merchant?.id);
+      if (rate !== undefined) return { program: p, rate: toNumber(rate) };
+    }
+    return null;
+  }, [hasLoyalty, isTransfer, type, cardProduct, categoryTypeForRate, merchant?.id]);
+  const autopayOn = !!autopayOffer && isAutopay;
+
   function rateFor(program: { default_rate: string; category_rates: LoyaltyCategoryRate[] }) {
-    return toNumber(pickRate(program, selectedCategory?.category_type, date));
+    return toNumber(pickRate(program, categoryTypeForRate, date, merchant?.id, autopayOn));
   }
 
   const discountPrograms = useMemo(
@@ -280,9 +304,14 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     hasLoyalty && !editing && !isTransfer && type === 'expense' && amountValid
       ? autoPrograms
           .map((p) => {
+            const label = p.name ? ` (${p.name})` : '';
+            // "Cashback a partir de $10": por debajo, este programa no gana; se dice
+            // por qué en vez de simplemente no mostrar nada.
+            if (!qualifies(p, amountNum)) {
+              return `Sin ${p.kind === 'points' ? 'puntos' : 'cashback'}${label}: compra mínima ${formatMoney(Number(p.min_amount), currency)}`;
+            }
             const rate = rateFor(p);
             if (!rate) return null;
-            const label = p.name ? ` (${p.name})` : '';
             return p.kind === 'points'
               ? `+${Math.round(amountNum * rate)} puntos${label}`
               : `+${formatMoney(amountNum * rate, currency)} cashback${label}`;
@@ -305,7 +334,10 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   }, [discountPrograms, appliedDiscount]);
 
   const activeDiscountProgram = discountPrograms.find((p) => p.id === discountProgramId) ?? null;
-  const discountRate = activeDiscountProgram ? rateFor(activeDiscountProgram) : 0;
+  const discountRate =
+    activeDiscountProgram && qualifies(activeDiscountProgram, amountNum)
+      ? rateFor(activeDiscountProgram)
+      : 0;
   const suggestedAmount = amountNum * (1 - discountRate);
   const showDiscountHint =
     !editing &&
@@ -455,6 +487,8 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
       payload.category = categoryId;
       if (type === 'expense') payload.counts_toward_budget = inBudget;
       payload.is_refundable = isRefundable;
+      // Sólo se manda si la tarjeta lo pregunta: sin la pregunta no hay nada que confirmar.
+      payload.is_autopay = autopayOn;
       if (appliedDiscount) {
         payload.discount_program = appliedDiscount.programId;
         payload.pre_discount_amount = appliedDiscount.original.toFixed(2);
@@ -701,6 +735,29 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
                 {line}
               </Text>
             ))}
+          </View>
+        ) : null}
+
+        {autopayOffer ? (
+          <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
+            <View className="flex-1 pr-2">
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                ¿Es un cargo automático?
+              </Text>
+              <Text className="text-text-muted text-xs">
+                Pagos Automáticos de servicios: {autopayOffer.program.name || 'esta tarjeta'} da{' '}
+                {autopayOffer.program.kind === 'points'
+                  ? `${autopayOffer.rate} puntos por unidad`
+                  : `${(autopayOffer.rate * 100).toFixed(0)}%`}{' '}
+                sólo así.
+              </Text>
+            </View>
+            <Switch
+              value={isAutopay}
+              onValueChange={setIsAutopay}
+              trackColor={{ true: colors.primary, false: colors.surface2 }}
+              thumbColor="#FFFFFF"
+            />
           </View>
         ) : null}
 
