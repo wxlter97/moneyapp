@@ -1,16 +1,17 @@
-import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { useLoyaltySummary } from '@/api/queries';
-import { useWalletMap } from '@/api/queries/lookups';
+import type { LoyaltyWalletBalance } from '@/api/types';
 import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { Card } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
-import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
-import { ErrorState, LoadingState } from '@/components/ui/states';
-import { currentYearMonth, formatYearMonth, monthRange } from '@/lib/date';
-import { toNumber } from '@/lib/money';
+import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { formatMoney, toNumber } from '@/lib/money';
+import { formatQuantity, groupByBank, pointsWithoutValue, totalsByCurrency } from '@/lib/rewards';
+import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
 /**
@@ -18,19 +19,19 @@ import { fonts } from '@/theme/typography';
  * `app/(app)/loyalty.tsx` pueda cargarlo con `lazy()` sin que Expo Router
  * también lo registre como su propia ruta.
  *
- * Saldo de puntos (acumulado, todas las cartas) + cashback ganado/descuento
- * ahorrado en el mes elegido -- ver `apps.loyalty` en el backend. Se llega
- * acá desde una tarjeta con producto asignado (ver `WalletForm`).
+ * Una tarjeta por cartera, agrupadas por banco, cada una con lo que tiene
+ * disponible para canjear. Tocar una tarjeta abre la suya (`loyalty/[wallet]`):
+ * ahí están sus canjes, ajustes y lo que ganó cada compra. Antes esto era una
+ * sola lista con todo junto y sin total.
  */
 export default function LoyaltyScreen() {
-  const [month, setMonth] = useState(currentYearMonth());
-  const range = monthRange(month);
-  const summary = useLoyaltySummary({ date_after: range.from, date_before: range.to });
-  const { map: wallets } = useWalletMap();
+  const summary = useLoyaltySummary();
   const refresh = usePullRefresh(summary.isFetching && !summary.isLoading, () => summary.refetch());
 
-  const points = summary.data?.points_balances ?? [];
-  const totals = summary.data?.period_totals ?? [];
+  const wallets = summary.data?.wallets ?? [];
+  const groups = groupByBank(wallets);
+  const totals = totalsByCurrency(wallets);
+  const withoutValue = pointsWithoutValue(wallets);
 
   return (
     <ProFeatureGate feature="loyalty">
@@ -39,89 +40,94 @@ export default function LoyaltyScreen() {
           <LoadingState />
         ) : summary.isError ? (
           <ErrorState error={summary.error} onRetry={summary.refetch} />
+        ) : wallets.length === 0 ? (
+          <EmptyState
+            title="Todavía no tienes tarjetas con recompensas"
+            hint="Asígnale un producto a una tarjeta (Carteras → esa tarjeta → Recompensas) para empezar a acumular."
+          />
         ) : (
           <>
-            <Card title="Puntos acumulados">
-              {points.length === 0 ? (
-                <Text className="text-text-muted text-sm">
-                  Sin puntos todavía -- asignale un producto a tu tarjeta (Herramientas → esa
-                  cartera) para empezar a acumular.
-                </Text>
-              ) : (
-                points.map((p, i) => {
-                  const wallet = wallets.get(p.wallet);
-                  return (
-                    <View
-                      key={`${p.wallet}-${p.program}`}
-                      className={`flex-row items-center justify-between py-2.5 ${
-                        i > 0 ? 'border-t border-border/30' : ''
-                      }`}
-                    >
-                      <View className="flex-1 pr-2">
-                        <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                          {p.program_name}
-                        </Text>
-                        <Text className="text-text-muted text-xs">{wallet?.name ?? p.wallet_name}</Text>
-                      </View>
-                      <View className="items-end">
-                        <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                          {toNumber(p.points)} pts
-                        </Text>
-                        {p.estimated_value != null ? (
-                          <Money
-                            value={p.estimated_value}
-                            currency={wallet?.currency ?? 'USD'}
-                            tone="muted"
-                            className="text-[11px]"
-                          />
-                        ) : null}
-                      </View>
-                    </View>
-                  );
-                })
-              )}
-            </Card>
-
-            <View className="gap-2">
-              <Text className="text-text-muted px-1 text-xs uppercase tracking-wide">
-                {formatYearMonth(month)}
+            <Card title="Disponible ahora">
+              {totals.map((t) => (
+                <Money
+                  key={t.currency}
+                  value={t.total}
+                  currency={t.currency}
+                  tone="income"
+                  className="text-2xl"
+                />
+              ))}
+              <Text className="text-text-muted mt-1 text-xs">
+                Cashback más el valor en dinero de tus puntos, de {wallets.length}{' '}
+                {wallets.length === 1 ? 'tarjeta' : 'tarjetas'}.
               </Text>
-              <MonthSwitcher value={month} onChange={setMonth} />
-            </View>
-
-            <Card title="Cashback y descuentos del mes">
-              {totals.length === 0 ? (
-                <Text className="text-text-muted text-sm">
-                  Sin cashback ni descuentos este mes.
+              {withoutValue > 0 ? (
+                <Text className="text-warning mt-1 text-xs">
+                  {withoutValue === 1
+                    ? 'Un programa de puntos no tiene valor de canje y no entra en este total.'
+                    : `${withoutValue} programas de puntos no tienen valor de canje y no entran en este total.`}
                 </Text>
-              ) : (
-                totals.map((t, i) => {
-                  const wallet = wallets.get(t.wallet);
-                  const currency = wallet?.currency ?? 'USD';
-                  return (
-                    <View
-                      key={t.wallet}
-                      className={`gap-1 py-2.5 ${i > 0 ? 'border-t border-border/30' : ''}`}
-                    >
-                      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                        {wallet?.name ?? t.wallet_name}
-                      </Text>
-                      <View className="flex-row justify-between">
-                        <Text className="text-text-muted text-xs">Cashback ganado</Text>
-                        <Money value={t.cashback_earned} currency={currency} tone="income" className="text-xs" />
-                      </View>
-                      <View className="flex-row justify-between">
-                        <Text className="text-text-muted text-xs">Ahorrado en descuentos</Text>
-                        <Money value={t.discount_saved} currency={currency} tone="income" className="text-xs" />
-                      </View>
-                    </View>
-                  );
-                })
-              )}
+              ) : null}
             </Card>
+
+            {groups.map((group) => (
+              <View key={group.bank} className="gap-2">
+                <Text className="text-text-muted px-1 text-xs uppercase tracking-wide">
+                  {group.bankName}
+                </Text>
+                {group.wallets.map((wallet) => (
+                  <WalletRewardsRow key={wallet.wallet} wallet={wallet} />
+                ))}
+              </View>
+            ))}
           </>
         )}
       </ScrollView>
     </ProFeatureGate>
+  );
+}
+
+function WalletRewardsRow({ wallet }: { wallet: LoyaltyWalletBalance }) {
+  const colors = useColors();
+  return (
+    <Pressable
+      onPress={() => router.push(`/loyalty/${wallet.wallet}`)}
+      accessibilityRole="button"
+      accessibilityLabel={`Recompensas de ${wallet.wallet_name}`}
+      className="rounded-2xl border border-border bg-surface/95 p-4 active:opacity-80"
+    >
+      <View className="flex-row items-center justify-between">
+        <View className="flex-1 pr-2">
+          <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }}>
+            {wallet.wallet_name}
+          </Text>
+          <Text className="text-text-muted text-xs">{wallet.product_name}</Text>
+        </View>
+        <View className="flex-row items-center gap-2">
+          <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+            {formatMoney(toNumber(wallet.total_value), wallet.currency)}
+          </Text>
+          <Icon name="chevron-right" size={16} color={colors.textMuted} />
+        </View>
+      </View>
+
+      {wallet.programs.length === 0 ? (
+        <Text className="text-text-muted mt-2 text-xs">Esta tarjeta sólo tiene descuentos.</Text>
+      ) : (
+        <View className="mt-2 gap-1">
+          {wallet.programs.map((p) => (
+            <View key={p.program} className="flex-row items-center justify-between">
+              <Text className="text-text-muted text-xs">{p.name}</Text>
+              <Text className="text-text text-xs">
+                {formatQuantity(p.unit, p.available, wallet.currency)}
+                {p.unit === 'points' && p.estimated_value != null
+                  ? `  ≈ ${formatMoney(toNumber(p.estimated_value), wallet.currency)}`
+                  : ''}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </Pressable>
   );
 }

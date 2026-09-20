@@ -842,9 +842,83 @@ export interface LoyaltyPeriodTotal {
   discount_saved: string;
 }
 
+/** Un programa de puntos o cashback de una tarjeta, con su saldo. `unit` es `points`
+ * (puntos, millas…) o `currency` (cashback, en la moneda de la cartera). */
+export interface LoyaltyProgramBalance {
+  program: UUID;
+  name: string;
+  kind: 'points' | 'cashback';
+  unit: 'points' | 'currency';
+  is_active: boolean;
+  earned: string;
+  /** Suma de los ajustes manuales (con signo). */
+  adjusted: string;
+  redeemed: string;
+  /** `earned + adjusted - redeemed`: lo que se puede canjear hoy. */
+  available: string;
+  point_value: string | null;
+  /** Valor en dinero de lo disponible (los puntos sin valor de canje: `null`). */
+  estimated_value: string | null;
+  min_amount: string | null;
+}
+
+/** Una tarjeta con recompensas y todo lo suyo, por separado de las demás. */
+export interface LoyaltyWalletBalance {
+  wallet: UUID;
+  wallet_name: string;
+  currency: string;
+  bank: UUID;
+  bank_name: string;
+  product_name: string;
+  programs: LoyaltyProgramBalance[];
+  discount_saved: string;
+  total_value: string;
+}
+
 export interface LoyaltySummary {
+  wallets: LoyaltyWalletBalance[];
   points_balances: LoyaltyPointsBalance[];
   period_totals: LoyaltyPeriodTotal[];
+}
+
+/** Un canje o un ajuste del libro de recompensas. `delta` es el efecto sobre el
+ * disponible: negativo al canjear, con signo al ajustar. */
+export interface LoyaltyMovement {
+  id: UUID;
+  wallet: UUID;
+  program: UUID;
+  program_name: string;
+  kind: 'redeem' | 'adjust';
+  delta: string;
+  /** Sólo canjes: lo que valió en dinero. */
+  cash_value: string | null;
+  date: ISODate;
+  note: string;
+  /** El ingreso que se registró al depositar el canje en una cartera. */
+  deposit_transaction: UUID | null;
+  created_at: ISODateTime;
+}
+
+export interface LoyaltyMovementInput {
+  wallet: UUID;
+  program: UUID;
+  kind: 'redeem' | 'adjust';
+  /** Canje: lo que se canjea (positivo). Ajuste: con signo. Puntos, o dinero si es cashback. */
+  quantity: string;
+  date?: ISODate;
+  note?: string;
+  cash_value?: string | null;
+  deposit_wallet?: UUID | null;
+}
+
+/** Fila de `GET /loyalty-earnings/`: lo que ganó (o ahorró) una compra. */
+export interface LoyaltyEarningRow extends LoyaltyEarningSummary {
+  id: UUID;
+  transaction: UUID;
+  transaction_description: string;
+  transaction_date: ISODate;
+  wallet: UUID;
+  kind: LoyaltyKind;
 }
 
 export interface MonthlySnapshot {

@@ -33,7 +33,10 @@ import type {
   InstallmentPurchaseInput,
   Invitation,
   LoyaltyCategoryType,
+  LoyaltyEarningRow,
   LoyaltyMerchant,
+  LoyaltyMovement,
+  LoyaltyMovementInput,
   PushTestResponse,
   LoyaltySummary,
   Membership,
@@ -225,7 +228,21 @@ export const cardProducts = {
 };
 
 // --- lo generado por transacciones según los programas de lealtad ---------
+export const loyaltyMovements = {
+  list: (params?: { wallet?: string; program?: string; kind?: string }) =>
+    fetchAll<LoyaltyMovement>('/loyalty-movements/', params ?? {}),
+  create: (input: LoyaltyMovementInput) =>
+    api.post<LoyaltyMovement>('/loyalty-movements/', input).then((r) => r.data),
+  /** Sólo nota, fecha y (en un ajuste) la cantidad: un canje se deshace y se rehace. */
+  update: (id: string, input: { quantity?: string; date?: string; note?: string }) =>
+    api.patch<LoyaltyMovement>(`/loyalty-movements/${id}/`, input).then((r) => r.data),
+  /** Deshace el movimiento; si era un canje depositado, también borra su ingreso. */
+  remove: (id: string) => api.delete(`/loyalty-movements/${id}/`).then(() => undefined),
+};
+
 export const loyaltyEarnings = {
+  /** Lo que ganó cada compra de una cartera (más reciente primero). */
+  list: (params?: { wallet?: string }) => fetchAll<LoyaltyEarningRow>('/loyalty-earnings/', params ?? {}),
   /** Saldo de puntos por cartera + cashback ganado / descuento ahorrado en
    * el período (ambas fechas opcionales, formato ISO). */
   summary: (params?: { date_after?: string; date_before?: string }) =>
