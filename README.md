@@ -127,16 +127,24 @@ Pruebas: `npm test` (Jest, 17 tests sobre `lib/` y el cliente de API).
 
 ## Deploy
 
-Frontend en **Vercel**, backend en **Cloud Run**, DB en **Neon** (sin Celery).
-Guía completa: [`../budget/DEPLOY.md`](../budget/DEPLOY.md).
+Frontend en **Cloudflare Pages**, backend en **Cloud Run**, DB en **Neon** (sin
+Celery). Desde el 20-sep-2026 el front ya no corre en Vercel. Guía completa:
+[`../budget/DEPLOY.md`](../budget/DEPLOY.md) §3.
 
-- `vercel.json` fija el build (`expo export -p web` → `dist/`) y el rewrite SPA
-  (`/(.*)` → `/index.html`), necesario con `web.output: "single"`.
-- `EXPO_PUBLIC_API_URL` se define en el panel de Vercel (Settings → Environment
-  Variables); se embebe en el bundle en el build.
-- Lo normal es conectar el repo en el panel de Vercel: cada push a `main`
-  redeploya, sin workflow propio.
-- `npm run deploy:web` → `vercel deploy --prod` para un deploy manual.
+- Proyecto de **Pages** (no un Worker: un Worker con dominio propio exige la zona
+  DNS en Cloudflare). Build: `npm run build:web`; salida: `dist/`. El rewrite SPA
+  lo hace `public/_redirects`, necesario con `web.output: "single"`.
+- Cada push a `main` redeploya, sin workflow propio.
+- Variables del build (Settings → Environment variables en Pages), que se embeben
+  en el bundle: `EXPO_PUBLIC_API_URL` (la URL de Cloud Run con `/api/v1`),
+  `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` y `NODE_VERSION=20`.
+  Sin `EXPO_PUBLIC_API_URL` el bundle llama a `http://localhost:8000/api/v1`; para
+  comprobarlo, buscar `localhost:8000` en `dist/_expo/static/js/web/entry-*.js`.
+- `money.wxlter.dev` es un CNAME hacia `<proyecto>.pages.dev` en el DNS del
+  registrar. El CORS del backend sólo acepta ese dominio: el login no funciona en
+  `*.pages.dev`.
+- `vercel.json` queda en el repo sólo como respaldo por si hubiera que volver a
+  Vercel; ya no lo usa nada.
 - `npm run build:web` → export local a `dist/` (para inspeccionar el bundle).
 
 Pendiente: gestión de miembros del workspace; pulido visual de alta fidelidad;
