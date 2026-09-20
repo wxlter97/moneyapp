@@ -274,7 +274,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   // en el servidor (ver `apps.loyalty.signals`): "Comida" mezcla restaurantes con
   // supermercados.
   // Lo que se elige a mano ("¿fue en Súper Selectos?") gana al que se reconoce en el texto.
-  const allMerchants = merchantsQ.data ?? [];
+  const allMerchants = useMemo(() => merchantsQ.data ?? [], [merchantsQ.data]);
   const merchant =
     allMerchants.find((m) => m.id === chosenMerchantId) ?? matchMerchant(note, allMerchants);
   // Comercios con beneficio en la tarjeta elegida: salen de sus tasas (admin), no de una lista fija.
