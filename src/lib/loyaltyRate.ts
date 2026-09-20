@@ -1,4 +1,10 @@
-import type { ISODate, LoyaltyCategoryRate, LoyaltyMerchant, UUID } from '@/api/types';
+import type {
+  ISODate,
+  LoyaltyCategoryRate,
+  LoyaltyMerchant,
+  LoyaltyProgram,
+  UUID,
+} from '@/api/types';
 
 /** Día de la semana de una fecha ISO ("2026-09-21") con lunes = 0 … domingo = 6:
  * los mismos números que `date.weekday()` en el backend (`LoyaltyCategoryRate.weekday`).
@@ -93,4 +99,22 @@ export function pickRate(
   if (merchantRate !== undefined) return merchantRate;
   const categoryRate = categoryType ? find((r) => r.category_type === categoryType) : undefined;
   return categoryRate ?? program.default_rate;
+}
+
+/**
+ * Los comercios en los que la tarjeta da un beneficio especial (los de sus tasas de
+ * comercio, en programas activos), para ofrecerlos como opciones al registrar un gasto:
+ * "¿Fue en Súper Selectos?". Salen de los datos de la tarjeta, no de una lista fija:
+ * agregar un comercio a una tarjeta desde el admin hace que aparezca solo.
+ */
+export function merchantOptions(
+  programs: Pick<LoyaltyProgram, 'is_active' | 'category_rates'>[],
+  merchants: LoyaltyMerchant[],
+): LoyaltyMerchant[] {
+  const ids = new Set<UUID>();
+  for (const program of programs) {
+    if (!program.is_active) continue;
+    for (const rate of program.category_rates) if (rate.merchant) ids.add(rate.merchant);
+  }
+  return merchants.filter((m) => ids.has(m.id)).sort((a, b) => a.name.localeCompare(b.name, 'es'));
 }
