@@ -757,6 +757,8 @@ export interface LoyaltyCategoryRate {
   program: UUID;
   category_type: UUID;
   rate: string;
+  /** 0 = lunes … 6 = domingo (como `date.weekday()`); `null` = todos los días. */
+  weekday: number | null;
 }
 
 /**

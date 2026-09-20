@@ -19,6 +19,7 @@ import {
 import { useAssignableWallets, walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import type {
+  LoyaltyCategoryRate,
   ParseCandidate,
   ReceiptCandidate,
   Transaction,
@@ -45,6 +46,7 @@ import type { PickedFile } from '@/lib/receipt';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
+import { pickRate } from '@/lib/loyaltyRate';
 import { formatMoney, toNumber } from '@/lib/money';
 import { useSnackbarStore } from '@/store/snackbar';
 
@@ -259,11 +261,8 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const selectedCategory = categoriesQ.data?.find((c) => c.id === categoryId);
   const cardProduct = cardProductsQ.data?.find((p) => p.id === selectedWallet?.card_product);
 
-  function rateFor(program: { default_rate: string; category_rates: { category_type: string; rate: string }[] }) {
-    const override = selectedCategory?.category_type
-      ? program.category_rates.find((r) => r.category_type === selectedCategory.category_type)
-      : undefined;
-    return toNumber(override?.rate ?? program.default_rate);
+  function rateFor(program: { default_rate: string; category_rates: LoyaltyCategoryRate[] }) {
+    return toNumber(pickRate(program, selectedCategory?.category_type, date));
   }
 
   const discountPrograms = useMemo(
