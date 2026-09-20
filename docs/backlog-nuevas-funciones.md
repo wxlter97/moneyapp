@@ -317,6 +317,43 @@ saberlo antes de invertir en esto:
 
 ## Costos de IA y topes por plan
 
+> **Actualización del 20 sep 2026: las tablas de abajo quedaron viejas.** Se calcularon con los
+> modelos 2.5, que **ya no están disponibles para cuentas nuevas** (la API responde 404 aunque
+> figuren en la lista de modelos). Hoy el texto libre y el chat van en `gemini-3.5-flash-lite`
+> (`$0.30` entrada / `$2.50` salida por millón de tokens) y los recibos, el resumen y el audio en
+> `gemini-3.8-flash` (`$0.75` / `$3.75` **hasta el 31-dic-2026**, `$1.50` / `$7.50` desde el
+> 1-ene-2027). Mismos tokens que en las tablas de abajo. **No incluye los tokens de razonamiento**
+> de los 3.x, que se cobran como salida y pueden subir estas cifras; `AIUsage` los va a mostrar
+> desde la primera llamada real.
+>
+> | Operación | Modelo | Ahora (promo) | Desde 1-ene-2027 |
+> |---|---|---|---|
+> | Parseo de texto libre | 3.5 Flash-Lite | ~$0.0005 | ~$0.0005 |
+> | Dictado de voz (5 s) | 3.8 Flash | ~$0.0010 | ~$0.0021 |
+> | Recibo (foto, 1.5–3k tokens) | 3.8 Flash | ~$0.0028–0.0034 | ~$0.0056–0.0067 |
+> | Pregunta de chat | 3.5 Flash-Lite | ~$0.0022 | ~$0.0022 |
+> | Resumen mensual | 3.8 Flash | ~$0.0024 | ~$0.0048 |
+>
+> | Perfil de usuario | Ahora (promo) | Desde 1-ene-2027 |
+> |---|---|---|
+> | Ligero | ~$0.010 (1% de $0.99) | ~$0.018 (2%) |
+> | Medio | ~$0.057 (6%) | ~$0.092 (9%) |
+> | Intensivo | ~$0.23 (23%) | ~$0.37 (37%) |
+> | Sin tope (500 recibos + 500 chats) | ~$2.51 (253%) | ~$3.91 (395%) |
+>
+> | Plan (topes de abajo) | Techo de costo ahora | Techo desde 1-ene-2027 |
+> |---|---|---|
+> | Free | ~$0.015 | ~$0.025 |
+> | Plus ($0.99) | ~$0.17 (**17%**, antes 9%) | ~$0.27 (27%) |
+> | Pro ($1.99) | ~$0.66 (**33%**, antes 18%) | ~$0.99 (**50%**) |
+>
+> Techos calculados con recibos de 3 000 tokens (el peor caso razonable). **La comisión del
+> procesador de pagos no está incluida**, y a estos precios pesa más que los tokens (ver la nota
+> al final de esta sección). Conclusión que mueve una decisión: con los modelos vigentes el
+> techo de Pro se come la mitad de su precio en 2027, así que conviene revisar el tope de Pro
+> o el precio **antes** de encender la IA para todos.
+
+
 Calculado el 18 sep 2026 con los precios de la API de Gemini de esa fecha (tier de pago) y
 los precios de plan que siembra `manage.py seed_billing_plans`: **Plus $0.99/mes · $9.99/año**,
 **Pro $1.99/mes · $14.99/año · $19.99 lifetime**.
