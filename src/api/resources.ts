@@ -507,6 +507,8 @@ export interface TransactionListParams {
   search?: string;
   /** ID de una etiqueta. */
   tag?: string;
+  amount_min?: number;
+  amount_max?: number;
   limit?: number;
   offset?: number;
 }

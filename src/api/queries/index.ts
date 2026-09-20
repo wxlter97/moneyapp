@@ -848,12 +848,21 @@ export function useDeleteTag() {
 }
 
 // --- transacciones ---------------------------------------------------
-export function useTransactions(params: res.TransactionListParams = {}) {
+/** `enabled: false` deja la consulta quieta (sin pedir nada) -- para una pantalla que
+ * alterna entre dos modos y sólo necesita una de las listas a la vez. */
+interface ListOptions {
+  enabled?: boolean;
+}
+
+export function useTransactions(
+  params: res.TransactionListParams = {},
+  { enabled = true }: ListOptions = {},
+) {
   const ws = useActiveWs();
   return useQuery({
     queryKey: qk.ws(ws).transactions(params),
     queryFn: () => res.transactions.list(params),
-    enabled: !!ws,
+    enabled: !!ws && enabled,
   });
 }
 
@@ -867,7 +876,10 @@ export const TRANSACTIONS_PAGE_SIZE = 50;
  * `useTransactions`. Los totales no se suman de lo cargado: usar
  * `useTransactionTotals` con los mismos filtros.
  */
-export function useInfiniteTransactions(params: res.TransactionListParams = {}) {
+export function useInfiniteTransactions(
+  params: res.TransactionListParams = {},
+  { enabled = true }: ListOptions = {},
+) {
   const ws = useActiveWs();
   return useInfiniteQuery({
     queryKey: qk.ws(ws).transactionsPaged(params),
@@ -876,17 +888,20 @@ export function useInfiniteTransactions(params: res.TransactionListParams = {}) 
     initialPageParam: 0,
     getNextPageParam: (last, pages) =>
       last.next ? pages.length * TRANSACTIONS_PAGE_SIZE : undefined,
-    enabled: !!ws,
+    enabled: !!ws && enabled,
   });
 }
 
 /** Ingresos/gastos por moneda de lo que cumple el filtro, calculados en el servidor. */
-export function useTransactionTotals(params: res.TransactionListParams = {}) {
+export function useTransactionTotals(
+  params: res.TransactionListParams = {},
+  { enabled = true }: ListOptions = {},
+) {
   const ws = useActiveWs();
   return useQuery({
     queryKey: qk.ws(ws).transactionTotals(params),
     queryFn: () => res.transactions.totals(params),
-    enabled: !!ws,
+    enabled: !!ws && enabled,
   });
 }
 
