@@ -20,6 +20,7 @@ export const qk = {
   loyaltyBanks: () => ['loyalty-banks'] as const,
   loyaltyCategoryTypes: () => ['loyalty-category-types'] as const,
   cardProducts: () => ['card-products'] as const,
+  loyaltyMerchants: () => ['loyalty-merchants'] as const,
   /** No va por workspace: la cuota de IA es del usuario, no del presupuesto. */
   aiStatus: () => ['ai', 'status'] as const,
   /** No va por workspace: es un interruptor de la instalación entera. */
