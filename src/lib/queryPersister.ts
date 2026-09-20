@@ -41,5 +41,8 @@ export function shouldPersistQuery(query: Query): boolean {
   const key = query.queryKey;
   if (!Array.isArray(key)) return true;
   if (key.includes('receipt')) return false;
+  // Lo ganado cambia con cada gasto y con el catálogo del servidor: una copia vieja
+  // restaurada del disco mostraría "sin recompensas" hasta que llegue la fresca.
+  if (key.includes('loyalty-summary')) return false;
   return key[0] !== AI_QUERY_PREFIX;
 }

@@ -4,7 +4,8 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { pushDevices } from '@/api/resources';
-import { registerWebPush, unsubscribeWebPush } from '@/lib/webPush';
+import { usePushPrefStore } from '@/store/pushPref';
+import { getWebPushSubscription, registerWebPush, resetWebPushSubscription } from '@/lib/webPush';
 
 // Cómo se muestra un push que llega con la app abierta (foreground). Sin
 // esto, expo-notifications no la muestra en absoluto mientras la app está al
@@ -109,4 +110,68 @@ export function addNotificationTapListener(
     callback(response.notification.request.content.data ?? {});
   });
   return () => sub.remove();
+}
+
+export type PushPermission = 'granted' | 'denied' | 'default' | 'unsupported';
+
+export interface PushStatus {
+  /** Permiso del sistema/navegador. */
+  permission: PushPermission;
+  /** Si este dispositivo tiene hoy una suscripción de push viva. */
+  subscribed: boolean;
+  /** Si el usuario quiere recibirlos (`usePushPrefStore`). */
+  enabled: boolean;
+}
+
+/** Estado real de los avisos en ESTE dispositivo: sirve para mostrar si de verdad
+ * están activos, no sólo si el permiso está concedido. */
+export async function getPushStatus(): Promise<PushStatus> {
+  const enabled = usePushPrefStore.getState().enabled;
+  if (Platform.OS === 'web') {
+    if (typeof window === 'undefined' || !('Notification' in window) || !('PushManager' in window)) {
+      return { permission: 'unsupported', subscribed: false, enabled };
+    }
+    const subscription = await getWebPushSubscription();
+    return { permission: Notification.permission, subscribed: subscription !== null, enabled };
+  }
+  const settings = await Notifications.getPermissionsAsync().catch(() => null);
+  if (!settings) return { permission: 'unsupported', subscribed: false, enabled };
+  return {
+    permission: settings.granted ? 'granted' : settings.canAskAgain ? 'default' : 'denied',
+    subscribed: cachedDevice !== null,
+    enabled,
+  };
+}
+
+/**
+ * Vuelve a registrar este dispositivo desde cero: en la web descarta la
+ * suscripción actual (queda un endpoint nuevo) y la registra de nuevo en el
+ * servidor. Es lo que hay que hacer cuando los avisos dejan de llegar (el
+ * navegador revocó la suscripción, se limpiaron los datos del sitio…). También
+ * vuelve a encender los avisos si estaban apagados. `null` si no se pudo (sin
+ * permiso, sin soporte…).
+ */
+export async function revalidatePush(): Promise<RegisteredDevice | null> {
+  usePushPrefStore.getState().setEnabled(true);
+  if (Platform.OS === 'web') {
+    const old = await resetWebPushSubscription();
+    if (old) await pushDevices.unregister(old).catch(() => {});
+  }
+  const device = await registerForPushNotificationsAsync();
+  if (device) await registerDevice(device);
+  return device;
+}
+
+/** Apaga los avisos en este dispositivo: da de baja la suscripción, la borra del
+ * servidor y recuerda la decisión para que la app no se vuelva a registrar sola. */
+export async function disablePush(): Promise<void> {
+  usePushPrefStore.getState().setEnabled(false);
+  const tokens = new Set<string>();
+  if (cachedDevice) tokens.add(cachedDevice.token);
+  if (Platform.OS === 'web') {
+    const old = await resetWebPushSubscription();
+    if (old) tokens.add(old);
+  }
+  await Promise.all([...tokens].map((token) => pushDevices.unregister(token).catch(() => {})));
+  clearCachedPushDevice();
 }

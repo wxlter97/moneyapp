@@ -542,12 +542,15 @@ export function useLoyaltyMerchants() {
 
 /** Saldo de puntos por cartera + cashback ganado / descuento ahorrado en el
  * período (ambas fechas opcionales). */
-export function useLoyaltySummary(range?: { date_after?: string; date_before?: string }) {
+export function useLoyaltySummary(
+  range?: { date_after?: string; date_before?: string },
+  enabled = true,
+) {
   const ws = useActiveWs();
   return useQuery({
     queryKey: qk.ws(ws).loyaltySummary(range),
     queryFn: () => res.loyaltyEarnings.summary(range),
-    enabled: !!ws,
+    enabled: !!ws && enabled,
   });
 }
 

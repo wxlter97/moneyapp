@@ -46,22 +46,48 @@ export function matchMerchant(
   return best;
 }
 
+/** Si una compra de ese monto llega a la compra mínima del programa (`min_amount`). */
+export function qualifies(program: { min_amount: string | null }, amount: number): boolean {
+  return program.min_amount == null || amount >= Number(program.min_amount);
+}
+
+/** Si el programa tiene una tasa que sólo vale para cargos automáticos en ese rubro
+ * o comercio: es lo que decide si el formulario pregunta "¿es un cargo automático?". */
+export function autopayRate(
+  program: { category_rates: LoyaltyCategoryRate[] },
+  categoryType: UUID | null | undefined,
+  merchantId?: UUID | null,
+): string | undefined {
+  return program.category_rates.find(
+    (r) =>
+      r.requires_autopay &&
+      ((categoryType && r.category_type === categoryType) || (merchantId && r.merchant === merchantId)),
+  )?.rate;
+}
+
 /**
  * Tasa efectiva de un programa para una compra: la misma regla que
  * `LoyaltyProgram.rate_for` del backend, gana la más específica:
  * comercio+día, comercio, rubro+día, rubro, y si no hay ninguna la tasa base.
- * Es sólo la vista previa antes de guardar; lo que vale es lo que calcula el servidor.
+ * Las tasas `requires_autopay` sólo cuentan si `autopay` y, en ese caso, ganan a
+ * las de cualquier cargo. Es sólo la vista previa antes de guardar; lo que vale
+ * es lo que calcula el servidor.
  */
 export function pickRate(
   program: { default_rate: string; category_rates: LoyaltyCategoryRate[] },
   categoryType: UUID | null | undefined,
   date: ISODate,
   merchantId?: UUID | null,
+  autopay = false,
 ): string {
   const day = weekdayMon0(date);
   const find = (match: (r: LoyaltyCategoryRate) => boolean) => {
-    const rows = program.category_rates.filter(match);
-    return (rows.find((r) => r.weekday === day) ?? rows.find((r) => r.weekday == null))?.rate;
+    for (const autopayRule of autopay ? [true, false] : [false]) {
+      const rows = program.category_rates.filter((r) => match(r) && r.requires_autopay === autopayRule);
+      const rate = (rows.find((r) => r.weekday === day) ?? rows.find((r) => r.weekday == null))?.rate;
+      if (rate !== undefined) return rate;
+    }
+    return undefined;
   };
   const merchantRate = merchantId ? find((r) => r.merchant === merchantId) : undefined;
   if (merchantRate !== undefined) return merchantRate;
