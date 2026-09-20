@@ -1,4 +1,12 @@
-import { pickRate, weekdayMon0 } from '../loyaltyRate';
+import type { LoyaltyCategoryRate, LoyaltyMerchant } from '@/api/types';
+
+import { matchMerchant, normalizeText, pickRate, weekdayMon0 } from '../loyaltyRate';
+
+const rate = (
+  over: Partial<LoyaltyCategoryRate> & { rate: string },
+): LoyaltyCategoryRate => ({
+  id: 'r', program: 'p', category_type: null, merchant: null, weekday: null, ...over,
+});
 
 describe('weekdayMon0', () => {
   it('cuenta desde el lunes, como el backend', () => {
@@ -8,29 +16,68 @@ describe('weekdayMon0', () => {
   });
 });
 
+describe('normalizeText', () => {
+  it('quita tildes, mayúsculas y puntuación', () => {
+    expect(normalizeText("  McDonald's — Metrocentro ")).toBe('mcdonald s metrocentro');
+    expect(normalizeText('Súper Selectos')).toBe('super selectos');
+    expect(normalizeText(null)).toBe('');
+  });
+});
+
+describe('matchMerchant', () => {
+  const m = (id: string, name: string, aliases: string[]): LoyaltyMerchant => ({
+    id, name, category_type: null, aliases: [name, ...aliases],
+  });
+  const merchants = [
+    m('selectos', 'Súper Selectos', ['selectos']),
+    m('mc', "McDonald's", ['mc', 'mcdonalds']),
+    m('uber', 'Uber', []),
+    m('eats', 'Uber Eats', []),
+  ];
+
+  it('reconoce sin importar mayúsculas ni tildes', () => {
+    expect(matchMerchant('SUPER selectos san miguel', merchants)?.id).toBe('selectos');
+  });
+  it('sólo cuenta como palabra completa', () => {
+    expect(matchMerchant('mc combo', merchants)?.id).toBe('mc');
+    expect(matchMerchant('mcafee antivirus', merchants)).toBeUndefined();
+  });
+  it('gana el alias más largo', () => {
+    expect(matchMerchant('uber eats pedido', merchants)?.id).toBe('eats');
+    expect(matchMerchant('uber a casa', merchants)?.id).toBe('uber');
+  });
+  it('una descripción vacía o desconocida no reconoce nada', () => {
+    expect(matchMerchant('', merchants)).toBeUndefined();
+    expect(matchMerchant('pupusas', merchants)).toBeUndefined();
+  });
+});
+
 describe('pickRate', () => {
   const program = {
-    default_rate: '1.0000',
+    default_rate: '0.01',
     category_rates: [
-      { category_type: 'super', rate: '1.5000', weekday: null },
-      { category_type: 'super', rate: '2.0000', weekday: 0 },
+      rate({ category_type: 'super', rate: '0.02' }),
+      rate({ category_type: 'super', rate: '0.03', weekday: 0 }),
+      rate({ merchant: 'selectos', rate: '0.07' }),
+      rate({ merchant: 'selectos', rate: '0.09', weekday: 0 }),
     ],
   };
+  const MON = '2026-09-21';
+  const TUE = '2026-09-22';
 
-  it('usa la tasa del día si coincide', () => {
-    expect(pickRate(program, 'super', '2026-09-21')).toBe('2.0000');
+  it('gana comercio+día, luego comercio, rubro+día, rubro y base', () => {
+    expect(pickRate(program, 'super', MON, 'selectos')).toBe('0.09');
+    expect(pickRate(program, 'super', TUE, 'selectos')).toBe('0.07');
+    expect(pickRate(program, 'super', MON)).toBe('0.03');
+    expect(pickRate(program, 'super', TUE)).toBe('0.02');
+    expect(pickRate(program, 'gas', TUE)).toBe('0.01');
+    expect(pickRate(program, null, TUE)).toBe('0.01');
   });
-  it('otro día cae a la tasa del rubro sin día', () => {
-    expect(pickRate(program, 'super', '2026-09-22')).toBe('1.5000');
+  it('un comercio sin reglas cae al rubro', () => {
+    expect(pickRate(program, 'super', TUE, 'otro')).toBe('0.02');
   });
-  it('un rubro sin tasa cae a la base', () => {
-    expect(pickRate(program, 'gas', '2026-09-21')).toBe('1.0000');
-  });
-  it('sin rubro usa la base', () => {
-    expect(pickRate(program, null, '2026-09-21')).toBe('1.0000');
-  });
-  it('un bono de otro día no aplica y cae a la base si no hay tasa sin día', () => {
-    const p = { default_rate: '1', category_rates: [{ category_type: 'super', rate: '2', weekday: 0 }] };
-    expect(pickRate(p, 'super', '2026-09-22')).toBe('1');
+  it('un bono de otro día no aplica', () => {
+    const p = { default_rate: '1', category_rates: [rate({ category_type: 'super', rate: '2', weekday: 0 })] };
+    expect(pickRate(p, 'super', TUE)).toBe('1');
   });
 });

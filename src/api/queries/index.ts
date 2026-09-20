@@ -529,6 +529,17 @@ export function useCardProducts() {
   });
 }
 
+/** Comercios conocidos del catálogo de lealtad: sirven para reconocerlos en la
+ * descripción del gasto y mostrar el beneficio que la tarjeta da en ese
+ * comercio (ver `lib/loyaltyRate.ts`). Catálogo global y casi estático. */
+export function useLoyaltyMerchants() {
+  return useQuery({
+    queryKey: qk.loyaltyMerchants(),
+    queryFn: () => res.loyaltyMerchants.list(),
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
 /** Saldo de puntos por cartera + cashback ganado / descuento ahorrado en el
  * período (ambas fechas opcionales). */
 export function useLoyaltySummary(range?: { date_after?: string; date_before?: string }) {

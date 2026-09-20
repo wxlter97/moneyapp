@@ -33,6 +33,7 @@ import type {
   InstallmentPurchaseInput,
   Invitation,
   LoyaltyCategoryType,
+  LoyaltyMerchant,
   LoyaltySummary,
   Membership,
   ModuleFlagsStatus,
@@ -212,6 +213,10 @@ export const loyaltyBanks = {
 
 export const loyaltyCategoryTypes = {
   list: () => fetchAll<LoyaltyCategoryType>('/category-types/', {}),
+};
+
+export const loyaltyMerchants = {
+  list: () => fetchAll<LoyaltyMerchant>('/loyalty-merchants/', {}),
 };
 
 export const cardProducts = {

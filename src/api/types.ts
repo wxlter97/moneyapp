@@ -750,12 +750,23 @@ export const LOYALTY_KIND_LABEL: Record<LoyaltyKind, string> = {
   discount: 'Descuento',
 };
 
+/** Comercio conocido (Súper Selectos, McDonald's…). `aliases` incluye el nombre y
+ * es lo que se busca en la descripción del gasto. */
+export interface LoyaltyMerchant {
+  id: UUID;
+  name: string;
+  category_type: UUID | null;
+  aliases: string[];
+}
+
 /** Tasa especial de un programa para un rubro puntual (reemplaza la
  * `default_rate` del programa para ese rubro). */
 export interface LoyaltyCategoryRate {
   id: UUID;
   program: UUID;
-  category_type: UUID;
+  /** Un rubro **o** un comercio, nunca los dos. */
+  category_type: UUID | null;
+  merchant: UUID | null;
   rate: string;
   /** 0 = lunes … 6 = domingo (como `date.weekday()`); `null` = todos los días. */
   weekday: number | null;

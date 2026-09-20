@@ -7,6 +7,7 @@ import { dismissModal } from '@/components/ui/ModalHeader';
 import {
   checkDuplicateTransaction,
   useCardProducts,
+  useLoyaltyMerchants,
   useCategories,
   useCreateTransaction,
   useDeleteTransaction,
@@ -46,7 +47,7 @@ import type { PickedFile } from '@/lib/receipt';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
-import { pickRate } from '@/lib/loyaltyRate';
+import { matchMerchant, pickRate } from '@/lib/loyaltyRate';
 import { formatMoney, toNumber } from '@/lib/money';
 import { useSnackbarStore } from '@/store/snackbar';
 
@@ -102,6 +103,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const { data: assignableWallets, query: walletsQ } = useAssignableWallets();
   const categoriesQ = useCategories();
   const cardProductsQ = useCardProducts();
+  const merchantsQ = useLoyaltyMerchants();
   // El catálogo de tarjetas (`cardProductsQ`) es público -- cualquiera lo lee,
   // pague o no Pro (ver `apps.loyalty.api.IsAdminOrReadOnly`). Sin este
   // chequeo, la vista previa de puntos/cashback de más abajo mostraría
@@ -261,8 +263,13 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const selectedCategory = categoriesQ.data?.find((c) => c.id === categoryId);
   const cardProduct = cardProductsQ.data?.find((p) => p.id === selectedWallet?.card_product);
 
+  // El comercio reconocido en la descripción manda sobre la categoría, igual que
+  // en el servidor (ver `apps.loyalty.signals`): "Comida" mezcla restaurantes con
+  // supermercados.
+  const merchant = matchMerchant(note, merchantsQ.data ?? []);
   function rateFor(program: { default_rate: string; category_rates: LoyaltyCategoryRate[] }) {
-    return toNumber(pickRate(program, selectedCategory?.category_type, date));
+    const categoryType = merchant?.category_type ?? selectedCategory?.category_type;
+    return toNumber(pickRate(program, categoryType, date, merchant?.id));
   }
 
   const discountPrograms = useMemo(
