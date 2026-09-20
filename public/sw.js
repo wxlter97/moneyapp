@@ -103,3 +103,45 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+// --- Web Push -------------------------------------------------------------
+// Tiene que vivir ACÁ y no en otro worker: un navegador sólo puede tener un
+// service worker activo por alcance, y `index.html` registra este archivo en
+// cada carga (ver `scripts/pwa-postbuild.js`). Cuando el manejador de push
+// estaba en un `push-worker.js` aparte, cada apertura de la app lo reemplazaba
+// por este worker, que no lo tenía: el aviso llegaba al teléfono y nadie lo
+// mostraba (en iOS, además, eso termina revocando la suscripción).
+// La suscripción se hace en `src/lib/webPush.ts`.
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { title: 'Budget', body: event.data ? event.data.text() : '' };
+  }
+
+  const title = payload.title || 'Budget';
+  const options = {
+    body: payload.body || '',
+    data: payload.data || {},
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Al tocar el aviso: si ya hay una ventana de la app abierta, la enfoca en
+// vez de abrir una nueva.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow('/');
+      return undefined;
+    }),
+  );
+});

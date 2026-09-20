@@ -1,5 +1,5 @@
-/** Web Push (RFC 8291) del lado del navegador: registra el service worker
- * de `public/push-worker.js` y la suscripción contra VAPID. Sólo tiene
+/** Web Push (RFC 8291) del lado del navegador: se suscribe contra VAPID usando el
+ * service worker de la app (`public/sw.js`, que es el que muestra el aviso). Sólo tiene
  * sentido en `Platform.OS === 'web'` -- lo llama
  * `lib/notifications.ts::registerForPushNotificationsAsync`, que ya hace
  * ese chequeo antes de entrar acá. */
@@ -53,7 +53,9 @@ export async function registerWebPush(vapidPublicKey: string): Promise<WebPushSu
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
 
-    const registration = await navigator.serviceWorker.register('/push-worker.js');
+    // El mismo worker que registra `index.html` (ver `public/sw.js`): registrar otro
+    // script en el mismo alcance haría que se reemplazaran entre sí.
+    const registration = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
 
     let subscription = await registration.pushManager.getSubscription();
@@ -88,7 +90,7 @@ export async function registerWebPush(vapidPublicKey: string): Promise<WebPushSu
 export async function unsubscribeWebPush(): Promise<void> {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.getRegistration('/push-worker.js');
+    const registration = await navigator.serviceWorker.getRegistration();
     const subscription = await registration?.pushManager.getSubscription();
     await subscription?.unsubscribe();
   } catch {
