@@ -378,7 +378,7 @@ function SetupInstructionsCard({ manualAlternative }: { manualAlternative: boole
         </View>
 
         <Text className="text-text-muted text-xs leading-4">
-          Sin "category" (o con "category": "auto") adivinamos la categoría por cómo
+          Sin &quot;category&quot; (o con &quot;category&quot;: &quot;auto&quot;) adivinamos la categoría por cómo
           categorizaste antes ese mismo comercio. Si nunca la usaste, la respuesta trae
           la lista de categorías para que el Atajo te pregunte y reintente con el id
           elegido.

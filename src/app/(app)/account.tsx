@@ -101,7 +101,7 @@ export default function AccountScreen() {
             <View className="flex-row items-center gap-2 py-1">
               <Icon name="check" size={16} color={colors.income} />
               <Text className="text-text-muted flex-1 text-sm leading-5">
-                Vinculada -- también podés entrar con "Continuar con Google"
+                Vinculada -- también podés entrar con &quot;Continuar con Google&quot;
                 usando {user.email}.
               </Text>
             </View>
@@ -109,7 +109,7 @@ export default function AccountScreen() {
             <View className="gap-3">
               <Text className="text-text-muted text-sm leading-5">
                 Vinculá tu cuenta de Google ({user.email}) para poder entrar
-                también con "Continuar con Google", sin perder tu contraseña
+                también con &quot;Continuar con Google&quot;, sin perder tu contraseña
                 actual.
               </Text>
               <GoogleSignInButton mode="link" />

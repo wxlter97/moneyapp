@@ -38,7 +38,7 @@ export default function PrivacyScreen() {
           notas que cargás vos; los recibos (foto o PDF) que adjuntás a una transacción; los
           mensajes que nos mandás desde Soporte; si activás notificaciones, un token de tu
           dispositivo para poder enviártelas; si conectás la importación por correo, el contenido de los
-          correos bancarios que vos mismo reenviás; y si usás "Continuar con Google", tu
+          correos bancarios que vos mismo reenviás; y si usás &quot;Continuar con Google&quot;, tu
           nombre y foto de perfil de esa cuenta.
         </Section>
 
@@ -89,7 +89,7 @@ export default function PrivacyScreen() {
         <Section title="Con quién los compartimos">
           Sólo con los proveedores que hacen funcionar la app: Wompi (cobro del plan Pro),
           Mailgun (envío de correos de invitación y recepción de la importación bancaria),
-          Google (si usás "Continuar con Google" o las funciones de IA), Sentry (reportes de
+          Google (si usás &quot;Continuar con Google&quot; o las funciones de IA), Sentry (reportes de
           errores), Cloudflare (que sirve la versión web de la app), y la infraestructura
           donde corre el backend, los recibos y la base de datos (Google Cloud Run, Google
           Cloud Storage y Neon/PostgreSQL). Estos proveedores procesan tus datos sólo para

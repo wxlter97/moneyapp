@@ -69,10 +69,10 @@ export function ModalHeader({ title, right }: { title: string; right?: ReactNode
               color={colors.textMuted}
               onPress={dismissModal}
               onPressIn={() => {
-                press.value = withSpring(0.88, { damping: 14, stiffness: 320 });
+                press.set(withSpring(0.88, { damping: 14, stiffness: 320 }));
               }}
               onPressOut={() => {
-                press.value = withSpring(1, { damping: 14, stiffness: 320 });
+                press.set(withSpring(1, { damping: 14, stiffness: 320 }));
               }}
               accessibilityLabel="Cerrar"
               className="rounded-full bg-surface-2"

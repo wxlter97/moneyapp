@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -174,14 +174,16 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     return assignableWallets.find((a) => a.is_default)?.id ?? assignableWallets[0]?.id ?? null;
   }, [assignableWallets]);
 
-  useEffect(() => {
-    if (editing || duplicateFromId || !!prefill || walletDefaulted || !defaultWalletId) return;
+  // Los tres bloques siguientes ajustan estado durante el render (patrón de React
+  // para estado que sigue a datos externos) y no en efectos: cada uno tiene una
+  // guarda que se apaga sola tras la primera vez, así que no se repiten, y el
+  // formulario no pinta antes una pasada con los valores vacíos.
+  if (!(editing || duplicateFromId || !!prefill || walletDefaulted || !defaultWalletId)) {
     setWalletId(defaultWalletId);
     setWalletDefaulted(true);
-  }, [editing, duplicateFromId, prefill, walletDefaulted, defaultWalletId]);
+  }
 
-  useEffect(() => {
-    if ((!editing && !duplicateFromId) || prefilled || !existing.data || !categoriesQ.data) return;
+  if (!((!editing && !duplicateFromId) || prefilled || !existing.data || !categoriesQ.data)) {
     const t = existing.data;
     setType(t.type);
     setAmount(String(Number(t.amount).toFixed(2)));
@@ -212,12 +214,11 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
       (t.loyalty_earnings?.length ?? 0) > 0 ||
       t.is_refundable;
     if (hasExtraDetails) setDetailsOpen(true);
-  }, [editing, prefilled, existing.data, categoriesQ.data]);
+  }
 
   // Viene de tocar un ítem "Programado" (recurrente o cuota): precarga todo
   // para que solo haga falta confirmar y guardar.
-  useEffect(() => {
-    if (editing || duplicateFromId || !prefill || prefilled) return;
+  if (!(editing || duplicateFromId || !prefill || prefilled)) {
     setType(prefill.type);
     setAmount(String(Number(prefill.amount).toFixed(2)));
     setCategoryId(prefill.categoryId ?? null);
@@ -226,7 +227,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     setDate(prefill.date);
     setNote(prefill.note ?? '');
     setPrefilled(true);
-  }, [editing, duplicateFromId, prefill, prefilled]);
+  }
 
   const walletOptions = useMemo(
     () =>
@@ -334,19 +335,17 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           .filter((x): x is string => x != null)
       : [];
 
-  useEffect(() => {
-    if (discountPrograms.length === 0) {
-      if (discountProgramId) setDiscountProgramId(null);
-    } else if (!discountPrograms.some((p) => p.id === discountProgramId)) {
-      setDiscountProgramId(discountPrograms[0].id);
-    }
-  }, [discountPrograms, discountProgramId]);
+  // Mantiene válida la selección de descuento cuando cambia la cartera o el comercio
+  // (ajuste durante el render: cada condición se apaga sola al corregir el estado).
+  if (discountPrograms.length === 0) {
+    if (discountProgramId) setDiscountProgramId(null);
+  } else if (!discountPrograms.some((p) => p.id === discountProgramId)) {
+    setDiscountProgramId(discountPrograms[0].id);
+  }
 
-  useEffect(() => {
-    if (appliedDiscount && !discountPrograms.some((p) => p.id === appliedDiscount.programId)) {
-      setAppliedDiscount(null);
-    }
-  }, [discountPrograms, appliedDiscount]);
+  if (appliedDiscount && !discountPrograms.some((p) => p.id === appliedDiscount.programId)) {
+    setAppliedDiscount(null);
+  }
 
   const activeDiscountProgram = discountPrograms.find((p) => p.id === discountProgramId) ?? null;
   const discountRate =

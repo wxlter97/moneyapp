@@ -161,11 +161,11 @@ function Row({ index, count, itemHeight, active, offsetY, commit, setDragging, c
   const pan = Gesture.Pan()
     .minDistance(2)
     .onStart(() => {
-      active.value = index;
+      active.set(index);
       runOnJS(setDragging)(true);
     })
     .onUpdate((e) => {
-      offsetY.value = e.translationY;
+      offsetY.set(e.translationY);
     })
     .onEnd(() => {
       const to = targetIndex();
@@ -175,12 +175,12 @@ function Row({ index, count, itemHeight, active, offsetY, commit, setDragging, c
       // -- si se desactivara ya (como antes), esta fila usaría su `index`
       // viejo (el nuevo recién le llega al padre por props) y se vería
       // saltar de vuelta al lugar de origen antes de volver a moverse.
-      offsetY.value = withSpring((to - index) * itemHeight, SPRING, (finished) => {
+      offsetY.set(withSpring((to - index) * itemHeight, SPRING, (finished) => {
         if (finished) {
-          active.value = -1;
-          offsetY.value = 0;
+          active.set(-1);
+          offsetY.set(0);
         }
-      });
+      }));
     })
     .onFinalize((_event, success) => {
       runOnJS(setDragging)(false);
@@ -192,8 +192,8 @@ function Row({ index, count, itemHeight, active, offsetY, commit, setDragging, c
       // ScrollView se adueñó del toque): ahí no hay ningún spring en
       // camino y, si no se resetea acá, la fila quedaría flotando.
       if (!success) {
-        active.value = -1;
-        offsetY.value = 0;
+        active.set(-1);
+        offsetY.set(0);
       }
     });
 

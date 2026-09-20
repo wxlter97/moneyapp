@@ -17,7 +17,6 @@ import { TextField } from '@/components/ui/TextField';
 import { haptics } from '@/lib/haptics';
 import { toNumber } from '@/lib/money';
 import { useColors } from '@/theme';
-import { fonts } from '@/theme/typography';
 
 interface PartDraft {
   key: string;

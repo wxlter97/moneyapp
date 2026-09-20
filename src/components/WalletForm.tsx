@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Linking,
@@ -154,8 +154,9 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [splitName, setSplitName] = useState('');
   const [splitError, setSplitError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!editing || prefilled || !existing.data) return;
+  // Precarga al llegar la cartera, una vez y durante el render (guarda: `prefilled`)
+  // -- no en un efecto, que pintaba antes una pasada con el formulario vacío.
+  if (editing && !prefilled && existing.data) {
     const w = existing.data;
     setName(w.name);
     setCurrency(w.currency);
@@ -193,7 +194,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setPaymentDueDay(w.payment_due_day ? String(w.payment_due_day) : '');
     setCounterparty(w.counterparty ?? '');
     setPrefilled(true);
-  }, [editing, prefilled, existing.data]);
+  }
 
   const parentOptions = useMemo(
     () =>
@@ -231,12 +232,11 @@ export function WalletForm({ walletId }: WalletFormProps) {
   // El banco es puramente derivado del producto ya guardado (no viaja en la
   // cartera) -- una vez que cargan los productos, se completa solo para que
   // el selector de dos pasos arranque coherente al editar.
-  useEffect(() => {
-    if (loyaltyBankId || !cardProductId || !cardProductsQ.data) return;
+  // Ajuste durante el render: se apaga solo cuando `loyaltyBankId` queda puesto.
+  if (!loyaltyBankId && cardProductId && cardProductsQ.data) {
     const product = cardProductsQ.data.find((p) => p.id === cardProductId);
     if (product) setLoyaltyBankId(product.bank);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardProductId, cardProductsQ.data]);
+  }
 
   function onChangeLoyaltyBank(next: string) {
     setLoyaltyBankId(next || null);
@@ -411,9 +411,9 @@ export function WalletForm({ walletId }: WalletFormProps) {
   if (editing && existing.isError) {
     return <ErrorState error={existing.error} onRetry={existing.refetch} />;
   }
-  // `!prefilled`, aparte de `isLoading`: entre que la query resuelve y el
-  // `useEffect` de arriba corre `setKind`/`setPurpose`/etc. (los efectos
-  // corren después de pintar) hay un render de tránsito donde el formulario
+  // `!prefilled`, aparte de `isLoading`: antes la precarga corría en un efecto
+  // (después de pintar) y entre que la query resolvía y `setKind`/`setPurpose`/etc.
+  // se aplicaban había un render de tránsito donde el formulario
   // ya no está "cargando" pero todavía muestra los defaults de cartera
   // nueva -- ahí es donde "Efectivo" se veía con Subtipo "Banco" (hallazgo
   // de la auditoría de producto, §11: confirmado contra el modelo, no era
@@ -891,7 +891,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
         {editing && splittingOpen ? (
           <View className="gap-3 rounded-2xl bg-surface-2 p-3">
             <Text className="text-text text-sm">
-              Crea una cuenta nueva con el saldo y los movimientos de "{name}", y deja a "{name}"
+              Crea una cuenta nueva con el saldo y los movimientos de &quot;{name}&quot;, y deja a &quot;{name}&quot;
               en 0 -- pasa a ser solo un grupo que suma sus cuentas. Útil para agruparla con otras
               carteras después.
             </Text>

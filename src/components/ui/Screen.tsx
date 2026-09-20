@@ -82,21 +82,19 @@ export function Screen({ children, edges = ['top'], noPadding = false, variant =
     () =>
       Gesture.Pan()
         .onChange((e) => {
-          translateY.value = Math.max(0, translateY.value + e.changeY);
+          translateY.set(Math.max(0, translateY.get() + e.changeY));
         })
         .onEnd((e) => {
-          if (translateY.value > DISMISS_THRESHOLD || e.velocityY > 800) {
+          if (translateY.get() > DISMISS_THRESHOLD || e.velocityY > 800) {
             // Termina el gesto (en vez de saltar al valor final) para que la
             // salida se sienta continua con lo que el dedo ya venía haciendo.
-            translateY.value = withTiming(
-              1000,
-              { duration: 180, easing: Easing.in(Easing.cubic) },
-              (finished) => {
+            translateY.set(
+              withTiming(1000, { duration: 180, easing: Easing.in(Easing.cubic) }, (finished) => {
                 if (finished) runOnJS(dismissModal)();
-              },
+              }),
             );
           } else {
-            translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+            translateY.set(withSpring(0, { damping: 20, stiffness: 300 }));
           }
         }),
     [translateY],

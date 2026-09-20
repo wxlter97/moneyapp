@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -158,8 +158,8 @@ export default function SplitPeopleScreen() {
   const txn = txnQ.data;
   const people = useMemo(() => peopleQ.data ?? [], [peopleQ.data]);
 
-  useEffect(() => {
-    if (hydrated || !txn || peopleQ.isLoading) return;
+  // Se hidrata una vez, durante el render, cuando llegan la transacción y las personas.
+  if (!hydrated && txn && !peopleQ.isLoading) {
     if ((txn.shares?.length ?? 0) > 0) {
       const payer = people.find((p) => p.id === txn.paid_by);
       setPaidBy(payer?.is_me ? ME : (txn.paid_by ?? ME));
@@ -172,7 +172,7 @@ export default function SplitPeopleScreen() {
       );
     }
     setHydrated(true);
-  }, [hydrated, txn, people, peopleQ.isLoading]);
+  }
   const total = toNumber(txn?.amount);
   const assigned = participants.reduce((sum, p) => sum + toNumber(p.amount), 0);
   const myShare = Math.round((total - assigned) * 100) / 100;

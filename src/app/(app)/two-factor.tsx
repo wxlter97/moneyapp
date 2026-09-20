@@ -47,21 +47,26 @@ export default function TwoFactorScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Estado inicial: una vez al abrir (`error` ya arranca en null). Si la pantalla
+  // se cierra antes de que responda, no se escribe estado en una desmontada.
   useEffect(() => {
-    refreshStatus();
+    let cancelled = false;
+    twoFactor
+      .status()
+      .then((data) => {
+        if (cancelled) return;
+        setStep(data.enabled ? 'on' : 'off');
+        setTwoFactorEnabledInStore(data.enabled);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(errorMessage(err, 'No se pudo cargar el estado.'));
+        setStep('off');
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
-
-  async function refreshStatus() {
-    setError(null);
-    try {
-      const data = await twoFactor.status();
-      setStep(data.enabled ? 'on' : 'off');
-      setTwoFactorEnabledInStore(data.enabled);
-    } catch (err) {
-      setError(errorMessage(err, 'No se pudo cargar el estado.'));
-      setStep('off');
-    }
-  }
 
   async function onStartSetup() {
     setBusy(true);

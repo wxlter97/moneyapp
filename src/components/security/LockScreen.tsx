@@ -42,6 +42,9 @@ export function LockScreen({ onUnlock, biometricAvailable }: LockScreenProps) {
   }, [onUnlock]);
 
   useEffect(() => {
+    // Lanzar el diálogo biométrico al montar es un efecto de verdad (habla con el
+    // sistema): `tryBiometric` marca «verificando» al empezar.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (biometricAvailable && biometricEnabled) tryBiometric();
     // sólo al montar: cada reaparición de LockScreen es un montaje nuevo
     // (ver AppLockGate), así que esto ya cubre cada bloqueo.

@@ -34,10 +34,10 @@ export function Button({
       disabled={isDisabled}
       onPressIn={() => {
         if (isDisabled) return;
-        press.value = withSpring(0.96, { damping: 16, stiffness: 320 });
+        press.set(withSpring(0.96, { damping: 16, stiffness: 320 }));
       }}
       onPressOut={() => {
-        press.value = withSpring(1, { damping: 16, stiffness: 320 });
+        press.set(withSpring(1, { damping: 16, stiffness: 320 }));
       }}
       onPress={(e) => {
         if (isDisabled) return;

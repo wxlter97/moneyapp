@@ -137,10 +137,10 @@ export function TransactionRow({
         disabled={!onPress}
         onPressIn={() => {
           if (!onPress) return;
-          press.value = withSpring(0.98, { damping: 16, stiffness: 320 });
+          press.set(withSpring(0.98, { damping: 16, stiffness: 320 }));
         }}
         onPressOut={() => {
-          press.value = withSpring(1, { damping: 16, stiffness: 320 });
+          press.set(withSpring(1, { damping: 16, stiffness: 320 }));
         }}
         className="flex-row items-center gap-3 py-3"
         accessibilityRole={onPress ? 'button' : undefined}
