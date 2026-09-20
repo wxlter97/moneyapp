@@ -70,6 +70,7 @@ import type {
   Tag,
   TagSummary,
   Transaction,
+  TransactionTotals,
   TransactionImportResult,
   TransactionInput,
   TransactionSplitPart,
@@ -514,6 +515,12 @@ export const transactions = {
   /** Página cruda (para scroll infinito). */
   page: (params: TransactionListParams = {}) =>
     api.get<Paginated<Transaction>>('/transactions/', { params }).then((r) => r.data),
+
+  /** Ingresos y gastos que cumplen el filtro (todo, no sólo lo cargado), por moneda. */
+  totals: (params: TransactionListParams = {}) =>
+    api
+      .get<TransactionTotals[]>('/transactions/totals/', { params })
+      .then((r) => r.data),
 
   /** Toda la colección que cumple el filtro. */
   list: (params: TransactionListParams = {}) =>

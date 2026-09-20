@@ -50,6 +50,10 @@ export const qk = {
 
     transactions: (params?: TransactionListParams) =>
       ['ws', ws, 'transactions', params ?? {}] as const,
+    transactionsPaged: (params?: TransactionListParams) =>
+      ['ws', ws, 'transactions', 'paged', params ?? {}] as const,
+    transactionTotals: (params?: TransactionListParams) =>
+      ['ws', ws, 'transactions', 'totals', params ?? {}] as const,
     transaction: (id: string) => ['ws', ws, 'transaction', id] as const,
     receiptImage: (id: string) => ['ws', ws, 'transaction', id, 'receipt'] as const,
 

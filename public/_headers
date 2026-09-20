@@ -1,0 +1,22 @@
+# Cabeceras de caché para Cloudflare Pages (se copia tal cual a `dist/`).
+#
+# Lo que lleva hash en el nombre no cambia nunca bajo la misma URL: el navegador
+# puede reutilizarlo sin volver a preguntar al servidor. Sin esto Pages responde
+# `max-age=0, must-revalidate` y cada visita paga una consulta condicional por
+# cada archivo del bundle.
+/_expo/static/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Lo que NO lleva hash y tiene que actualizarse en cada deploy: el navegador
+# revisa siempre (una consulta condicional barata, casi siempre 304). Si el
+# service worker se quedara cacheado, la app no recibiría las versiones nuevas.
+/sw.js
+  Cache-Control: no-cache
+/push-worker.js
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
