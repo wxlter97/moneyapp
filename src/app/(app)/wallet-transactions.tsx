@@ -6,6 +6,7 @@ import { useTransactions, useWallet } from '@/api/queries';
 import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import { DayHeader } from '@/components/DayHeader';
 import { TransactionRow } from '@/components/TransactionRow';
+import { WalletRewardsCard } from '@/components/WalletRewardsCard';
 import { IconButton } from '@/components/ui/IconButton';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
@@ -91,6 +92,7 @@ export default function WalletTransactionsScreen() {
         }
       />
       <ScrollView contentContainerClassName="gap-3 py-2" refreshControl={refresh}>
+        {walletQ.data ? <WalletRewardsCard wallet={walletQ.data} /> : null}
         {query.isLoading ? (
           <>
             <TransactionListSkeleton />

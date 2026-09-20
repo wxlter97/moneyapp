@@ -11,12 +11,11 @@ import { IconButton } from '@/components/ui/IconButton';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { ErrorState, LoadingState } from '@/components/ui/states';
-import { registerDevice, registerForPushNotificationsAsync } from '@/lib/notifications';
+import { pushDevices } from '@/api/resources';
+import { disablePush, getPushStatus, revalidatePush, type PushStatus } from '@/lib/notifications';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
-
-type PermissionState = 'checking' | 'granted' | 'denied' | 'unsupported';
 
 /**
  * Herramientas → Notificaciones: qué recordatorios push mandar (recurrentes
@@ -29,8 +28,9 @@ export default function NotificationsScreen() {
   const colors = useColors();
   const prefsQ = useNotificationPreferences();
   const update = useUpdateNotificationPreferences();
-  const [permission, setPermission] = useState<PermissionState>('checking');
-  const [enabling, setEnabling] = useState(false);
+  const [status, setStatus] = useState<PushStatus | null>(null);
+  const [busy, setBusy] = useState<'revalidate' | 'disable' | 'test' | null>(null);
+  const [deviceMessage, setDeviceMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   // iOS/Android no dejan volver a pedir el permiso una vez que el usuario ya
   // dijo que no: `requestPermissionsAsync` simplemente no hace nada. Sin
@@ -38,34 +38,77 @@ export default function NotificationsScreen() {
   const [needsSystemSettings, setNeedsSystemSettings] = useState(false);
 
   useEffect(() => {
-    checkPermission();
+    refreshStatus();
   }, []);
 
-  async function checkPermission() {
-    const settings = await Notifications.getPermissionsAsync().catch(() => null);
-    setPermission(settings ? (settings.granted ? 'granted' : 'denied') : 'unsupported');
+  async function refreshStatus() {
+    setStatus(await getPushStatus());
   }
 
-  async function onEnable() {
-    setEnabling(true);
+  /** Vuelve a registrar este dispositivo desde cero (y los enciende si estaban
+   * apagados): lo que hay que hacer cuando los avisos dejaron de llegar. */
+  async function onRevalidate() {
+    setBusy('revalidate');
     setNeedsSystemSettings(false);
+    setDeviceMessage(null);
     try {
-      const device = await registerForPushNotificationsAsync();
+      const device = await revalidatePush();
       if (device) {
-        await registerDevice(device);
         haptics.success();
+        setDeviceMessage('Listo: este dispositivo quedó registrado de nuevo.');
       } else {
         // Si seguimos sin permiso después de pedirlo, es porque el sistema
         // ya no vuelve a preguntar (el usuario dijo que no antes): hay que
         // ir a Ajustes a mano.
         const settings = await Notifications.getPermissionsAsync().catch(() => null);
-        if (settings && !settings.granted && !settings.canAskAgain) {
-          setNeedsSystemSettings(true);
-        }
+        if (settings && !settings.granted && !settings.canAskAgain) setNeedsSystemSettings(true);
+        setDeviceMessage('No se pudo registrar: falta el permiso de notificaciones.');
       }
+    } catch (err) {
+      haptics.error();
+      setDeviceMessage(errorMessage(err, 'No se pudo registrar este dispositivo.'));
     } finally {
-      setEnabling(false);
-      checkPermission();
+      setBusy(null);
+      refreshStatus();
+    }
+  }
+
+  async function onDisable() {
+    setBusy('disable');
+    setDeviceMessage(null);
+    try {
+      await disablePush();
+      haptics.selection();
+      setDeviceMessage('Avisos apagados en este dispositivo.');
+    } finally {
+      setBusy(null);
+      refreshStatus();
+    }
+  }
+
+  /** Manda un aviso real a todos los dispositivos de la cuenta y cuenta qué pasó:
+   * separa "el servidor no pudo enviarlo" de "salió bien" (si aun así no se ve,
+   * el problema está en este dispositivo: revalidar). */
+  async function onTest() {
+    setBusy('test');
+    setDeviceMessage(null);
+    try {
+      const { devices, results } = await pushDevices.test();
+      if (devices === 0) {
+        setDeviceMessage('La cuenta no tiene ningún dispositivo registrado: usá "Revalidar".');
+      } else {
+        const failed = results.filter((r) => !r.ok);
+        setDeviceMessage(
+          failed.length === 0
+            ? `Enviado a ${devices} dispositivo(s). Si no te llega, usá "Revalidar".`
+            : failed.map((r) => r.detail).join(' · '),
+        );
+      }
+    } catch (err) {
+      setDeviceMessage(errorMessage(err, 'No se pudo enviar el aviso de prueba.'));
+    } finally {
+      setBusy(null);
+      refreshStatus();
     }
   }
 
@@ -119,42 +162,15 @@ export default function NotificationsScreen() {
       <ModalHeader title="Notificaciones" />
 
       <ScrollView contentContainerClassName="gap-4 py-2" keyboardShouldPersistTaps="handled">
-        {permission !== 'granted' ? (
-          <Card>
-            <View className="flex-row items-center gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
-                <Icon name="bell" size={16} color={colors.textMuted} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                  {permission === 'unsupported'
-                    ? 'No disponible en este dispositivo'
-                    : 'Los avisos están desactivados'}
-                </Text>
-                <Text className="text-text-muted text-xs">
-                  {permission === 'unsupported'
-                    ? 'Probá desde un iPhone/Android real (no un simulador) o desde un navegador con soporte de notificaciones.'
-                    : 'Dale permiso para poder avisarte de recurrentes, cuotas y presupuesto.'}
-                </Text>
-              </View>
-            </View>
-            {permission === 'denied' ? (
-              <View className="mt-3 gap-2">
-                <Button
-                  label="Activar avisos"
-                  loading={enabling}
-                  onPress={needsSystemSettings ? () => Linking.openSettings() : onEnable}
-                />
-                {needsSystemSettings ? (
-                  <Text className="text-text-muted text-center text-xs">
-                    Ya lo habías rechazado antes: el sistema no vuelve a preguntar. Activalo
-                    desde Ajustes → Notificaciones.
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
-          </Card>
-        ) : null}
+        <DeviceCard
+          status={status}
+          busy={busy}
+          message={deviceMessage}
+          needsSystemSettings={needsSystemSettings}
+          onRevalidate={onRevalidate}
+          onDisable={onDisable}
+          onTest={onTest}
+        />
 
         {prefsQ.isLoading ? (
           <LoadingState />
@@ -325,5 +341,101 @@ function ToggleRow({
         thumbColor="#FFFFFF"
       />
     </View>
+  );
+}
+
+function DeviceCard({
+  status,
+  busy,
+  message,
+  needsSystemSettings,
+  onRevalidate,
+  onDisable,
+  onTest,
+}: {
+  status: PushStatus | null;
+  busy: 'revalidate' | 'disable' | 'test' | null;
+  message: string | null;
+  needsSystemSettings: boolean;
+  onRevalidate: () => void;
+  onDisable: () => void;
+  onTest: () => void;
+}) {
+  const colors = useColors();
+  if (!status) return null;
+
+  const active = status.enabled && status.permission === 'granted' && status.subscribed;
+  const unsupported = status.permission === 'unsupported';
+  let title: string;
+  let hint: string;
+  if (unsupported) {
+    title = 'No disponible en este dispositivo';
+    hint =
+      'Probá desde un iPhone/Android real (no un simulador) o desde un navegador con soporte de notificaciones. En iPhone tiene que estar instalada en la pantalla de inicio.';
+  } else if (!status.enabled) {
+    title = 'Apagados en este dispositivo';
+    hint = 'No vas a recibir avisos aquí. Los del centro de notificaciones siguen apareciendo en la app.';
+  } else if (status.permission === 'denied') {
+    title = 'El permiso está bloqueado';
+    hint = 'El sistema no vuelve a preguntar: activalo desde Ajustes → Notificaciones.';
+  } else if (status.permission !== 'granted') {
+    title = 'Los avisos están desactivados';
+    hint = 'Dale permiso para poder avisarte de recurrentes, cuotas y presupuesto.';
+  } else if (!status.subscribed) {
+    title = 'Este dispositivo no está registrado';
+    hint = 'El permiso está concedido pero no hay una suscripción viva: revalidá para registrarlo de nuevo.';
+  } else {
+    title = 'Activos en este dispositivo';
+    hint = 'Si dejaron de llegar, revalidá: vuelve a registrar este dispositivo desde cero.';
+  }
+
+  return (
+    <Card title="Este dispositivo">
+      <View className="flex-row items-center gap-3">
+        <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+          <Icon name="bell" size={16} color={active ? colors.primary : colors.textMuted} />
+        </View>
+        <View className="flex-1">
+          <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+            {title}
+          </Text>
+          <Text className="text-text-muted text-xs">{hint}</Text>
+        </View>
+      </View>
+
+      {!unsupported ? (
+        <View className="mt-3 gap-2">
+          {needsSystemSettings || status.permission === 'denied' ? (
+            <Button label="Abrir Ajustes" onPress={() => Linking.openSettings()} />
+          ) : (
+            <Button
+              label={status.enabled ? 'Revalidar avisos' : 'Activar avisos'}
+              loading={busy === 'revalidate'}
+              disabled={busy !== null}
+              onPress={onRevalidate}
+            />
+          )}
+          {active ? (
+            <>
+              <Button
+                label="Enviar aviso de prueba"
+                variant="ghost"
+                loading={busy === 'test'}
+                disabled={busy !== null}
+                onPress={onTest}
+              />
+              <Button
+                label="Apagar en este dispositivo"
+                variant="ghost"
+                loading={busy === 'disable'}
+                disabled={busy !== null}
+                onPress={onDisable}
+              />
+            </>
+          ) : null}
+        </View>
+      ) : null}
+      {message ? <Text className="text-text-muted mt-2 text-xs">{message}</Text> : null}
+    </Card>
   );
 }

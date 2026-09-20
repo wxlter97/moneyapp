@@ -1,4 +1,9 @@
-import { registerWebPush, unsubscribeWebPush } from '@/lib/webPush';
+import {
+  getWebPushSubscription,
+  registerWebPush,
+  resetWebPushSubscription,
+  unsubscribeWebPush,
+} from '@/lib/webPush';
 
 // Cualquier base64url válido alcanza -- `urlBase64ToUint8Array` sólo
 // necesita decodificarlo, no es una clave VAPID real.
@@ -112,6 +117,25 @@ describe('webPush', () => {
     it('sin suscripción activa, no lanza', async () => {
       stubBrowserWithPush({ existingSubscription: null });
       await expect(unsubscribeWebPush()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('resetWebPushSubscription / getWebPushSubscription (revalidar y apagar avisos)', () => {
+    it('sin service worker no hay suscripción y no lanza', async () => {
+      (global as Record<string, unknown>).navigator = undefined;
+      await expect(getWebPushSubscription()).resolves.toBeNull();
+      await expect(resetWebPushSubscription()).resolves.toBeNull();
+    });
+
+    it('devuelve el endpoint que tenía y da de baja la suscripción', async () => {
+      const { subscription } = stubBrowserWithPush({ existingSubscription: { endpoint: 'x' } });
+      await expect(resetWebPushSubscription()).resolves.toBe('https://push.example.com/abc');
+      expect(subscription.unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('sin suscripción devuelve null (no hay nada que avisarle al servidor)', async () => {
+      stubBrowserWithPush({ existingSubscription: null });
+      await expect(resetWebPushSubscription()).resolves.toBeNull();
     });
   });
 });

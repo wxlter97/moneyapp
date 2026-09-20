@@ -1,11 +1,12 @@
 import type { LoyaltyCategoryRate, LoyaltyMerchant } from '@/api/types';
 
-import { matchMerchant, normalizeText, pickRate, weekdayMon0 } from '../loyaltyRate';
+import { autopayRate, matchMerchant, normalizeText, pickRate, qualifies, weekdayMon0 } from '../loyaltyRate';
 
 const rate = (
   over: Partial<LoyaltyCategoryRate> & { rate: string },
 ): LoyaltyCategoryRate => ({
-  id: 'r', program: 'p', category_type: null, merchant: null, weekday: null, ...over,
+  id: 'r', program: 'p', category_type: null, merchant: null, weekday: null,
+  requires_autopay: false, ...over,
 });
 
 describe('weekdayMon0', () => {
@@ -79,5 +80,43 @@ describe('pickRate', () => {
   it('un bono de otro día no aplica', () => {
     const p = { default_rate: '1', category_rates: [rate({ category_type: 'super', rate: '2', weekday: 0 })] };
     expect(pickRate(p, 'super', TUE)).toBe('1');
+  });
+});
+
+describe('qualifies (compra mínima)', () => {
+  it('es inclusiva y opcional', () => {
+    expect(qualifies({ min_amount: '10.00' }, 10)).toBe(true);
+    expect(qualifies({ min_amount: '10.00' }, 10.01)).toBe(true);
+    expect(qualifies({ min_amount: '10.00' }, 9.99)).toBe(false);
+    expect(qualifies({ min_amount: null }, 0.01)).toBe(true);
+  });
+});
+
+describe('cargos automáticos', () => {
+  const program = {
+    default_rate: '0.01',
+    category_rates: [rate({ category_type: 'agua', rate: '0.05', requires_autopay: true })],
+  };
+
+  it('la tasa de cargo automático sólo cuenta si el gasto lo es', () => {
+    expect(pickRate(program, 'agua', '2026-09-22')).toBe('0.01');
+    expect(pickRate(program, 'agua', '2026-09-22', null, true)).toBe('0.05');
+    expect(pickRate(program, 'otro', '2026-09-22', null, true)).toBe('0.01');
+  });
+  it('con cargo automático gana a la tasa normal del mismo rubro', () => {
+    const p = {
+      default_rate: '0.01',
+      category_rates: [
+        rate({ category_type: 'agua', rate: '0.02' }),
+        rate({ category_type: 'agua', rate: '0.05', requires_autopay: true }),
+      ],
+    };
+    expect(pickRate(p, 'agua', '2026-09-22')).toBe('0.02');
+    expect(pickRate(p, 'agua', '2026-09-22', null, true)).toBe('0.05');
+  });
+  it('autopayRate dice si hay algo que preguntar para ese rubro o comercio', () => {
+    expect(autopayRate(program, 'agua')).toBe('0.05');
+    expect(autopayRate(program, 'gasolina')).toBeUndefined();
+    expect(autopayRate(program, null, 'nadie')).toBeUndefined();
   });
 });

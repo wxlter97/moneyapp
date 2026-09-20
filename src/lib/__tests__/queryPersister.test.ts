@@ -29,4 +29,9 @@ describe('shouldPersistQuery', () => {
   it('el prefijo de IA sólo cuenta al inicio de la key: una key que lo contiene no se pierde', () => {
     expect(shouldPersistQuery(query(['ws', 'abc', 'ai']))).toBe(true);
   });
+
+  it('no persiste el resumen de recompensas: una copia vieja mostraría "sin recompensas" hasta que llegue la fresca', () => {
+    expect(shouldPersistQuery(query(['ws', 'abc', 'loyalty-summary', {}]))).toBe(false);
+    expect(shouldPersistQuery(query(['ws', 'abc', 'wallets']))).toBe(true);
+  });
 });

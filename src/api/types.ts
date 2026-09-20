@@ -434,6 +434,8 @@ export interface Transaction {
   has_receipt: boolean;
   /** Si false, el gasto no cuenta contra el presupuesto de su categoría. */
   counts_toward_budget: boolean;
+  /** Cargo que la tarjeta cobró sola (Pagos Automáticos): algunas tasas de lealtad sólo valen así. */
+  is_autopay: boolean;
   source: TransactionSource;
   is_recurring: boolean;
   /** Gasto que se espera recuperar (reembolso de trabajo, seguro, etc.).
@@ -544,6 +546,7 @@ export interface TransactionInput {
   description?: string;
   currency?: string;
   counts_toward_budget?: boolean;
+  is_autopay?: boolean;
   is_refundable?: boolean;
   /** Nombres de etiqueta tal como los escribe el usuario -- se reusan las
    * que ya existen (sin distinguir mayúsculas) y se crean las que no.
@@ -768,6 +771,8 @@ export interface LoyaltyCategoryRate {
   category_type: UUID | null;
   merchant: UUID | null;
   rate: string;
+  /** Sólo vale si el gasto es un cargo automático de la tarjeta (`Transaction.is_autopay`). */
+  requires_autopay: boolean;
   /** 0 = lunes … 6 = domingo (como `date.weekday()`); `null` = todos los días. */
   weekday: number | null;
 }
@@ -786,6 +791,8 @@ export interface LoyaltyProgram {
   default_rate: string;
   /** Sólo puntos: valor de canje estimado por punto -- referencia, no afecta cálculos reales. */
   point_value: string | null;
+  /** Sólo las compras de este monto o más ganan ("cashback a partir de $10"); `null` = cualquier monto. */
+  min_amount: string | null;
   is_active: boolean;
   category_rates: LoyaltyCategoryRate[];
 }
@@ -1301,4 +1308,10 @@ export interface ParseCandidate {
   category_source: 'history' | 'ai' | null;
   confidence: Record<string, ConfidenceLevel>;
   possible_duplicates: PossibleDuplicate[];
+}
+
+/** Resultado de `POST /push-devices/test/`: un renglón por dispositivo de la cuenta. */
+export interface PushTestResponse {
+  devices: number;
+  results: { device: UUID; ok: boolean; status: number | null; detail: string }[];
 }
