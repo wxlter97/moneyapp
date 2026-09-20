@@ -3,6 +3,7 @@
  * y se deshabilitan si aún no hay uno seleccionado.
  */
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -852,6 +853,39 @@ export function useTransactions(params: res.TransactionListParams = {}) {
   return useQuery({
     queryKey: qk.ws(ws).transactions(params),
     queryFn: () => res.transactions.list(params),
+    enabled: !!ws,
+  });
+}
+
+/** Tamaño de página de las listas con scroll infinito. */
+export const TRANSACTIONS_PAGE_SIZE = 50;
+
+/**
+ * Lista paginada (scroll infinito): sólo baja la primera página y pide más al
+ * llegar al final. Para pantallas que muestran un historial largo; las que
+ * necesitan TODO el conjunto (exportar, agregados de un periodo) siguen con
+ * `useTransactions`. Los totales no se suman de lo cargado: usar
+ * `useTransactionTotals` con los mismos filtros.
+ */
+export function useInfiniteTransactions(params: res.TransactionListParams = {}) {
+  const ws = useActiveWs();
+  return useInfiniteQuery({
+    queryKey: qk.ws(ws).transactionsPaged(params),
+    queryFn: ({ pageParam }) =>
+      res.transactions.page({ ...params, limit: TRANSACTIONS_PAGE_SIZE, offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) =>
+      last.next ? pages.length * TRANSACTIONS_PAGE_SIZE : undefined,
+    enabled: !!ws,
+  });
+}
+
+/** Ingresos/gastos por moneda de lo que cumple el filtro, calculados en el servidor. */
+export function useTransactionTotals(params: res.TransactionListParams = {}) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).transactionTotals(params),
+    queryFn: () => res.transactions.totals(params),
     enabled: !!ws,
   });
 }

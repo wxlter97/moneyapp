@@ -2,16 +2,18 @@ import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { useTags, useTransactions } from '@/api/queries';
+import { useInfiniteTransactions, useTags, useTransactionTotals } from '@/api/queries';
 import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import { TransactionRow } from '@/components/TransactionRow';
+import { LoadMoreFooter } from '@/components/ui/LoadMoreFooter';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Screen } from '@/components/ui/Screen';
 import { SummaryTriple } from '@/components/SummaryTriple';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { formatDayHeader } from '@/lib/date';
-import { groupByDay, summarizeByType, useSwipeDeleteTransactions } from '@/lib/transactions';
+import { flattenPages, usePagedScroll } from '@/lib/pagedList';
+import { groupByDay, totalsForCurrency, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { useWorkspaceStore } from '@/store/workspace';
 
 /** Todos los movimientos de una etiqueta -- se llega acá tocando su fila en
@@ -19,7 +21,9 @@ import { useWorkspaceStore } from '@/store/workspace';
  * casi siempre cruza meses. */
 export default function TagTransactionsScreen() {
   const { tag } = useLocalSearchParams<{ tag: string }>();
-  const query = useTransactions({ tag });
+  const query = useInfiniteTransactions({ tag });
+  const paged = usePagedScroll(query);
+  const totalsQ = useTransactionTotals({ tag });
   const { data: tags } = useTags();
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
@@ -29,13 +33,20 @@ export default function TagTransactionsScreen() {
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
 
+  const loaded = useMemo(() => flattenPages(query.data), [query.data]);
   const items = useMemo(
-    () => (query.data ?? []).filter((t) => !pendingDeleteIds.has(t.id)),
-    [query.data, pendingDeleteIds],
+    () => loaded.filter((t) => !pendingDeleteIds.has(t.id)),
+    [loaded, pendingDeleteIds],
   );
+  // El total sale del servidor (toda la etiqueta, no sólo lo que ya se cargó).
   const totals = useMemo(
-    () => summarizeByType(items.filter((t) => t.currency === currency)),
-    [items, currency],
+    () =>
+      totalsForCurrency(
+        totalsQ.data,
+        currency,
+        loaded.filter((t) => pendingDeleteIds.has(t.id)),
+      ),
+    [totalsQ.data, currency, loaded, pendingDeleteIds],
   );
   const days = useMemo(() => groupByDay(items), [items]);
 
@@ -44,7 +55,12 @@ export default function TagTransactionsScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title={tagObj?.name ?? 'Etiqueta'} />
-      <ScrollView contentContainerClassName="gap-3 py-2" refreshControl={refresh}>
+      <ScrollView
+        contentContainerClassName="gap-3 py-2"
+        refreshControl={refresh}
+        onScroll={paged.onScroll}
+        scrollEventThrottle={paged.scrollEventThrottle}
+      >
         <SummaryTriple income={totals.income} expenses={totals.expenses} currency={currency} />
 
         {query.isLoading ? (
@@ -77,6 +93,11 @@ export default function TagTransactionsScreen() {
             </View>
           ))
         )}
+        <LoadMoreFooter
+          hasNextPage={query.hasNextPage}
+          isFetchingNextPage={query.isFetchingNextPage}
+          onLoadMore={paged.loadMore}
+        />
       </ScrollView>
     </Screen>
   );

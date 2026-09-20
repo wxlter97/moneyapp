@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { useTransactions } from '@/api/queries';
+import { useInfiniteTransactions, useTransactionTotals } from '@/api/queries';
 import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import { TransactionRow } from '@/components/TransactionRow';
+import { LoadMoreFooter } from '@/components/ui/LoadMoreFooter';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Screen } from '@/components/ui/Screen';
@@ -12,7 +13,8 @@ import { Segmented } from '@/components/ui/Segmented';
 import { SummaryTriple } from '@/components/SummaryTriple';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { formatDayHeader, formatShortDate } from '@/lib/date';
-import { groupByDay, summarizeByType, useSwipeDeleteTransactions } from '@/lib/transactions';
+import { flattenPages, usePagedScroll } from '@/lib/pagedList';
+import { groupByDay, totalsForCurrency, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { useWorkspaceStore } from '@/store/workspace';
 
 type Scope = 'range' | 'all';
@@ -29,11 +31,20 @@ export default function CategoryTransactionsScreen() {
 
   const hasRange = !!from && !!to;
 
-  const query = useTransactions(
-    scope === 'range' && hasRange
-      ? { category, date_after: from, date_before: to }
-      : { category },
+  // `counts_toward_budget` va al servidor y no se filtra acá: esta pantalla
+  // explica un número de Presupuesto, que ignora las marcadas «S/PRES.», y con
+  // la lista paginada un filtro del lado del cliente dejaría páginas casi vacías
+  // y un total distinto del de Presupuesto.
+  const filters = useMemo(
+    () =>
+      scope === 'range' && hasRange
+        ? { category, date_after: from, date_before: to, counts_toward_budget: true }
+        : { category, counts_toward_budget: true },
+    [scope, hasRange, category, from, to],
   );
+  const query = useInfiniteTransactions(filters);
+  const paged = usePagedScroll(query);
+  const totalsQ = useTransactionTotals(filters);
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
   const cat = categories.get(category);
@@ -42,22 +53,24 @@ export default function CategoryTransactionsScreen() {
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
 
-  // Esta pantalla existe para explicar un número de Presupuesto -- se
-  // excluyen las transacciones marcadas "S/PRES." (no cuentan para el
-  // presupuesto) de raíz, lista y total incluidos. Si no, se siguen viendo
-  // acá gastos que Presupuesto ya ignora, y el total tampoco coincide con
-  // el que se ve ahí (ver `budget_vs_actual` en el backend). También se
-  // ocultan las que se acaban de deslizar-borrar (ver `useSwipeDeleteTransactions`).
+  // También se ocultan las que se acaban de deslizar-borrar (ver
+  // `useSwipeDeleteTransactions`).
+  const loaded = useMemo(() => flattenPages(query.data), [query.data]);
   const items = useMemo(
-    () => (query.data ?? []).filter((t) => t.counts_toward_budget && !pendingDeleteIds.has(t.id)),
-    [query.data, pendingDeleteIds],
+    () => loaded.filter((t) => !pendingDeleteIds.has(t.id)),
+    [loaded, pendingDeleteIds],
   );
-  // El total de arriba se suma sin convertir (no hay tasas acá) -- se
-  // limita a la moneda base para no mezclar montos de otras carteras; cada
-  // fila de la lista de abajo sí muestra su moneda real, sea cual sea.
+  // El total sale del servidor (todo lo que cumple el filtro, no sólo lo cargado)
+  // y se limita a la moneda base para no mezclar montos de otras carteras; cada
+  // fila de la lista sí muestra su moneda real, sea cual sea.
   const totals = useMemo(
-    () => summarizeByType(items.filter((t) => t.currency === currency)),
-    [items, currency],
+    () =>
+      totalsForCurrency(
+        totalsQ.data,
+        currency,
+        loaded.filter((t) => pendingDeleteIds.has(t.id)),
+      ),
+    [totalsQ.data, currency, loaded, pendingDeleteIds],
   );
   const days = useMemo(() => groupByDay(items), [items]);
 
@@ -66,7 +79,12 @@ export default function CategoryTransactionsScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title={cat?.name ?? 'Categoría'} />
-      <ScrollView contentContainerClassName="gap-3 py-2" refreshControl={refresh}>
+      <ScrollView
+        contentContainerClassName="gap-3 py-2"
+        refreshControl={refresh}
+        onScroll={paged.onScroll}
+        scrollEventThrottle={paged.scrollEventThrottle}
+      >
         <SummaryTriple income={totals.income} expenses={totals.expenses} currency={currency} />
 
         {hasRange ? (
@@ -120,6 +138,11 @@ export default function CategoryTransactionsScreen() {
             </View>
           ))
         )}
+        <LoadMoreFooter
+          hasNextPage={query.hasNextPage}
+          isFetchingNextPage={query.isFetchingNextPage}
+          onLoadMore={paged.loadMore}
+        />
       </ScrollView>
     </Screen>
   );

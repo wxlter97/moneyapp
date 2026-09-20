@@ -26,6 +26,13 @@ export interface Paginated<T> {
   results: T[];
 }
 
+/** `GET /transactions/totals/`: ingresos y gastos de lo que cumple el filtro, por moneda. */
+export interface TransactionTotals {
+  currency: string;
+  income: string;
+  expenses: string;
+}
+
 // ---------------------------------------------------------------------------
 // Auth / usuario
 // ---------------------------------------------------------------------------

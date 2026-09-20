@@ -6,6 +6,7 @@ import {
   groupByDay,
   signedAmount,
   summarizeByType,
+  totalsForCurrency,
   useSwipeDeleteTransactions,
 } from '../transactions';
 
@@ -192,5 +193,41 @@ describe('useSwipeDeleteTransactions', () => {
     // todavía espera su propio "Deshacer".
     expect(result.current.pendingDeleteIds.has('t1')).toBe(true);
     expect(result.current.pendingDeleteIds.has('t2')).toBe(true);
+  });
+});
+
+describe('totalsForCurrency', () => {
+  const server = [
+    { currency: 'USD', income: '1000.00', expenses: '250.50' },
+    { currency: 'EUR', income: '0.00', expenses: '9.00' },
+  ];
+  const txn = (over: Partial<Transaction>) =>
+    ({ id: 't', type: 'expense', amount: '10.00', currency: 'USD', ...over }) as Transaction;
+
+  it('toma los totales de la moneda pedida', () => {
+    expect(totalsForCurrency(server, 'USD')).toEqual({ income: 1000, expenses: 250.5, net: 749.5 });
+    expect(totalsForCurrency(server, 'EUR').expenses).toBe(9);
+  });
+
+  it('sin datos del servidor o de esa moneda, cero', () => {
+    expect(totalsForCurrency(undefined, 'USD')).toEqual({ income: 0, expenses: 0, net: 0 });
+    expect(totalsForCurrency(server, 'GTQ').expenses).toBe(0);
+  });
+
+  it('resta las filas pendientes de deshacer, sólo de esa moneda', () => {
+    const pending = [
+      txn({ amount: '50.50' }),
+      txn({ type: 'income', amount: '100.00' }),
+      txn({ amount: '999.00', currency: 'EUR' }),
+    ];
+    expect(totalsForCurrency(server, 'USD', pending)).toEqual({
+      income: 900,
+      expenses: 200,
+      net: 700,
+    });
+  });
+
+  it('nunca baja de cero', () => {
+    expect(totalsForCurrency(server, 'USD', [txn({ amount: '5000.00' })]).expenses).toBe(0);
   });
 });

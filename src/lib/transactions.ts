@@ -27,6 +27,24 @@ export function summarizeByType(transactions: Transaction[]): TypeTotals {
   return { income, expenses, net: income - expenses };
 }
 
+/**
+ * Totales de la moneda base a partir de los que calculó el servidor (todo lo
+ * que cumple el filtro, no sólo lo cargado), restando las filas que se acaban
+ * de deslizar-borrar y siguen esperando su «Deshacer» -- así el total baja al
+ * instante, igual que la lista.
+ */
+export function totalsForCurrency(
+  server: { currency: string; income: string; expenses: string }[] | undefined,
+  currency: string,
+  pending: Transaction[] = [],
+): TypeTotals {
+  const row = server?.find((r) => r.currency === currency);
+  const gone = summarizeByType(pending.filter((t) => t.currency === currency));
+  const income = Math.max(0, toNumber(row?.income) - gone.income);
+  const expenses = Math.max(0, toNumber(row?.expenses) - gone.expenses);
+  return { income, expenses, net: income - expenses };
+}
+
 export interface DaySection {
   date: ISODate;
   data: Transaction[];

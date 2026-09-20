@@ -2,12 +2,13 @@ import { useMemo } from 'react';
 import { ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { useTransactions, useWallet } from '@/api/queries';
+import { useInfiniteTransactions, useWallet } from '@/api/queries';
 import { useCategoryMap, useWalletMap } from '@/api/queries/lookups';
 import { DayHeader } from '@/components/DayHeader';
 import { TransactionRow } from '@/components/TransactionRow';
 import { WalletRewardsCard } from '@/components/WalletRewardsCard';
 import { IconButton } from '@/components/ui/IconButton';
+import { LoadMoreFooter } from '@/components/ui/LoadMoreFooter';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Screen } from '@/components/ui/Screen';
@@ -15,6 +16,7 @@ import { TransactionListSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { balanceAfterEach, groupByDay, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { toNumber } from '@/lib/money';
+import { flattenPages, usePagedScroll } from '@/lib/pagedList';
 import { useColors } from '@/theme';
 
 /** Historial completo de movimientos de una cartera: se llega acá tocando
@@ -24,16 +26,19 @@ export default function WalletTransactionsScreen() {
   const colors = useColors();
   const { wallet: walletId } = useLocalSearchParams<{ wallet: string }>();
   const walletQ = useWallet(walletId);
-  const query = useTransactions({ wallet: walletId });
+  const query = useInfiniteTransactions({ wallet: walletId });
+  const paged = usePagedScroll(query);
   const { map: categories } = useCategoryMap();
   const { map: wallets } = useWalletMap();
   const { pendingDeleteIds, onSwipeDelete } = useSwipeDeleteTransactions();
 
-  const allItems = query.data ?? [];
+  const allItems = useMemo(() => flattenPages(query.data), [query.data]);
   // Saldo de la cartera justo después de cada movimiento -- se camina hacia
-  // atrás desde el saldo de hoy, así que hace falta el historial COMPLETO
-  // (sin paginar, y SIN filtrar los pendientes de deshacer: el saldo de hoy
-  // todavía los incluye hasta que el borrado se confirme de verdad).
+  // atrás desde el saldo de hoy. La lista llega paginada, de lo más reciente
+  // a lo más antiguo, así que cada fila cargada ya tiene su saldo correcto sin
+  // necesitar las que faltan (son más viejas). SIN filtrar los pendientes de
+  // deshacer: el saldo de hoy todavía los incluye hasta que el borrado se
+  // confirme de verdad.
   const balances = useMemo(
     () =>
       walletId && walletQ.data
@@ -91,7 +96,12 @@ export default function WalletTransactionsScreen() {
           </View>
         }
       />
-      <ScrollView contentContainerClassName="gap-3 py-2" refreshControl={refresh}>
+      <ScrollView
+        contentContainerClassName="gap-3 py-2"
+        refreshControl={refresh}
+        onScroll={paged.onScroll}
+        scrollEventThrottle={paged.scrollEventThrottle}
+      >
         {walletQ.data ? <WalletRewardsCard wallet={walletQ.data} /> : null}
         {query.isLoading ? (
           <>
@@ -126,6 +136,11 @@ export default function WalletTransactionsScreen() {
             </View>
           ))
         )}
+        <LoadMoreFooter
+          hasNextPage={query.hasNextPage}
+          isFetchingNextPage={query.isFetchingNextPage}
+          onLoadMore={paged.loadMore}
+        />
       </ScrollView>
     </Screen>
   );
