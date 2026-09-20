@@ -436,6 +436,8 @@ export interface Transaction {
   counts_toward_budget: boolean;
   /** Cargo que la tarjeta cobró sola (Pagos Automáticos): algunas tasas de lealtad sólo valen así. */
   is_autopay: boolean;
+  /** Comercio con beneficio elegido al registrar el gasto (gana al reconocido en la descripción). */
+  merchant: UUID | null;
   source: TransactionSource;
   is_recurring: boolean;
   /** Gasto que se espera recuperar (reembolso de trabajo, seguro, etc.).
@@ -547,6 +549,7 @@ export interface TransactionInput {
   currency?: string;
   counts_toward_budget?: boolean;
   is_autopay?: boolean;
+  merchant?: UUID | null;
   is_refundable?: boolean;
   /** Nombres de etiqueta tal como los escribe el usuario -- se reusan las
    * que ya existen (sin distinguir mayúsculas) y se crean las que no.

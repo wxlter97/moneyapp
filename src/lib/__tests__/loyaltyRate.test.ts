@@ -1,6 +1,14 @@
 import type { LoyaltyCategoryRate, LoyaltyMerchant } from '@/api/types';
 
-import { autopayRate, matchMerchant, normalizeText, pickRate, qualifies, weekdayMon0 } from '../loyaltyRate';
+import {
+  autopayRate,
+  matchMerchant,
+  merchantOptions,
+  normalizeText,
+  pickRate,
+  qualifies,
+  weekdayMon0,
+} from '../loyaltyRate';
 
 const rate = (
   over: Partial<LoyaltyCategoryRate> & { rate: string },
@@ -118,5 +126,36 @@ describe('cargos automáticos', () => {
     expect(autopayRate(program, 'agua')).toBe('0.05');
     expect(autopayRate(program, 'gasolina')).toBeUndefined();
     expect(autopayRate(program, null, 'nadie')).toBeUndefined();
+  });
+});
+
+describe('merchantOptions (comercios que ofrece el selector)', () => {
+  const m = (id: string, name: string) => ({ id, name, category_type: null, aliases: [name] });
+  const merchants = [m('w', 'Walmart'), m('s', 'Súper Selectos'), m('x', 'Otro')];
+
+  it('sale de las tasas de comercio de la tarjeta, ordenado por nombre', () => {
+    const programs = [
+      { is_active: true, category_rates: [rate({ merchant: 'w', rate: '0.07' })] },
+      { is_active: true, category_rates: [rate({ merchant: 's', rate: '0.07' }), rate({ category_type: 'c', rate: '1' })] },
+    ];
+    expect(merchantOptions(programs, merchants).map((x) => x.name)).toEqual(['Súper Selectos', 'Walmart']);
+  });
+  it('agregar un comercio a la tarjeta lo hace aparecer, sin tocar código', () => {
+    const before = [{ is_active: true, category_rates: [rate({ merchant: 'w', rate: '0.07' })] }];
+    const after = [
+      { is_active: true, category_rates: [rate({ merchant: 'w', rate: '0.07' }), rate({ merchant: 's', rate: '0.05' })] },
+    ];
+    expect(merchantOptions(before, merchants)).toHaveLength(1);
+    expect(merchantOptions(after, merchants)).toHaveLength(2);
+  });
+  it('ignora programas inactivos, tasas de rubro y comercios que ya no están en el catálogo', () => {
+    const programs = [
+      { is_active: false, category_rates: [rate({ merchant: 'w', rate: '0.07' })] },
+      { is_active: true, category_rates: [rate({ category_type: 'super', rate: '0.05' }), rate({ merchant: 'borrado', rate: '0.1' })] },
+    ];
+    expect(merchantOptions(programs, merchants)).toEqual([]);
+  });
+  it('una tarjeta sin beneficios de comercio no ofrece nada', () => {
+    expect(merchantOptions([], merchants)).toEqual([]);
   });
 });

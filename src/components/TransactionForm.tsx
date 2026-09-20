@@ -47,7 +47,7 @@ import type { PickedFile } from '@/lib/receipt';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
-import { autopayRate, matchMerchant, pickRate, qualifies } from '@/lib/loyaltyRate';
+import { autopayRate, matchMerchant, merchantOptions, pickRate, qualifies } from '@/lib/loyaltyRate';
 import { formatMoney, toNumber } from '@/lib/money';
 import { useSnackbarStore } from '@/store/snackbar';
 
@@ -127,6 +127,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   const [inBudget, setInBudget] = useState(true);
   const [isRefundable, setIsRefundable] = useState(false);
   const [isAutopay, setIsAutopay] = useState(false);
+  const [chosenMerchantId, setChosenMerchantId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   // Mini-formulario inline de "Registrar reembolso" -- ver más abajo. No es
   // un campo de la transacción: crea OTRA transacción (el ingreso real que
@@ -192,7 +193,10 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     setTagNames((t.tags ?? []).map((tag) => tag.name));
     setInBudget(t.counts_toward_budget);
     // Como `isRefundable`: duplicar un cargo automático no lo copia ya marcado.
-    if (editing) setIsAutopay(t.is_autopay ?? false);
+    if (editing) {
+      setIsAutopay(t.is_autopay ?? false);
+      setChosenMerchantId(t.merchant ?? null);
+    }
     // Sólo al EDITAR (no al duplicar): duplicar una transacción reembolsada
     // no debería crear la copia ya marcada como reembolsable.
     if (editing) {
@@ -269,7 +273,18 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   // El comercio reconocido en la descripción manda sobre la categoría, igual que
   // en el servidor (ver `apps.loyalty.signals`): "Comida" mezcla restaurantes con
   // supermercados.
-  const merchant = matchMerchant(note, merchantsQ.data ?? []);
+  // Lo que se elige a mano ("¿fue en Súper Selectos?") gana al que se reconoce en el texto.
+  const allMerchants = useMemo(() => merchantsQ.data ?? [], [merchantsQ.data]);
+  const merchant =
+    allMerchants.find((m) => m.id === chosenMerchantId) ?? matchMerchant(note, allMerchants);
+  // Comercios con beneficio en la tarjeta elegida: salen de sus tasas (admin), no de una lista fija.
+  const merchantChoices = useMemo(
+    () =>
+      hasLoyalty && !isTransfer && type === 'expense'
+        ? merchantOptions(cardProduct?.programs ?? [], allMerchants)
+        : [],
+    [hasLoyalty, isTransfer, type, cardProduct, allMerchants],
+  );
   // Tasas que sólo valen para cargos automáticos (Pagos Automáticos de servicios):
   // no se pueden deducir de la descripción, así que se PREGUNTA (ver el interruptor
   // más abajo) en vez de suponerlo, y se pregunta también al editar por si quedó mal.
@@ -489,6 +504,8 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
       payload.is_refundable = isRefundable;
       // Sólo se manda si la tarjeta lo pregunta: sin la pregunta no hay nada que confirmar.
       payload.is_autopay = autopayOn;
+      // Sólo si la tarjeta lo ofrece; `null` quita uno elegido antes al editar.
+      if (merchantChoices.length > 0) payload.merchant = chosenMerchantId;
       if (appliedDiscount) {
         payload.discount_program = appliedDiscount.programId;
         payload.pre_discount_amount = appliedDiscount.original.toFixed(2);
@@ -735,6 +752,41 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
                 {line}
               </Text>
             ))}
+          </View>
+        ) : null}
+
+        {merchantChoices.length > 0 ? (
+          <View className="gap-2 rounded-xl bg-surface-2 px-3 py-2.5">
+            <View>
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                ¿Fue en alguno de estos comercios?
+              </Text>
+              <Text className="text-text-muted text-xs">
+                Tu tarjeta da un beneficio especial ahí. Si no lo eliges, se busca por lo que
+                escribas en la descripción.
+              </Text>
+            </View>
+            <View className="flex-row flex-wrap gap-2">
+              {merchantChoices.map((m) => {
+                const selected = merchant?.id === m.id;
+                return (
+                  <Pressable
+                    key={m.id}
+                    onPress={() => {
+                      haptics.selection();
+                      setChosenMerchantId(chosenMerchantId === m.id ? null : m.id);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    className={`rounded-full border px-3 py-1 ${
+                      selected ? 'border-primary bg-primary/10' : 'border-border'
+                    }`}
+                  >
+                    <Text className="text-text text-xs">{m.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         ) : null}
 
