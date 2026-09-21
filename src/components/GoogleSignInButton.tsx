@@ -45,6 +45,9 @@ export function GoogleSignInButton({ mode = 'login', onLinked }: GoogleSignInBut
     if (!idToken) return;
 
     let cancelled = false;
+    // Este efecto sí es sincronización con un sistema externo (la respuesta del
+    // flujo de Google): marcar «enviando» al recibirla no se puede derivar del render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSubmitting(true);
     setError(null);
     const action = mode === 'link' ? linkGoogleAccount(idToken) : signInWithGoogle(idToken);

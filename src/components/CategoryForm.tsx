@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import {
@@ -74,14 +74,15 @@ export function CategoryForm({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Al crear una subcategoría, hereda el tipo del grupo cuando cargan los datos.
-  useEffect(() => {
-    if (editing || !initialParentCat) return;
+  // Se ajusta durante el render, sólo cuando el grupo cambia (no en cada render).
+  const [seenParentId, setSeenParentId] = useState<string | null>(null);
+  if (!editing && initialParentCat && initialParentCat.id !== seenParentId) {
+    setSeenParentId(initialParentCat.id);
     setType(initialParentCat.type);
     setParentId(initialParentCat.id);
-  }, [editing, initialParentCat]);
+  }
 
-  useEffect(() => {
-    if (!editing || prefilled || !existing) return;
+  if (editing && !prefilled && existing) {
     setName(existing.name);
     setType(existing.type);
     setIcon(existing.icon ?? '');
@@ -89,7 +90,7 @@ export function CategoryForm({
     setParentId(existing.parent);
     setCategoryTypeId(existing.category_type);
     setPrefilled(true);
-  }, [editing, prefilled, existing]);
+  }
 
   // Rubro estándar del catálogo de lealtad (opcional): mapea esta categoría a
   // uno para heredar las tasas de puntos/cashback/descuento que le

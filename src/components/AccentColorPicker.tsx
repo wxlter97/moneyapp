@@ -45,22 +45,26 @@ export function AccentColorPicker({ hex, onChange }: AccentColorPickerProps) {
 
   // El campo de texto sigue el hex real (prop), pero sólo cuando cambia
   // "desde afuera" (slider, u otra instancia) -- si lo hiciéramos en cada
-  // letra tipeada nunca se podría terminar de escribir un hex válido.
+  // letra tipeada nunca se podría terminar de escribir un hex válido. Se ajusta
+  // durante el render (patrón de React para "estado que depende de una prop") en
+  // vez de en un efecto, que pintaba una vez con el texto viejo.
   const lastPropHex = useRef(hex);
-  useEffect(() => {
-    lastPropHex.current = hex;
+  const [prevHex, setPrevHex] = useState(hex);
+  if (hex !== prevHex) {
+    setPrevHex(hex);
     setText(hex);
     setError(null);
+  }
+  useEffect(() => {
+    lastPropHex.current = hex;
   }, [hex]);
 
-  const onChangeRef = useRef(onChange);
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  });
-
-  const commitHue = useCallback((hue: number) => {
-    onChangeRef.current(hueToPreviewHex(hue));
-  }, []);
+  const commitHue = useCallback(
+    (hue: number) => {
+      onChange(hueToPreviewHex(hue));
+    },
+    [onChange],
+  );
 
   const pan = Gesture.Pan()
     .onBegin((e) => {

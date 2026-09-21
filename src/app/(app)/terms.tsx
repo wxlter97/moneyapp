@@ -68,7 +68,7 @@ export default function TermsScreen() {
           guardamos el número completo de tu tarjeta. Podés cancelar cuando quieras desde
           Herramientas → Cuenta → Pro; seguís teniendo acceso Pro hasta el final del
           período ya pagado, sin renovación automática después de cancelar. Ver también
-          "Reembolsos y cancelación".
+          &quot;Reembolsos y cancelación&quot;.
         </Section>
 
         <Section title="Qué no podés hacer">

@@ -70,7 +70,7 @@ export default function PasswordScreen() {
         <Card>
           {!hasPassword ? (
             <Text className="text-text-muted mb-3 text-sm leading-5">
-              Tu cuenta entra solo con "Continuar con Google". Agregá una contraseña para poder
+              Tu cuenta entra solo con &quot;Continuar con Google&quot;. Agregá una contraseña para poder
               entrar también con tu usuario, sin perder el acceso por Google.
             </Text>
           ) : null}

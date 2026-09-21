@@ -7,7 +7,6 @@ import {
   useNotifications,
 } from '@/api/queries';
 import type { AppNotification, NotificationKind } from '@/api/types';
-import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';

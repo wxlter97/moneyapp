@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import {
@@ -62,8 +62,8 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
 
   const isTransfer = type === 'transfer';
 
-  useEffect(() => {
-    if (!editing || prefilled || !existing.data) return;
+  // Precarga al llegar los datos, una vez y durante el render (guarda: `prefilled`).
+  if (editing && !prefilled && existing.data) {
     const r = existing.data;
     setType(r.type);
     setName(r.name ?? '');
@@ -75,7 +75,7 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
     setNextDue(r.next_due_date);
     setIsActive(r.is_active);
     setPrefilled(true);
-  }, [editing, prefilled, existing.data]);
+  }
 
   // Sólo categorías del tipo elegido -- igual que en "Nueva transacción":
   // una vez que cambiás Gasto/Ingreso, la categoría vieja (del otro tipo) ya

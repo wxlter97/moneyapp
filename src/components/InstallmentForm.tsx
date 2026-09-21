@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import {
@@ -49,8 +49,8 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
   const [prefilled, setPrefilled] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  useEffect(() => {
-    if (!editing || prefilled || !existing.data) return;
+  // Precarga al llegar los datos, una vez y durante el render (guarda: `prefilled`).
+  if (editing && !prefilled && existing.data) {
     const p = existing.data;
     setDescription(p.description);
     setTotal(toNumber(p.total_amount).toFixed(2));
@@ -59,7 +59,7 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
     setCategoryId(p.category);
     setWalletId(p.wallet);
     setPrefilled(true);
-  }, [editing, prefilled, existing.data]);
+  }
 
   const categoryOptions = useMemo(
     () =>

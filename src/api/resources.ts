@@ -90,7 +90,6 @@ const PAGE_LIMIT = 100;
 async function fetchAll<T>(path: string, params: object = {}): Promise<T[]> {
   const out: T[] = [];
   let offset = 0;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const { data } = await api.get<Paginated<T>>(path, {
       params: { ...params, limit: PAGE_LIMIT, offset },

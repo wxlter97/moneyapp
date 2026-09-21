@@ -232,10 +232,10 @@ function TabBarButton({
       onLayout={handleLayout}
       onPress={onPress}
       onPressIn={() => {
-        press.value = withSpring(0.94, { damping: 14, stiffness: 320 });
+        press.set(withSpring(0.94, { damping: 14, stiffness: 320 }));
       }}
       onPressOut={() => {
-        press.value = withSpring(1, { damping: 14, stiffness: 320 });
+        press.set(withSpring(1, { damping: 14, stiffness: 320 }));
       }}
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}

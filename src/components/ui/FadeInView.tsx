@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated } from 'react-native';
 
 interface FadeInViewProps {
@@ -19,7 +19,8 @@ interface FadeInViewProps {
  * queda sin efecto en el único lugar de la app que no usa Reanimated.
  */
 export function FadeInView({ children, index = 0 }: FadeInViewProps) {
-  const v = useRef(new Animated.Value(0)).current;
+  // `useState` con inicializador perezoso: un valor animado por instancia, sin leer un ref al renderizar.
+  const [v] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     let cancelled = false;

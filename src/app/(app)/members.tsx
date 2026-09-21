@@ -82,7 +82,7 @@ export default function MembersScreen() {
         role: m.role === 'owner' ? 'member' : 'owner',
       });
       haptics.success();
-    } catch (err) {
+    } catch {
       haptics.error();
     } finally {
       setBusyId(null);

@@ -53,7 +53,7 @@ export function SplashOverlay({ ready, onFinished }: SplashOverlayProps) {
 
   useEffect(() => {
     if (!ready || !minHoldDone) return;
-    markScale.value = withTiming(1.08, { duration: 380, easing: Easing.in(Easing.cubic) });
+    markScale.set(withTiming(1.08, { duration: 380, easing: Easing.in(Easing.cubic) }));
     overlayOpacity.value = withDelay(
       80,
       withTiming(0, { duration: 340 }, (finished) => {

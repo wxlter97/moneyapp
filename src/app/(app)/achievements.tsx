@@ -25,7 +25,6 @@ const BADGE_ICON: Record<string, IconName> = {
  * estado -- ver `GET gamification/summary/`.
  */
 export default function AchievementsScreen() {
-  const colors = useColors();
   const summary = useGamificationSummary();
   const refresh = usePullRefresh(summary.isFetching && !summary.isLoading, summary.refetch);
 

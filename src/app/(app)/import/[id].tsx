@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -52,8 +52,10 @@ export default function ConfirmImportScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (prefilled || !logQ.data || !walletsQ.data) return;
+  // Precarga desde el correo en cuanto llegan los datos: se ajusta durante el
+  // render (una sola vez, la guarda es `prefilled`) y no en un efecto, que
+  // pintaba antes una pasada con el formulario vacío.
+  if (!prefilled && logQ.data && walletsQ.data) {
     const log = logQ.data;
     setWalletId(log.wallet ?? walletsQ.data.find((w) => w.purpose === 'spending')?.id ?? null);
     if (log.extracted_amount) setAmount(toNumber(log.extracted_amount).toFixed(2));
@@ -63,7 +65,7 @@ export default function ConfirmImportScreen() {
     // igual la puede cambiar antes de confirmar, esto solo ahorra el toque.
     if (log.suggested_category) setCategoryId(log.suggested_category);
     setPrefilled(true);
-  }, [prefilled, logQ.data, walletsQ.data]);
+  }
 
   const walletOptions = (walletsQ.data ?? []).map((w) => ({ value: w.id, label: walletLabel(w) }));
 
@@ -148,7 +150,7 @@ export default function ConfirmImportScreen() {
             />
             {log?.suggested_category_name && categoryId === log.suggested_category ? (
               <Text className="text-text-muted text-xs">
-                Sugerida por compras anteriores en "{log.extracted_merchant}"
+                Sugerida por compras anteriores en &quot;{log.extracted_merchant}&quot;
               </Text>
             ) : null}
 

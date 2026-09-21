@@ -37,13 +37,21 @@ export default function NotificationsScreen() {
   // esto, tocar "Activar avisos" en ese caso parecía no hacer nada.
   const [needsSystemSettings, setNeedsSystemSettings] = useState(false);
 
-  useEffect(() => {
-    refreshStatus();
-  }, []);
-
   async function refreshStatus() {
     setStatus(await getPushStatus());
   }
+
+  // Estado inicial: una vez al abrir. Si la pantalla se cierra antes de que
+  // responda, no se escribe estado en una pantalla desmontada.
+  useEffect(() => {
+    let cancelled = false;
+    void getPushStatus().then((s) => {
+      if (!cancelled) setStatus(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** Vuelve a registrar este dispositivo desde cero (y los enciende si estaban
    * apagados): lo que hay que hacer cuando los avisos dejaron de llegar. */
