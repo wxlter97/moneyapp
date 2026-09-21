@@ -107,9 +107,8 @@ function cheapestActivePrice(plan: Plan): number {
  * más de uno -- p. ej. Plus y Pro) para suscribirse -- nada de nombre/
  * límite/precio está hardcodeado acá, todo sale del backend para poder
  * ajustarlo sin subir versión nueva. El checkout redirige al proveedor de
- * pago (Wompi); al volver, la app reabre acá mismo
- * (`ExpoLinking.createURL('/pro')`) y el estado se refresca solo la próxima
- * vez que se abra esta pantalla.
+ * pago (Wompi); al pagar vuelve a `/placed-order`, que espera
+ * la confirmación del webhook, y si cancela vuelve acá (`/pro`).
  */
 export default function ProScreen() {
   const colors = useColors();
@@ -140,11 +139,11 @@ export default function ProScreen() {
     setError(null);
     setPendingPriceId(price.id);
     try {
-      const redirect = ExpoLinking.createURL('/pro');
+      // Pagó: `/placed-order` espera la confirmación. Canceló: vuelve a Pro.
       const { checkout_url } = await checkout.mutateAsync({
         plan_price: price.id,
-        success_url: redirect,
-        cancel_url: redirect,
+        success_url: ExpoLinking.createURL('/placed-order'),
+        cancel_url: ExpoLinking.createURL('/pro'),
       });
       await Linking.openURL(checkout_url);
     } catch (err) {
