@@ -386,6 +386,10 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="placed-order"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="notification-center"
           options={{ presentation: 'modal', headerShown: false }}
         />
