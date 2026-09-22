@@ -3,10 +3,13 @@ import { Platform, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/Button';
 import { FadeInView } from '@/components/ui/FadeInView';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Screen } from '@/components/ui/Screen';
+import { haptics } from '@/lib/haptics';
+import { FEATURE_LABEL } from '@/lib/planFeatures';
 import { useColors, type ThemeColors } from '@/theme';
 import { lighten } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
@@ -98,6 +101,187 @@ function MockBudgetPreview({ colors }: { colors: ThemeColors }) {
   );
 }
 
+/** Tarjeta de "prueba visual": una mini maqueta de UI real (no un ícono
+ * genérico) + una afirmación concreta -- el mismo recurso que usan las
+ * mejores landings de producto para no quedarse en promesas abstractas,
+ * adaptado a los primitivos y la paleta monocromática de esta app (nunca un
+ * color vivo "porque sí"). */
+function ProofCard({ mock, title, body }: { mock: React.ReactNode; title: string; body: string }) {
+  return (
+    <View className="bg-surface border-border gap-4 rounded-3xl border p-5">
+      {mock}
+      <View className="gap-1">
+        <Text className="text-text text-base" style={{ fontFamily: fonts.bold }}>
+          {title}
+        </Text>
+        <Text className="text-text-muted text-sm">{body}</Text>
+      </View>
+    </View>
+  );
+}
+
+const WALLET_MOCK_ROWS = [
+  { label: 'Efectivo', amount: '$120.00' },
+  { label: 'Tarjeta BAC', amount: '-$340.00' },
+  { label: 'Ahorros', amount: '$900.00' },
+];
+
+const NET_WORTH_MOCK_BARS = [18, 30, 24, 40, 52];
+
+interface PrivacyItem {
+  icon: IconName;
+  title: string;
+  body: string;
+}
+
+/** Cada una verificada contra el código real, no aspiracional: 2FA
+ * (`LoginScreen`), carteras privadas (`Wallet.visibility`, ver
+ * `apps.reports.services`) y borrado de cuenta (`DeleteAccountView`) ya
+ * existen hoy -- nada de esto es un "próximamente". */
+const PRIVACY_ITEMS: PrivacyItem[] = [
+  {
+    icon: 'lock',
+    title: 'Conexión siempre cifrada',
+    body: 'Todo el tráfico entre la app y el servidor viaja por HTTPS.',
+  },
+  {
+    icon: 'face-id',
+    title: 'Verificación en dos pasos',
+    body: 'Activá 2FA para que, aunque alguien tenga tu contraseña, no pueda entrar a tu cuenta.',
+  },
+  {
+    icon: 'users',
+    title: 'Carteras privadas si querés',
+    body: 'En un presupuesto compartido, una cartera privada no la ve el resto -- ni en los totales.',
+  },
+  {
+    icon: 'trash',
+    title: 'Eliminá tu cuenta cuando quieras',
+    body: 'Borrar tu cuenta borra tus datos, no los deja dando vueltas.',
+  },
+];
+
+interface WebItem {
+  icon: IconName;
+  title: string;
+  body: string;
+}
+
+const WEB_ITEMS: WebItem[] = [
+  {
+    icon: 'bolt',
+    title: 'Andá directo desde el navegador',
+    body: 'Sin tiendas de apps ni actualizaciones manuales -- abrís el link y ya está.',
+  },
+  {
+    icon: 'download',
+    title: 'Instalala en un toque',
+    body: 'Agregala a tu pantalla de inicio y se abre como cualquier app, con su propio ícono.',
+  },
+  {
+    icon: 'reset',
+    title: 'La misma cuenta en todos lados',
+    body: 'Iniciá sesión desde el celular o la computadora -- no hay una versión "solo para uno".',
+  },
+];
+
+interface PricingTier {
+  name: string;
+  price: string;
+  period?: string;
+  description: string;
+  features: string[];
+  ctaLabel: string;
+  highlight?: boolean;
+}
+
+/** Mismos planes y precios que `seed_billing_plans.py` (backend, fuente de
+ * verdad) -- la landing pública no tiene sesión para pedirle el catálogo
+ * real a `GET /plans/` (requiere estar autenticado, ver `apps.billing.api`),
+ * así que esto se actualiza a mano si cambian los precios ahí. Sin datos de
+ * prueba gratis: `Plan.trial_days` no viene seteado por defecto para Plus/Pro,
+ * así que no se promete acá. */
+const PRICING: PricingTier[] = [
+  {
+    name: 'Gratis',
+    price: '$0',
+    description: 'El loop diario: anotar y ver tus gastos, en solitario.',
+    features: ['1 presupuesto propio', 'Sin recurrentes automáticos', 'IA justa para probarla'],
+    ctaLabel: 'Empezar con Gratis',
+  },
+  {
+    name: 'Plus',
+    price: '$0.99',
+    period: '/mes',
+    description: 'Todo lo que el gratis deja afuera: miembros, recurrentes y patrimonio.',
+    features: [
+      FEATURE_LABEL.net_worth,
+      FEATURE_LABEL.calendar,
+      FEATURE_LABEL.notifications,
+      FEATURE_LABEL.installments,
+    ],
+    ctaLabel: 'Empezar con Plus',
+  },
+  {
+    name: 'Pro',
+    price: '$1.99',
+    period: '/mes',
+    description: 'Workspaces y miembros ilimitados, más todo lo automático.',
+    features: [
+      FEATURE_LABEL.import_email,
+      FEATURE_LABEL.advanced_reports,
+      FEATURE_LABEL.loyalty,
+      FEATURE_LABEL.backup,
+    ],
+    ctaLabel: 'Empezar con Pro',
+    highlight: true,
+  },
+];
+
+function PricingCard({ colors, tier }: { colors: ThemeColors; tier: PricingTier }) {
+  return (
+    <View
+      className={`gap-4 rounded-3xl p-5 ${
+        tier.highlight ? 'bg-surface border-primary border-2' : 'bg-surface border-border border'
+      }`}
+    >
+      {tier.highlight ? (
+        <View className="bg-primary self-start rounded-full px-2.5 py-1">
+          <Text className="text-primary-fg text-[10px]" style={{ fontFamily: fonts.bold }}>
+            MÁS ELEGIDO
+          </Text>
+        </View>
+      ) : null}
+      <View className="gap-1">
+        <Text className="text-text text-base" style={{ fontFamily: fonts.bold }}>
+          {tier.name}
+        </Text>
+        <View className="flex-row items-baseline gap-1">
+          <Text className="text-text text-3xl" style={{ fontFamily: fonts.bold }}>
+            {tier.price}
+          </Text>
+          {tier.period ? <Text className="text-text-muted text-sm">{tier.period}</Text> : null}
+        </View>
+        <Text className="text-text-muted text-sm">{tier.description}</Text>
+      </View>
+      <View className="gap-2">
+        {tier.features.map((f) => (
+          <View key={f} className="flex-row items-start gap-2">
+            <Icon name="check" size={14} color={colors.income} />
+            <Text className="text-text-muted flex-1 text-sm">{f}</Text>
+          </View>
+        ))}
+      </View>
+      <Button
+        label={tier.ctaLabel}
+        variant={tier.highlight ? 'primary' : 'ghost'}
+        onPress={() => router.push('/register')}
+        accessibilityLabel={`Crear cuenta y empezar con ${tier.name}`}
+      />
+    </View>
+  );
+}
+
 // Mismos ganchos que el onboarding (ver `(app)/onboarding.tsx`): lo que de
 // verdad diferencia a la app, no una lista genérica de "controlá tus
 // gastos" que podría ser cualquier otra app de presupuesto.
@@ -134,12 +318,35 @@ const FEATURES: Feature[] = [
   },
 ];
 
+interface SectionHeaderProps {
+  title: string;
+  subtitle?: string;
+}
+
+function SectionHeader({ title, subtitle }: SectionHeaderProps) {
+  return (
+    <View className="gap-1.5">
+      <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
+        {title}
+      </Text>
+      {subtitle ? <Text className="text-text-muted text-sm">{subtitle}</Text> : null}
+    </View>
+  );
+}
+
 /** Landing de marketing en `/` para quien no tiene sesión -- ver
  * `src/app/index.tsx`. Autenticado nunca la ve (redirect directo a
  * `/dashboard`), así que no compite con el guard de sesión, sólo lo
  * precede. Usa los mismos primitivos (`Screen`/`Button`/`Icon`) que el
  * resto de la app a propósito: es la misma app, no un micrositio aparte con
- * su propio sistema de diseño. */
+ * su propio sistema de diseño.
+ *
+ * Estructura pensada para explicar todo en una sola página larga (pedido
+ * explícito: "algo llamativo donde explica todo, da precios... muestra
+ * bastante contenido de forma muy creativa"), pero sin salirse de la
+ * identidad monocromática de la marca ni inventar datos: cada afirmación de
+ * cada sección está respaldada por código real (ver comentarios puntuales
+ * en `PRIVACY_ITEMS`/`PRICING` más arriba). */
 export function LandingScreen() {
   const colors = useColors();
 
@@ -155,7 +362,26 @@ export function LandingScreen() {
 
   return (
     <Screen edges={['top', 'bottom']}>
-      <ScrollView contentContainerClassName="gap-10 py-8" showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerClassName="gap-10 py-4" showsVerticalScrollIndicator={false}>
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-2">
+            <BrandMark size={28} animate={false} />
+            <Text className="text-text text-base" style={{ fontFamily: fonts.extrabold, letterSpacing: -0.3 }}>
+              porksupuesto
+            </Text>
+          </View>
+          <Text
+            className="text-primary text-sm"
+            style={{ fontFamily: fonts.semibold }}
+            onPress={() => {
+              haptics.tap();
+              router.push('/login');
+            }}
+          >
+            Iniciar sesión
+          </Text>
+        </View>
+
         <LinearGradient
           colors={[`${colors.primary}26`, `${colors.primary}00`]}
           start={{ x: 0.5, y: 0 }}
@@ -209,12 +435,107 @@ export function LandingScreen() {
         </FadeInView>
 
         <View className="gap-4">
-          <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
-            Todo lo que ya hace, sin vueltas
-          </Text>
+          <SectionHeader
+            title="Menos estrés, más claridad con tu plata"
+            subtitle="No se trata de gastar menos. Se trata de saber siempre en qué estás parado."
+          />
+          <View className="gap-4">
+            <FadeInView index={2}>
+              <ProofCard
+                title="Sabés antes de pasarte"
+                body="Los avisos de presupuesto llegan cuando una categoría se acerca al límite, no cuando ya la pasaste."
+                mock={
+                  <View className="bg-surface-2 gap-2 rounded-2xl p-4">
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center gap-1.5">
+                        <Icon name="alert" size={14} color={colors.warning} />
+                        <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                          Comida
+                        </Text>
+                      </View>
+                      <Text className="text-text-muted text-xs">Quedan $34.00</Text>
+                    </View>
+                    <View className="bg-surface h-2 overflow-hidden rounded-full">
+                      <View className="h-2 rounded-full" style={{ width: '83%', backgroundColor: colors.warning }} />
+                    </View>
+                  </View>
+                }
+              />
+            </FadeInView>
+
+            <FadeInView index={3}>
+              <ProofCard
+                title="Recurrentes sin duplicados"
+                body="Si ya registraste una suscripción a mano, el proceso automático no la vuelve a crear al día siguiente."
+                mock={
+                  <View className="bg-surface-2 flex-row items-center gap-3 rounded-2xl p-4">
+                    <View className="bg-surface h-9 w-9 items-center justify-center rounded-xl">
+                      <Icon name="repeat" size={16} color={colors.textMuted} />
+                    </View>
+                    <View className="flex-1 gap-0.5">
+                      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                        Netflix
+                      </Text>
+                      <Text className="text-text-muted text-xs">Recurrente · cada mes</Text>
+                    </View>
+                    <View className="items-end gap-0.5">
+                      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                        -$9.00
+                      </Text>
+                      <View className="flex-row items-center gap-1">
+                        <Icon name="check" size={10} color={colors.income} />
+                        <Text style={{ color: colors.income, fontSize: 10 }}>Ya registrado</Text>
+                      </View>
+                    </View>
+                  </View>
+                }
+              />
+            </FadeInView>
+
+            <FadeInView index={4}>
+              <ProofCard
+                title="Todo en un solo lugar"
+                body="Efectivo, tarjetas y cuotas juntos, sin sumar a mano entre apps distintas."
+                mock={
+                  <View className="bg-surface-2 gap-2.5 rounded-2xl p-4">
+                    {WALLET_MOCK_ROWS.map((w) => (
+                      <View key={w.label} className="flex-row items-center justify-between">
+                        <Text className="text-text-muted text-xs">{w.label}</Text>
+                        <Text className="text-text text-xs" style={{ fontFamily: fonts.semibold }}>
+                          {w.amount}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                }
+              />
+            </FadeInView>
+
+            <FadeInView index={5}>
+              <ProofCard
+                title="Tu patrimonio, no sólo tu gasto"
+                body="Mirá cuánto tenés de verdad entre cuentas, ahorros y deudas -- no sólo cuánto gastaste este mes."
+                mock={
+                  <View className="bg-surface-2 flex-row items-end gap-1.5 rounded-2xl p-4" style={{ height: 64 }}>
+                    {NET_WORTH_MOCK_BARS.map((h, i) => (
+                      <View
+                        key={i}
+                        className="flex-1 rounded-md"
+                        style={{ height: h, backgroundColor: i === NET_WORTH_MOCK_BARS.length - 1 ? colors.primary : colors.border }}
+                      />
+                    ))}
+                  </View>
+                }
+              />
+            </FadeInView>
+          </View>
+        </View>
+
+        <View className="gap-4">
+          <SectionHeader title="Todo lo que ya hace, sin vueltas" />
           <View className="gap-4">
             {FEATURES.map((f, i) => (
-              <FadeInView key={f.title} index={i + 2}>
+              <FadeInView key={f.title} index={i + 6}>
                 <View className="flex-row gap-3">
                   <View
                     className="h-10 w-10 items-center justify-center rounded-xl"
@@ -235,9 +556,50 @@ export function LandingScreen() {
         </View>
 
         <View className="gap-4">
-          <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
-            Empezar toma tres pasos
-          </Text>
+          <SectionHeader
+            title="Tus finanzas son tuyas, punto"
+            subtitle="Ni ads ni venta de datos: el negocio es el plan pago, no vos."
+          />
+          <View className="gap-4">
+            {PRIVACY_ITEMS.map((item) => (
+              <View key={item.title} className="flex-row gap-3">
+                <View className="bg-surface-2 h-10 w-10 items-center justify-center rounded-xl">
+                  <Icon name={item.icon} color={colors.text} size={18} />
+                </View>
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                    {item.title}
+                  </Text>
+                  <Text className="text-text-muted text-sm">{item.body}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View className="gap-4">
+          <SectionHeader
+            title="Es una app web, no una descarga"
+            subtitle="Ningún app store, ninguna actualización manual."
+          />
+          <View className="gap-3">
+            {WEB_ITEMS.map((item) => (
+              <View key={item.title} className="bg-surface-2 gap-2 rounded-2xl p-4">
+                <Icon name={item.icon} color={colors.primary} size={18} />
+                <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                  {item.title}
+                </Text>
+                <Text className="text-text-muted text-sm">{item.body}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View className="gap-4">
+          <SectionHeader
+            title="Empezar toma tres pasos"
+            subtitle="Tan simple que lo configurás en el tiempo que te toma un café."
+          />
           <View className="gap-4">
             {STEPS.map((step, i) => (
               <View key={step.title} className="flex-row gap-3">
@@ -253,6 +615,18 @@ export function LandingScreen() {
                   <Text className="text-text-muted text-sm">{step.body}</Text>
                 </View>
               </View>
+            ))}
+          </View>
+        </View>
+
+        <View className="gap-4">
+          <SectionHeader
+            title="Empezá gratis. Subí de nivel cuando quieras."
+            subtitle="Te suscribís desde adentro de la app, después de crear tu cuenta -- en dólares, sin permanencia."
+          />
+          <View className="gap-4">
+            {PRICING.map((tier) => (
+              <PricingCard key={tier.name} colors={colors} tier={tier} />
             ))}
           </View>
         </View>
