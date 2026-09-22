@@ -161,6 +161,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
         hint: 'Préstamo, ahorro, interés compuesto y más (money-calc)',
         onPress: () => Linking.openURL(MONEY_CALC_URL),
       },
+      {
+        icon: 'bolt',
+        label: 'Chat de finanzas',
+        hint: 'Preguntale a la IA por tu presupuesto, gastos y lo programado',
+        onPress: () => router.push('/chat'),
+      },
     ],
   },
   {

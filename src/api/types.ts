@@ -1398,6 +1398,15 @@ export interface ParseCandidate {
   possible_duplicates: PossibleDuplicate[];
 }
 
+/** `POST /ai/chat/` — respuesta a una pregunta sobre las finanzas del
+ * workspace. `function_used` es informativo (qué función de reportes
+ * contestó, o `null` si la pregunta no daba para ninguna); el cliente no
+ * necesita hacer nada con él más que mostrarlo si quiere. */
+export interface ChatAnswer {
+  answer: string;
+  function_used: string | null;
+}
+
 /** Resultado de `POST /push-devices/test/`: un renglón por dispositivo de la cuenta. */
 export interface PushTestResponse {
   devices: number;

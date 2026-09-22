@@ -32,6 +32,7 @@ import { ParseTextField } from '@/components/ParseTextField';
 import { ReceiptField } from '@/components/ReceiptField';
 import { ReceiptScanButton } from '@/components/ReceiptScanButton';
 import { TagPicker } from '@/components/TagPicker';
+import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { FadeInView } from '@/components/ui/FadeInView';
@@ -603,15 +604,18 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           ]}
         />
 
-        {/* Las dos entradas de IA, sólo al crear: llenar el formulario de algo
-            que ya existe no tendría sentido. Las dos se esconden solas si el
+        {/* Las tres entradas de IA, sólo al crear: llenar el formulario de algo
+            que ya existe no tendría sentido. Las tres se esconden solas si el
             backend no tiene IA configurada.
 
-            La frase sirve para gasto e ingreso (puede decir "me pagaron"); el
-            escaneo es sólo para gasto, porque un recibo nunca es un ingreso ni
-            una transferencia. */}
+            La frase y el dictado sirven para gasto e ingreso (pueden decir
+            "me pagaron"); el escaneo es sólo para gasto, porque un recibo
+            nunca es un ingreso ni una transferencia. */}
         {!editing && !isTransfer ? (
           <ParseTextField walletId={walletId} onParsed={onParsed} />
+        ) : null}
+        {!editing && !isTransfer ? (
+          <VoiceInputButton walletId={walletId} onParsed={onParsed} />
         ) : null}
         {!editing && type === 'expense' ? (
           <ReceiptScanButton walletId={walletId} onScanned={onScanned} />

@@ -28,6 +28,7 @@ jest.mock('@/components/ParseTextField', () => ({ ParseTextField: () => null }))
 jest.mock('@/components/ReceiptScanButton', () => ({ ReceiptScanButton: () => null }));
 jest.mock('@/components/ReceiptField', () => ({ ReceiptField: () => null }));
 jest.mock('@/components/TagPicker', () => ({ TagPicker: () => null }));
+jest.mock('@/components/VoiceInputButton', () => ({ VoiceInputButton: () => null }));
 
 const mockNone = { mutateAsync: jest.fn(), isPending: false };
 jest.mock('@/api/queries', () => ({

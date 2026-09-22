@@ -47,7 +47,8 @@ export type IconName =
   | 'calculator'
   | 'alert'
   | 'bank'
-  | 'cash';
+  | 'cash'
+  | 'mic';
 
 interface IconProps {
   name: IconName;
@@ -229,6 +230,14 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
         <>
           <Rect x={8} y={8} width={12} height={12} rx={2.5} {...p} />
           <Path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" {...p} />
+        </>
+      )}
+      {name === 'mic' && (
+        <>
+          <Rect x={9} y={2.5} width={6} height={11} rx={3} {...p} />
+          <Path d="M5.5 12a6.5 6.5 0 0 0 13 0" {...p} />
+          <Line x1={12} y1={18.5} x2={12} y2={21.5} {...p} />
+          <Line x1={8.5} y1={21.5} x2={15.5} y2={21.5} {...p} />
         </>
       )}
       {name === 'camera' && (
