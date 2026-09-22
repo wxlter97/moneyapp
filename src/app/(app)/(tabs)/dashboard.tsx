@@ -590,6 +590,10 @@ function openScheduledItem(it: ScheduledItem) {
   if (it.to_wallet) params.prefillToWallet = it.to_wallet;
   if (it.category) params.prefillCategory = it.category;
   if (it.description) params.prefillNote = it.description;
+  // Sólo un recurrente (no una cuota): avanza `next_due_date` de la regla al
+  // guardar, para que el job automático no la vuelva a crear al día
+  // siguiente (bug reportado: registrar a mano un día antes duplicaba).
+  if (it.kind === 'recurring') params.prefillRecurringId = it.source_id;
 
   const qs = Object.entries(params)
     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)

@@ -572,6 +572,10 @@ export interface TransactionInput {
    * puesto. Ver `LoyaltyProgram` (kind=discount). */
   discount_program?: UUID | null;
   pre_discount_amount?: Money | null;
+  /** Sólo al registrar a mano una ocurrencia de "Programado" (ver
+   * `TransactionPrefill.recurringExpenseId`): avanza `next_due_date` de la
+   * regla para que el job automático no la vuelva a crear al día siguiente. */
+  recurring_expense?: UUID;
 }
 
 /** Etiqueta libre, transversal a la categoría (p. ej. "viaje-cancún"). */

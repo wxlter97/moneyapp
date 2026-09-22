@@ -63,6 +63,11 @@ export interface TransactionPrefill {
   toWalletId?: string | null;
   date: string;
   note?: string;
+  /** Sólo si viene de un recurrente (no de una cuota): avanza `next_due_date`
+   * de la regla al guardar, para que el job automático no la vuelva a crear
+   * al día siguiente (ver `apps.transactions.services.
+   * register_manual_recurring_occurrence` en el backend). */
+  recurringExpenseId?: string;
 }
 
 interface TransactionFormProps {
@@ -527,6 +532,9 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
         payload.discount_program = appliedDiscount.programId;
         payload.pre_discount_amount = appliedDiscount.original.toFixed(2);
       }
+    }
+    if (!editing && prefill?.recurringExpenseId) {
+      payload.recurring_expense = prefill.recurringExpenseId;
     }
 
     try {
