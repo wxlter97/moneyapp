@@ -7,7 +7,7 @@ import { haptics } from '@/lib/haptics';
 import { fonts } from '@/theme/typography';
 
 const CONTACT_EMAIL = 'me@wxlter.dev';
-const LAST_UPDATED = '13 de septiembre de 2026';
+const LAST_UPDATED = '22 de septiembre de 2026';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -48,15 +48,23 @@ export default function RefundPolicyScreen() {
         </Section>
 
         <Section title="Renovaciones">
-          Un plan mensual o anual se renueva solo hasta que lo cancelás. Si un cobro de
-          renovación fue un error de nuestro lado (por ejemplo, se renovó después de que
-          ya lo habías cancelado), lo reembolsamos completo apenas nos escribís.
+          El plan mensual se renueva solo: te cobramos automáticamente cada mes hasta
+          que cancelás, y te avisamos unos días antes de cada cobro. El plan anual NO se
+          renueva solo -- no guardamos tu tarjeta de un año a otro. Te avisamos unos días
+          antes de que venza para que pagues el siguiente período vos mismo desde
+          Herramientas → Cuenta → Pro; si no lo hacés, tu acceso Pro simplemente termina
+          en la fecha de vencimiento, sin cobrarte nada de más. Si un cobro de renovación
+          mensual fue un error de nuestro lado (por ejemplo, se renovó después de que ya
+          lo habías cancelado), lo reembolsamos completo apenas nos escribís.
         </Section>
 
         <Section title="Cobros fallidos">
-          Si tu método de pago falla, no perdés el acceso Pro de inmediato -- tenés un
-          período de gracia para actualizar el método de pago antes de volver al plan
-          Gratis.
+          Si un cobro mensual no se puede procesar, no siempre nos enteramos al
+          instante -- lo notamos cuando pasa la fecha en que debía renovarse sin que se
+          haya acreditado el nuevo período, y en ese momento tu acceso Pro termina, igual
+          que si no hubieras renovado un plan anual a tiempo. Te avisamos antes de que
+          eso pase. Si creés que un cobro sí se hizo y tu acceso se cortó por error,
+          escribinos con el comprobante y lo revisamos.
         </Section>
 
         <Section title="Cómo pedir un reembolso">

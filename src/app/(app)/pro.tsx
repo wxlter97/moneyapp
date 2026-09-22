@@ -20,7 +20,7 @@ import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { ErrorState, LoadingState } from '@/components/ui/states';
-import { formatDateTime } from '@/lib/date';
+import { formatLongDateTime } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
 import { formatMoney } from '@/lib/money';
 import { FEATURE_LABEL, type FeatureKey } from '@/lib/planFeatures';
@@ -252,20 +252,20 @@ export default function ProScreen() {
                       ) : null}
                       <DetailRow
                         label="Desde"
-                        value={formatDateTime(myPlan.data.subscription.created_at)}
+                        value={formatLongDateTime(myPlan.data.subscription.created_at)}
                       />
                       <DetailRow
                         label={myPlan.data.subscription.canceled_at ? 'Vencía' : 'Vence'}
                         value={
                           myPlan.data.subscription.current_period_end
-                            ? formatDateTime(myPlan.data.subscription.current_period_end)
+                            ? formatLongDateTime(myPlan.data.subscription.current_period_end)
                             : 'Sin fecha de vencimiento'
                         }
                       />
                       {myPlan.data.subscription.canceled_at ? (
                         <DetailRow
                           label="Cancelada el"
-                          value={formatDateTime(myPlan.data.subscription.canceled_at)}
+                          value={formatLongDateTime(myPlan.data.subscription.canceled_at)}
                         />
                       ) : null}
                     </>

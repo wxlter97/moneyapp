@@ -70,12 +70,24 @@ export function formatLongDate(iso: ISODate): string {
   return `${d} de ${MONTHS_ES[m - 1] ?? ''} de ${y}`;
 }
 
-/** "31 ago, 14:05" — fecha y hora, p. ej. el último uso de un token. */
+/** "31 ago, 14:05" — fecha y hora, p. ej. el último uso de un token. Sin año: para
+ * fechas que se asumen recientes -- ver `formatLongDateTime` si puede ser de hace
+ * meses o quedar lejos en el futuro (p. ej. el vencimiento de una suscripción anual). */
 export function formatDateTime(iso: ISODateTime): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getDate()} ${MONTHS_ES[d.getMonth()]?.slice(0, 3) ?? ''}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** "22 de septiembre de 2026" — fecha completa con año, a partir de un datetime ISO.
+ * `formatDateTime` omite el año a propósito (asume "reciente"); esto es lo contrario,
+ * para fechas que pueden quedar lejos: cuándo empezó o vence una suscripción, sobre
+ * todo la anual -- sin el año, "22 sep" es ambiguo entre este año y el que viene. */
+export function formatLongDateTime(iso: ISODateTime): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.getDate()} de ${MONTHS_ES[d.getMonth()] ?? ''} de ${d.getFullYear()}`;
 }
 
 const WEEKDAYS_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];

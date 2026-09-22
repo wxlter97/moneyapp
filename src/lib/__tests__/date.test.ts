@@ -1,11 +1,26 @@
 import {
   addMonths,
+  formatLongDateTime,
   formatShortDate,
   formatYearMonth,
   isFutureDay,
   isSameOrAfter,
   monthRange,
 } from '../date';
+
+describe('formatLongDateTime', () => {
+  it('incluye el año, a diferencia de formatDateTime', () => {
+    expect(formatLongDateTime('2026-09-22T12:00:00Z')).toBe('22 de septiembre de 2026');
+  });
+
+  it('un año distinto se nota (para vencimientos lejos en el futuro)', () => {
+    expect(formatLongDateTime('2027-01-05T12:00:00Z')).toBe('5 de enero de 2027');
+  });
+
+  it('un ISO inválido se devuelve tal cual, sin tirar', () => {
+    expect(formatLongDateTime('no-es-una-fecha')).toBe('no-es-una-fecha');
+  });
+});
 
 describe('addMonths', () => {
   it('avanza y retrocede cruzando años', () => {
