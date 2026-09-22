@@ -34,6 +34,7 @@ import type {
   WalletInput,
   WorkspaceBackup,
 } from '@/api/types';
+import { track } from '@/lib/analytics';
 import { todayISO } from '@/lib/date';
 import type { FeatureKey } from '@/lib/planFeatures';
 import { periodStart } from '@/lib/periods';
@@ -97,6 +98,7 @@ export function useCreateWorkspace() {
   return useMutation({
     mutationFn: (name: string) => res.workspaces.create(name),
     onSuccess: async (workspace) => {
+      track('workspace_created');
       await qc.invalidateQueries({ queryKey: qk.workspaces() });
       setActiveId(workspace.id); // salta al presupuesto recién creado
     },
@@ -253,6 +255,7 @@ export function useAcceptInvitation() {
   return useMutation({
     mutationFn: (token: string) => res.invitations.accept(token),
     onSuccess: async () => {
+      track('invitation_accepted');
       await qc.invalidateQueries({ queryKey: qk.myInvitations() });
       await qc.invalidateQueries({ queryKey: qk.workspaces() });
     },
@@ -462,8 +465,10 @@ export function useStartTrial() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (planId: string) => res.billing.startTrial(planId),
-    onSuccess: (subscription) =>
-      qc.setQueryData(qk.myPlan(), { plan: subscription.plan, subscription }),
+    onSuccess: (subscription) => {
+      track('trial_started', { plan: subscription.plan.code });
+      qc.setQueryData(qk.myPlan(), { plan: subscription.plan, subscription });
+    },
   });
 }
 

@@ -32,6 +32,13 @@ export const config = {
    * y el token lo pide el propio Atajo al importarse (Import Question).
    */
   shortcutUrl: process.env.EXPO_PUBLIC_SHORTCUT_URL?.trim() || undefined,
+
+  /**
+   * Website ID de Umami Cloud (sin cookies, sin datos personales -- ver
+   * `docs/backlog-nuevas-funciones.md` punto 4). Vacío = no se inyecta el
+   * script (ver `+html.tsx`) y `track()` (`@/lib/analytics`) no hace nada.
+   */
+  umamiWebsiteId: process.env.EXPO_PUBLIC_UMAMI_WEBSITE_ID?.trim() || undefined,
 };
 
 export type AppConfig = typeof config;

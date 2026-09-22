@@ -43,6 +43,7 @@ import { PickerRow } from '@/components/ui/PickerRow';
 import { Segmented } from '@/components/ui/Segmented';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
+import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
 import type { PickedFile } from '@/lib/receipt';
 import { useColors } from '@/theme';
@@ -164,6 +165,12 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   // guarda ya resumido y no la candidata cruda para que el resumen sea uno
   // solo y no uno por cada forma de entrada.
   const [aiFilled, setAiFilled] = useState<AIFilledSummary | null>(null);
+  // Por qué canal se llenó esta alta (para el evento `transaction_created` de
+  // analítica, ver `docs/backlog-nuevas-funciones.md` punto 4) -- 'manual' es
+  // el default, y cambia sólo si una de las entradas de IA la llenó.
+  const [entryChannel, setEntryChannel] = useState<'manual' | 'receipt' | 'parse' | 'voice'>(
+    'manual',
+  );
   // El flujo por defecto es monto + nota + categoría + cartera + fecha + el
   // toggle de presupuesto (cuando aplica); etiquetas y recibo quedan
   // colapsados detrás de "Más detalles" salvo que la transacción que se está
@@ -395,6 +402,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
    * hubiera (típicamente 0.00) en vez de escribir algo inventado.
    */
   function onScanned(candidate: ReceiptCandidate, file: PickedFile) {
+    setEntryChannel('receipt');
     setPendingReceipt(file);
     applyCandidate(candidate);
     setAiFilled({
@@ -408,9 +416,10 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     setDetailsOpen(true);
   }
 
-  /** Lo mismo que `onScanned` pero desde una frase. Además puede traer el tipo
-   * y la cartera, que un recibo no dice. */
-  function onParsed(candidate: ParseCandidate) {
+  /** Lo mismo que `onScanned` pero desde una frase o un dictado. Además puede
+   * traer el tipo y la cartera, que un recibo no dice. */
+  function onParsed(candidate: ParseCandidate, channel: 'parse' | 'voice') {
+    setEntryChannel(channel);
     setType(candidate.type);
     if (candidate.wallet) setWalletId(candidate.wallet);
     applyCandidate(candidate);
@@ -525,6 +534,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
         await update.mutateAsync({ id: transactionId!, input: payload });
       } else {
         const created = await create.mutateAsync(payload);
+        track('transaction_created', { channel: entryChannel, type });
         if (pendingReceipt) {
           try {
             await uploadReceipt.mutateAsync({ id: created.id, file: pendingReceipt });
@@ -612,10 +622,10 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
             "me pagaron"); el escaneo es sólo para gasto, porque un recibo
             nunca es un ingreso ni una transferencia. */}
         {!editing && !isTransfer ? (
-          <ParseTextField walletId={walletId} onParsed={onParsed} />
+          <ParseTextField walletId={walletId} onParsed={(c) => onParsed(c, 'parse')} />
         ) : null}
         {!editing && !isTransfer ? (
-          <VoiceInputButton walletId={walletId} onParsed={onParsed} />
+          <VoiceInputButton walletId={walletId} onParsed={(c) => onParsed(c, 'voice')} />
         ) : null}
         {!editing && type === 'expense' ? (
           <ReceiptScanButton walletId={walletId} onScanned={onScanned} />
