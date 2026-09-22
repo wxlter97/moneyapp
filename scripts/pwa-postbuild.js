@@ -69,6 +69,32 @@ const UMAMI_SCRIPT = UMAMI_WEBSITE_ID
   ? `    <script defer src="https://cloud.umami.is/script.js" data-website-id="${UMAMI_WEBSITE_ID}"></script>\n`
   : '';
 
+// `<link rel="preload">` por cada .ttf que empaquetó Expo: sin esto el
+// navegador recién pide las fuentes cuando el bundle de JS (~3 MB) ya bajó,
+// corrió y registró los `@font-face` -- y la app espera esas fuentes antes de
+// mostrarse (ver `waitForWebFonts`). Así bajan en paralelo con el JS. La URL
+// tiene que ser idéntica a la que usa `expo-font` (la ruta del archivo dentro
+// de dist/) y llevar `crossorigin`: las fuentes siempre se piden en modo
+// CORS, y un preload sin ese atributo no se reutiliza (se bajaría dos veces).
+function fontPreloadTags() {
+  const distDir = path.dirname(INDEX);
+  const found = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.ttf')) found.push(full);
+    }
+  };
+  const assetsDir = path.join(distDir, 'assets');
+  if (fs.existsSync(assetsDir)) walk(assetsDir);
+  return found
+    .sort()
+    .map((file) => '/' + path.relative(distDir, file).split(path.sep).join('/'))
+    .map((href) => `    <link rel="preload" href="${href}" as="font" type="font/ttf" crossorigin />\n`)
+    .join('');
+}
+
 function main() {
   if (!fs.existsSync(INDEX)) {
     console.error('[pwa-postbuild] no existe', INDEX, '— ¿corriste expo export -p web?');
@@ -83,7 +109,7 @@ function main() {
   // El <title> que pone Expo por defecto no dice nada (ver README) -- se
   // reemplaza, no se duplica.
   html = html.replace(/<title>.*<\/title>/, `<title>${SITE_TITLE}</title>`);
-  html = html.replace('</head>', SEO_TAGS + UMAMI_SCRIPT + '  </head>');
+  html = html.replace('</head>', SEO_TAGS + fontPreloadTags() + UMAMI_SCRIPT + '  </head>');
   html = html.replace('</body>', SW_SCRIPT + '  </body>');
   fs.writeFileSync(INDEX, html);
   console.log(

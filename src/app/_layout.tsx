@@ -2,7 +2,7 @@ import '../../global.css';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Appearance } from 'react-native';
+import { Appearance, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
@@ -20,6 +20,7 @@ import {
   shouldPersistQuery,
 } from '@/lib/queryPersister';
 import { applyGlobalFont } from '@/lib/globalFont';
+import { waitForWebFonts } from '@/lib/webFonts';
 import { initSentry } from '@/lib/sentry';
 import { darkColors, lightColors } from '@/theme';
 import { resolveAccent, hexToRgbTriplet } from '@/theme/accents';
@@ -38,6 +39,25 @@ initSentry();
 // lo ocultamos a mano, apenas el overlay animado de abajo ya está pintado.
 void SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({ fade: false });
+
+// Requires directos a cada archivo en vez de importar las constantes desde
+// los barrels `@expo-google-fonts/*`: esos paquetes hacen un `require()` de
+// todas sus variantes (incluyendo pesos que no usamos) en el cuerpo de su
+// `index.js`, así que solo importar el nombre que querés no evita que
+// Metro empaquete el resto como asset muerto. 3 roles (ver
+// `theme/typography.ts`): Archivo (UI), Archivo Black (cifra
+// protagonista, un solo peso), JetBrains Mono (datos financieros).
+const APP_FONTS = {
+  Archivo_400Regular: require('@expo-google-fonts/archivo/400Regular/Archivo_400Regular.ttf'),
+  Archivo_500Medium: require('@expo-google-fonts/archivo/500Medium/Archivo_500Medium.ttf'),
+  Archivo_600SemiBold: require('@expo-google-fonts/archivo/600SemiBold/Archivo_600SemiBold.ttf'),
+  Archivo_700Bold: require('@expo-google-fonts/archivo/700Bold/Archivo_700Bold.ttf'),
+  Archivo_800ExtraBold: require('@expo-google-fonts/archivo/800ExtraBold/Archivo_800ExtraBold.ttf'),
+  ArchivoBlack_400Regular: require('@expo-google-fonts/archivo-black/400Regular/ArchivoBlack_400Regular.ttf'),
+  JetBrainsMono_400Regular: require('@expo-google-fonts/jetbrains-mono/400Regular/JetBrainsMono_400Regular.ttf'),
+  JetBrainsMono_500Medium: require('@expo-google-fonts/jetbrains-mono/500Medium/JetBrainsMono_500Medium.ttf'),
+  JetBrainsMono_600SemiBold: require('@expo-google-fonts/jetbrains-mono/600SemiBold/JetBrainsMono_600SemiBold.ttf'),
+};
 
 function navThemeFor(scheme: 'light' | 'dark', primary: string) {
   const c = scheme === 'light' ? lightColors : darkColors;
@@ -98,24 +118,22 @@ export default function RootLayout() {
     [accentShade.primary, accentShade.primaryFg],
   );
 
-  // Requires directos a cada archivo en vez de importar las constantes desde
-  // los barrels `@expo-google-fonts/*`: esos paquetes hacen un `require()` de
-  // todas sus variantes (incluyendo pesos que no usamos) en el cuerpo de su
-  // `index.js`, así que solo importar el nombre que querés no evita que
-  // Metro empaquete el resto como asset muerto. 3 roles (ver
-  // `theme/typography.ts`): Archivo (UI), Archivo Black (cifra
-  // protagonista, un solo peso), JetBrains Mono (datos financieros).
-  const [fontsLoaded] = useFonts({
-    Archivo_400Regular: require('@expo-google-fonts/archivo/400Regular/Archivo_400Regular.ttf'),
-    Archivo_500Medium: require('@expo-google-fonts/archivo/500Medium/Archivo_500Medium.ttf'),
-    Archivo_600SemiBold: require('@expo-google-fonts/archivo/600SemiBold/Archivo_600SemiBold.ttf'),
-    Archivo_700Bold: require('@expo-google-fonts/archivo/700Bold/Archivo_700Bold.ttf'),
-    Archivo_800ExtraBold: require('@expo-google-fonts/archivo/800ExtraBold/Archivo_800ExtraBold.ttf'),
-    ArchivoBlack_400Regular: require('@expo-google-fonts/archivo-black/400Regular/ArchivoBlack_400Regular.ttf'),
-    JetBrainsMono_400Regular: require('@expo-google-fonts/jetbrains-mono/400Regular/JetBrainsMono_400Regular.ttf'),
-    JetBrainsMono_500Medium: require('@expo-google-fonts/jetbrains-mono/500Medium/JetBrainsMono_500Medium.ttf'),
-    JetBrainsMono_600SemiBold: require('@expo-google-fonts/jetbrains-mono/600SemiBold/JetBrainsMono_600SemiBold.ttf'),
-  });
+  const [fontsRegistered] = useFonts(APP_FONTS);
+  // En web, "registrada" no es "descargada" (ver `waitForWebFonts`): sin esta
+  // segunda espera, Safari pintaba la app con la fuente de respaldo mientras
+  // bajaban los .ttf. En nativo arranca en `true` y no espera nada extra.
+  const [webFontsReady, setWebFontsReady] = useState(Platform.OS !== 'web');
+  useEffect(() => {
+    if (!fontsRegistered || webFontsReady) return;
+    let cancelled = false;
+    void waitForWebFonts(Object.keys(APP_FONTS)).then(() => {
+      if (!cancelled) setWebFontsReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fontsRegistered, webFontsReady]);
+  const fontsLoaded = fontsRegistered && webFontsReady;
 
   const [showSplash, setShowSplash] = useState(true);
   const dismissSplash = useCallback(() => setShowSplash(false), []);

@@ -20,7 +20,7 @@
  * El revalidate en segundo plano de acá abajo acorta esa ventana: alcanza
  * con reabrir la PWA una vez para que quede lista la versión nueva.
  */
-const CACHE = 'budget-v1.6.0';
+const CACHE = 'budget-v1.7.0';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.png'];
 
 self.addEventListener('install', (event) => {
