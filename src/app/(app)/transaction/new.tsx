@@ -15,6 +15,7 @@ export default function NewTransactionScreen() {
     prefillAmount?: string;
     prefillDate?: string;
     prefillNote?: string;
+    prefillRecurringId?: string;
   }>();
 
   // Viene de tocar un ítem "Programado" en el resumen (ver ScheduledCard en
@@ -30,6 +31,7 @@ export default function NewTransactionScreen() {
           amount: params.prefillAmount,
           date: params.prefillDate,
           note: params.prefillNote,
+          recurringExpenseId: params.prefillRecurringId,
         }
       : undefined;
 

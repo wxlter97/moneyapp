@@ -5,7 +5,13 @@ module.exports = {
   darkMode: 'class',
   theme: {
     fontFamily: {
-      sans: ['Archivo_500Medium'],
+      // Fallback explícito: en Safari/iOS/Edge `expo-font` no espera
+      // confirmación real de que el binario terminó de cargar (ver
+      // `ExpoFontLoader.web.js`), así que hay una ventana donde el navegador
+      // pinta con la fuente por defecto del user-agent -- sin este fallback
+      // esa fuente por defecto es serif (Times). Con el SW cacheando los
+      // .ttf, la PWA instalada casi no la nota; una pestaña normal sí.
+      sans: ['Archivo_500Medium', 'system-ui', 'sans-serif'],
     },
     extend: {
       colors: {
