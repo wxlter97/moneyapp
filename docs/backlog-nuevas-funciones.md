@@ -196,36 +196,40 @@ habla con Gemini. Todo lo demás la usa por dentro.
 
 ---
 
-## 4. Analítica — GA4 y Microsoft Clarity
+## 4. Analítica — decidido: sin cookies (Umami Cloud)
 
-> **⚠️ Bloqueante, no técnico: hay que decidir esto primero.**
-> `src/app/(app)/privacy.tsx` hoy dice, textual: *"No usamos cookies ni rastreadores de
-> publicidad, ni de nosotros ni de terceros"*. GA4 pone cookies (`_ga`) y Clarity **graba la
-> sesión** (movimiento de mouse, clics, y por defecto texto de la página). Meter cualquiera de
-> los dos **contradice la política publicada**. Tres salidas, en orden de lo que yo elegiría:
+> **Decisión tomada el 22-sep-2026: opción 1, analítica sin cookies.** Quedan documentadas las
+> tres salidas que se evaluaron, en orden de lo que se recomendaba:
 >
 > 1. **Analítica sin cookies** (Plausible o Umami, self-hosted o de pago): da páginas vistas,
 >    fuentes y embudos sin cookies ni datos personales, y la política actual sigue siendo
->    cierta. Pierdes las grabaciones de sesión de Clarity.
-> 2. **GA4 + Clarity con banner de consentimiento**, cargando los scripts sólo después del
->    "sí", y reescribiendo esa sección de la política. Es la opción con más insight de UX y la
->    que más trabajo y más responsabilidad legal trae.
-> 3. **Eventos propios en el backend** (ya tenés la base de datos y el API): cero terceros,
->    pero te toca construir hasta el gráfico más simple.
+>    cierta. Pierdes las grabaciones de sesión de Clarity. **Elegida.**
+> 2. GA4 + Clarity con banner de consentimiento, cargando los scripts sólo después del "sí", y
+>    reescribiendo esa sección de la política. Más insight de UX, pero más trabajo y más
+>    responsabilidad legal.
+> 3. Eventos propios en el backend: cero terceros, pero hay que construir hasta el gráfico más
+>    simple.
 
-**Si se va por GA4 + Clarity (web, ahora)**
-- [ ] Inyectar los snippets sólo en el build web. `app.json` tiene `web.output: "single"`, así
-      que va por el HTML del bundle, no por un `<Head>` de cada pantalla.
-- [ ] Cargar ambos scripts **después** del consentimiento, nunca antes.
-- [ ] En Clarity, activar el enmascarado estricto de texto. Esta app muestra montos, nombres de
-      carteras y notas de transacciones: eso **no** puede quedar grabado en un tercero.
-- [ ] Eventos mínimos que valen la pena: alta de transacción (por canal: manual / recibo / voz /
-      Telegram), creación de presupuesto, invitación aceptada, inicio de trial, abandono en el
-      onboarding.
-- **Configuración externa:** propiedad de GA4 (`EXPO_PUBLIC_GA4_MEASUREMENT_ID`) y proyecto de
-  Clarity (`EXPO_PUBLIC_CLARITY_PROJECT_ID`).
+**Implementado (22-sep-2026): Umami Cloud**
+- [x] `src/lib/analytics.ts` — envoltorio `track(event, data)` sobre `window.umami`, no hace
+      nada si el script no cargó (sin `EXPO_PUBLIC_UMAMI_WEBSITE_ID`, nativo, o bloqueado) para
+      que un tracker caído nunca rompa la acción real.
+- [x] El script se inyecta en `scripts/pwa-postbuild.js`, **no** en `src/app/+html.tsx`: con
+      `web.output: "single"` Expo genera su propio `index.html` e ignora ese archivo por
+      completo (ver el comentario del propio script) — confirmado con un build real
+      (`expo export -p web && node scripts/pwa-postbuild.js`), con y sin la variable puesta.
+      Umami no usa cookies ni identifica personas: la política de privacidad sigue siendo
+      cierta tal cual está, sin banner de consentimiento.
+- [x] Eventos: alta de transacción (`transaction_created`, con el canal: manual/recibo/texto/voz
+      — Telegram queda para cuando se retome, ver punto 3.1), presupuesto creado
+      (`workspace_created`), invitación aceptada (`invitation_accepted`), inicio de trial
+      (`trial_started`), y el par `onboarding_started`/`onboarding_finished` como proxy de
+      abandono (quien empieza y nunca manda el segundo evento cerró la app o navegó afuera).
+- **Configuración externa:** cuenta gratis en `cloud.umami.is`, `EXPO_PUBLIC_UMAMI_WEBSITE_ID`
+  en el entorno de build de Cloudflare Pages (mismo lugar que el resto de `EXPO_PUBLIC_*`).
 
-**Nativo (cuando haya build de tiendas)**
+**Nativo (cuando haya build de tiendas)** — queda de cuando se evaluaba GA4/Clarity; con la
+decisión de ir sin cookies esto no aplica salvo que se reconsidere para nativo específicamente.
 - [ ] GA4 nativo = `@react-native-firebase/analytics`: necesita **dev client / EAS Build** (no
       corre en Expo Go) más `google-services.json` y `GoogleService-Info.plist`.
 - [ ] Clarity nativo = `@microsoft/react-native-clarity` (el paquete `react-native-clarity`

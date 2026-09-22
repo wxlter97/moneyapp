@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -6,6 +6,7 @@ import { useWallets } from '@/api/queries';
 import { Button } from '@/components/ui/Button';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Screen } from '@/components/ui/Screen';
+import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useColors } from '@/theme';
@@ -86,8 +87,18 @@ export default function OnboardingScreen() {
   const isLast = step === STEPS.length - 1;
   const current = STEPS[step];
 
+  // Par `onboarding_started`/`onboarding_finished` para medir abandono en
+  // Umami (backlog punto 4): quien empieza y nunca manda el segundo evento
+  // -- cierra la app o navega afuera -- es lo que se está midiendo. "Saltar"
+  // cuenta como terminado igual que completar el tour (mismo criterio que
+  // `finish()`, ver su docstring).
+  useEffect(() => {
+    track('onboarding_started');
+  }, []);
+
   async function finish() {
     setFinishing(true);
+    track('onboarding_finished', { skipped: !isLast });
     try {
       await markOnboardingCompleted();
     } catch {
