@@ -202,6 +202,10 @@ export interface NotificationPreferences {
    * hormiga, día pico, categoría/frecuencia en alza) -- un solo toggle para
    * los seis, ver `apps.reports.services.behavior_insights` en el backend. */
   warn_insights: boolean;
+  /** Un mensaje mensual (redactado por IA, o el texto de respaldo si no hay)
+   * que conecta los mismos patrones de arriba -- toggle propio, independiente
+   * de `warn_insights` (ver `apps.ai.summary` en el backend). */
+  warn_monthly_summary: boolean;
 }
 
 export type NotificationKind =
@@ -1392,6 +1396,15 @@ export interface ParseCandidate {
   category_source: 'history' | 'ai' | null;
   confidence: Record<string, ConfidenceLevel>;
   possible_duplicates: PossibleDuplicate[];
+}
+
+/** `POST /ai/chat/` — respuesta a una pregunta sobre las finanzas del
+ * workspace. `function_used` es informativo (qué función de reportes
+ * contestó, o `null` si la pregunta no daba para ninguna); el cliente no
+ * necesita hacer nada con él más que mostrarlo si quiere. */
+export interface ChatAnswer {
+  answer: string;
+  function_used: string | null;
 }
 
 /** Resultado de `POST /push-devices/test/`: un renglón por dispositivo de la cuenta. */

@@ -1475,3 +1475,29 @@ export function useParseText() {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
   });
 }
+
+/** Igual que `useParseText` pero desde un dictado. Comparte la misma cuota
+ * (`parse`) -- por eso invalida la misma key. */
+export function useParseVoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      wallet,
+    }: {
+      file: { uri: string; name: string; type: string };
+      wallet?: string | null;
+    }) => res.ai.parseVoice(file, wallet),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
+  });
+}
+
+/** Una pregunta del chat de finanzas. Invalida `aiStatus` porque gasta una
+ * unidad de la cuota de chats del mes. */
+export function useAskChat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (question: string) => res.ai.chat(question),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
+  });
+}

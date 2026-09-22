@@ -42,6 +42,7 @@ import type {
   Membership,
   ModuleFlagsStatus,
   Money,
+  ChatAnswer,
   MonthlySnapshot,
   MyPlan,
   NetWorthBreakdown,
@@ -739,6 +740,27 @@ export const ai = {
     api
       .post<ParseCandidate>('/ai/parse/', { text, ...(wallet ? { wallet } : {}) })
       .then((r) => r.data),
+
+  /** Igual que `parseText` pero desde un dictado -- mismo `fetch(uri)` que
+   * `scanReceipt` para sacar el Blob, mismo contrato de respuesta. Comparte
+   * la cuota de `parse` con el texto libre: no es una operación aparte, es la
+   * misma entrada por otro canal. */
+  parseVoice: async (file: { uri: string; name: string; type: string }, wallet?: string | null) => {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    const form = new FormData();
+    form.append('file', blob, file.name);
+    if (wallet) form.append('wallet', wallet);
+    return api
+      .post<ParseCandidate>('/ai/voice/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
+
+  /** Pregunta sobre las finanzas del workspace activo. La IA elige una
+   * función de reportes ya existente y sólo redacta con lo que devuelve --
+   * ver `apps.ai.chat` en el backend. Cuenta contra `quotas.chat`. */
+  chat: (question: string) => api.post<ChatAnswer>('/ai/chat/', { question }).then((r) => r.data),
 };
 
 // --- interruptores de módulos (kill switch manual, ver `useModuleFlags`) --

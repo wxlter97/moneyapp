@@ -55,6 +55,12 @@
         {
           "faceIDPermission": "porksupuesto usa Face ID para desbloquear la app en vez de un PIN."
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "porksupuesto usa el micrófono para dictar una transacción."
+        }
       ]
     ],
     "experiments": {

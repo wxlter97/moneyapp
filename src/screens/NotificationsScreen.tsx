@@ -133,7 +133,8 @@ export default function NotificationsScreen() {
       | 'warn_budget'
       | 'remind_low_balance'
       | 'warn_statement_due'
-      | 'warn_insights',
+      | 'warn_insights'
+      | 'warn_monthly_summary',
     value: boolean,
   ) {
     setSaveError(null);
@@ -232,6 +233,13 @@ export default function NotificationsScreen() {
                 hint="Fin de semana, después de cobrar, gasto hormiga, día pico, categorías en alza."
                 value={prefs.warn_insights}
                 onChange={(v) => onToggle('warn_insights', v)}
+              />
+              <View className="h-px bg-border/30" />
+              <ToggleRow
+                title="Resumen mensual"
+                hint="Un mensaje que conecta esos mismos patrones, una vez al mes."
+                value={prefs.warn_monthly_summary}
+                onChange={(v) => onToggle('warn_monthly_summary', v)}
               />
             </Card>
 

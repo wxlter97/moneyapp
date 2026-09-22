@@ -12,6 +12,19 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+// expo-audio: el módulo nativo real revienta bajo jest ("Cannot read
+// properties of undefined (reading 'prototype')" al registrar el shared
+// object). Mock mínimo -- los componentes que graban de verdad (ver
+// `VoiceInputButton.test.tsx`) lo sobreescriben con uno más completo por
+// archivo; esto sólo evita que reviente importarlo desde cualquier otro test
+// que arrastre `TransactionForm` sin necesitar grabar nada.
+jest.mock('expo-audio', () => ({
+  AudioModule: { requestRecordingPermissionsAsync: async () => ({ granted: false }) },
+  RecordingPresets: { HIGH_QUALITY: { extension: '.m4a', web: {} }, LOW_QUALITY: { extension: '.m4a', web: {} } },
+  useAudioRecorder: () => ({ prepareToRecordAsync: async () => {}, record: () => {}, stop: async () => {}, uri: null }),
+  useAudioRecorderState: () => ({ isRecording: false, durationMillis: 0, canRecord: true, url: null }),
+}));
+
 // react-native-reanimated: tanto el módulo real como el mock OFICIAL de la
 // librería terminan enganchando el binding nativo de react-native-worklets
 // al importarse y revientan bajo jest ("Cannot read properties of
