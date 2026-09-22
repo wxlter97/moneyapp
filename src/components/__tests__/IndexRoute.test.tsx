@@ -33,7 +33,7 @@ describe('Index route (/)', () => {
   it('sin sesión muestra la landing, no un redirect a /login', async () => {
     mockStatus = 'anonymous';
     await render(<IndexRoute />);
-    expect(screen.getByText('Presupuesto para cómo se paga de verdad')).toBeTruthy();
+    expect(screen.getByText('Presupuesto que te va a ayudar a ahorrar de verdad')).toBeTruthy();
     expect(screen.queryByText(/^redirect:/)).toBeNull();
   });
 });
