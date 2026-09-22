@@ -11,8 +11,34 @@ const path = require('path');
 const INDEX = path.join(__dirname, '..', 'dist', 'index.html');
 const MARKER = '<!-- pwa:injected -->';
 
-const HEAD_TAGS = `
+// Dominio real de producción (ver README.md §Deploy) -- lo necesita la
+// canonical y las OG/Twitter tags (tienen que ser absolutas, no relativas).
+const SITE_URL = 'https://money.wxlter.dev';
+const SITE_TITLE = 'porksupuesto -- presupuesto personal y compartido';
+const SITE_DESCRIPTION =
+  'Presupuesto para cómo se paga de verdad: efectivo, tarjetas y cuotas a la vez, ' +
+  'en varias carteras y monedas. Compartido si querés, con IA para cargar por voz o chat.';
+
+// `expo export` no pone <title>/<meta description>/OG -- esto es lo único
+// que ve un link preview (Slack/WhatsApp/Twitter) o un crawler que no
+// ejecuta JS, porque `web.output: "single"` es una sola pantalla estática
+// para toda la SPA (la landing pisa el <title> en runtime para el buscador
+// que sí ejecuta JS, ver `LandingScreen`, pero eso no ayuda a un preview
+// social). Reemplaza cualquier <title> que haya puesto Expo, no lo agrega
+// duplicado.
+const SEO_TAGS = `
     ${MARKER}
+    <meta name="description" content="${SITE_DESCRIPTION}" />
+    <link rel="canonical" href="${SITE_URL}/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="${SITE_URL}/" />
+    <meta property="og:title" content="${SITE_TITLE}" />
+    <meta property="og:description" content="${SITE_DESCRIPTION}" />
+    <meta property="og:image" content="${SITE_URL}/icon-512.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${SITE_TITLE}" />
+    <meta name="twitter:description" content="${SITE_DESCRIPTION}" />
+    <meta name="twitter:image" content="${SITE_URL}/icon-512.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#111111" />
     <meta name="color-scheme" content="dark light" />
@@ -54,7 +80,10 @@ function main() {
     return;
   }
   html = html.replace('<html lang="en">', '<html lang="es">');
-  html = html.replace('</head>', HEAD_TAGS + UMAMI_SCRIPT + '  </head>');
+  // El <title> que pone Expo por defecto no dice nada (ver README) -- se
+  // reemplaza, no se duplica.
+  html = html.replace(/<title>.*<\/title>/, `<title>${SITE_TITLE}</title>`);
+  html = html.replace('</head>', SEO_TAGS + UMAMI_SCRIPT + '  </head>');
   html = html.replace('</body>', SW_SCRIPT + '  </body>');
   fs.writeFileSync(INDEX, html);
   console.log(
