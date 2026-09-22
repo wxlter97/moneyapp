@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { dismissModal } from '@/lib/modal';
-import { useIsDesktop } from '@/lib/responsive';
+import { useDesktopContentWidth, useIsDesktop } from '@/lib/responsive';
 
 interface ScreenProps {
   children: ReactNode;
@@ -21,18 +21,23 @@ interface ScreenProps {
   /** Sin padding horizontal (para listas full-bleed). */
   noPadding?: boolean;
   /**
-   * 'page' (default): pantalla completa, igual en mobile y desktop -- lo que
-   * ya hacía este componente. 'drawer': en desktop se muestra como panel
-   * lateral (ancho fijo, entra desde la derecha) en vez de tomar toda la
-   * pantalla -- para formularios rápidos de alta/edición (nueva transacción,
-   * cuota, recurrente...), no para pantallas con más contenido (Herramientas,
-   * un estado de cuenta) ni para login/register, que se quedan en 'page'
-   * (hallazgo de la auditoría de producto: esos formularios quedaban
-   * full-screen también en desktop, con casi toda la pantalla vacía -- ver
-   * docs/audit-tasks.md, Fase 5). En mobile, 'drawer' se comporta igual que
-   * 'page' -- ahí ya está bien como hoja completa.
+   * 'page' (default): pantalla completa, igual en mobile y desktop, columna
+   * centrada de hasta 560px -- lo que ya hacía este componente. 'drawer': en
+   * desktop se muestra como panel lateral (ancho fijo, entra desde la
+   * derecha) en vez de tomar toda la pantalla -- para formularios rápidos de
+   * alta/edición (nueva transacción, cuota, recurrente...), no para
+   * pantallas con más contenido (Herramientas, un estado de cuenta) ni para
+   * login/register, que se quedan en 'page' (hallazgo de la auditoría de
+   * producto: esos formularios quedaban full-screen también en desktop, con
+   * casi toda la pantalla vacía -- ver docs/audit-tasks.md, Fase 5). En
+   * mobile, 'drawer' se comporta igual que 'page' -- ahí ya está bien como
+   * hoja completa. 'wide': como 'page', pero la columna crece hasta 1080px
+   * en desktop (`useDesktopContentWidth`) en vez de quedar fija en 560 --
+   * para una pantalla pensada con un layout de escritorio propio (grillas de
+   * 2+ columnas), no la misma columna angosta de mobile estirada. En mobile
+   * se comporta igual que 'page'.
    */
-  variant?: 'page' | 'drawer';
+  variant?: 'page' | 'drawer' | 'wide';
 }
 
 const DismissGestureContext = createContext<GestureType | null>(null);
@@ -68,6 +73,10 @@ const DRAWER_WIDTH = 440;
 export function Screen({ children, edges = ['top'], noPadding = false, variant = 'page' }: ScreenProps) {
   const isDesktop = useIsDesktop();
   const isDrawer = variant === 'drawer' && isDesktop;
+  const isWide = variant === 'wide';
+  // Sin efecto salvo en 'wide' -- llamar siempre al hook (reglas de hooks) es
+  // barato: en 'page'/'drawer' el resultado simplemente no se usa.
+  const wideMaxWidth = useDesktopContentWidth(1080);
 
   const translateY = useSharedValue(0);
   // El inset de `SafeAreaView` para 'bottom' es justo el borde del área que
@@ -130,10 +139,13 @@ export function Screen({ children, edges = ['top'], noPadding = false, variant =
       <DismissGestureContext.Provider value={isDrawer ? null : pan}>
         <Animated.View style={isDrawer ? { flex: 1 } : [{ flex: 1 }, dragStyle]}>
           <View
-            className={`w-full flex-1 ${isDrawer ? '' : 'self-center max-w-[560px]'} ${
-              noPadding ? '' : 'px-4'
-            }`}
-            style={extraBottomPadding ? { paddingBottom: extraBottomPadding } : undefined}
+            className={`w-full flex-1 ${isDrawer ? '' : 'self-center'} ${
+              isDrawer || isWide ? '' : 'max-w-[560px]'
+            } ${noPadding ? '' : 'px-4'}`}
+            style={[
+              isDrawer || !isWide ? undefined : { maxWidth: wideMaxWidth },
+              extraBottomPadding ? { paddingBottom: extraBottomPadding } : undefined,
+            ]}
           >
             {children}
           </View>

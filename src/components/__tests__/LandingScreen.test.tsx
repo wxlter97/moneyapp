@@ -15,7 +15,7 @@ describe('LandingScreen', () => {
 
   it('muestra el mensaje principal y los dos accesos', async () => {
     await render(<LandingScreen />);
-    expect(screen.getByText('Presupuesto para cómo se paga de verdad')).toBeTruthy();
+    expect(screen.getByText('Presupuesto que te va a ayudar a ahorrar de verdad')).toBeTruthy();
     expect(screen.getByText('Crear cuenta gratis')).toBeTruthy();
     expect(screen.getByText('Ya tengo cuenta')).toBeTruthy();
   });

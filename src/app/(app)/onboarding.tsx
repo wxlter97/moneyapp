@@ -27,7 +27,7 @@ const STEPS: Step[] = [
     // (cuotas/recurrentes, varias carteras y monedas, presupuesto por
     // categoría) son justamente lo que pedía la auditoría de producto §1.1
     // que apareciera explícito desde el primer paso, no enterrado al final.
-    body: 'Para cómo se paga de verdad: efectivo, varias tarjetas y cuotas a la vez, en más de una cartera y moneda si hace falta — con presupuesto por categoría, no una hoja de cálculo genérica. Este tour rápido te muestra lo esencial — lo podés saltar cuando quieras.',
+    body: 'Un presupuesto que te va a ayudar a ahorrar de verdad: efectivo, varias tarjetas y cuotas a la vez, en más de una cartera y moneda si hace falta — con presupuesto por categoría, no una hoja de cálculo genérica. Este tour rápido te muestra lo esencial — lo podés saltar cuando quieras.',
   },
   {
     icon: 'users',

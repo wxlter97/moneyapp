@@ -16,7 +16,7 @@ const MARKER = '<!-- pwa:injected -->';
 const SITE_URL = 'https://money.wxlter.dev';
 const SITE_TITLE = 'porksupuesto -- presupuesto personal y compartido';
 const SITE_DESCRIPTION =
-  'Presupuesto para cómo se paga de verdad: efectivo, tarjetas y cuotas a la vez, ' +
+  'Presupuesto que te va a ayudar a ahorrar de verdad: efectivo, tarjetas y cuotas a la vez, ' +
   'en varias carteras y monedas. Compartido si querés, con IA para cargar por voz o chat.';
 
 // `expo export` no pone <title>/<meta description>/OG -- esto es lo único
