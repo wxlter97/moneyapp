@@ -109,6 +109,14 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   // chequeo, la vista previa de puntos/cashback de más abajo mostraría
   // "recompensas" en Free igual que si tuviera Pro.
   const hasLoyalty = useHasFeature('loyalty');
+  // Gratis restrictivo (22-sep-2026, ver ECONOMIA-POR-PLAN.md): estas cuatro
+  // acciones pasaron a requerir Plus -- `!== false` (no `=== true`) para no
+  // esconder el botón un instante mientras `useHasFeature` todavía resuelve
+  // el plan (mismo fail-open que el resto de la app).
+  const canDuplicate = useHasFeature('transaction_duplicate');
+  const canRefund = useHasFeature('refunds');
+  const canSplitCategories = useHasFeature('split_categories');
+  const canSplitPeople = useHasFeature('split_people');
   const create = useCreateTransaction();
   const update = useUpdateTransaction();
   const remove = useDeleteTransaction();
@@ -1007,7 +1015,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           />
         )}
 
-        {editing && !confirmingDelete ? (
+        {editing && !confirmingDelete && canDuplicate !== false ? (
           <Pressable
             onPress={() => {
               haptics.tap();
@@ -1024,7 +1032,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           </Pressable>
         ) : null}
 
-        {editing && type === 'expense' && !confirmingDelete ? (
+        {editing && type === 'expense' && !confirmingDelete && (existing.data?.is_refunded || canRefund !== false) ? (
           existing.data?.is_refunded ? (
             <Pressable
               onPress={() => {
@@ -1097,7 +1105,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           )
         ) : null}
 
-        {editing && !isTransfer && !confirmingDelete ? (
+        {editing && !isTransfer && !confirmingDelete && canSplitCategories !== false ? (
           existing.data?.split_group ? (
             <Text className="text-text-muted text-center text-xs">
               Es parte de una transacción dividida.
@@ -1119,7 +1127,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           )
         ) : null}
 
-        {editing && !isTransfer && !confirmingDelete ? (
+        {editing && !isTransfer && !confirmingDelete && canSplitPeople !== false ? (
           <Pressable
             onPress={() => {
               haptics.tap();

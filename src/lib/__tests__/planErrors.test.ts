@@ -6,6 +6,11 @@ describe('isPlanUpgradeError', () => {
     expect(isPlanUpgradeError('El respaldo y restauración son funciones Pro -- pasate a Pro para usarlas.')).toBe(true);
   });
 
+  it('también detecta los mensajes de las funciones que pasaron a requerir Plus (22-sep-2026)', () => {
+    expect(isPlanUpgradeError('Los gastos recurrentes son parte de Plus -- pasate a Plus para activarlos.')).toBe(true);
+    expect(isPlanUpgradeError('Dividir una cartera en varias es parte de Plus -- pasate a Plus para hacerlo.')).toBe(true);
+  });
+
   it('no confunde un error cualquiera con uno de plan', () => {
     expect(isPlanUpgradeError('No se pudo conectar con el servidor.')).toBe(false);
   });

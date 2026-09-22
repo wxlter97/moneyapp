@@ -9,6 +9,7 @@ import {
   useBudgetReport,
   useDashboardSummary,
   useGamificationSummary,
+  useHasFeature,
   useNetWorth,
   useScheduled,
   useTags,
@@ -52,33 +53,52 @@ import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
 export default function OverviewScreen() {
+  const colors = useColors();
   const tab = useUIStore((s) => s.overviewTab);
   const setTab = useUIStore((s) => s.setOverviewTab);
   const [month, setMonth] = useState(currentYearMonth);
 
-  const netWorth = useNetWorth();
+  const canSeeNetWorth = useHasFeature('net_worth');
+  const canSeeCalendar = useHasFeature('calendar');
+  // `enabled: canSeeNetWorth !== false` -- sin la feature, ni pide el
+  // patrimonio: el backend lo rechazaría igual (`NetWorthView`, ver
+  // `apps.billing.services.require_feature_for_workspace`), pero pedirlo
+  // para nada es un round-trip perdido en cada carga del dashboard.
+  const netWorth = useNetWorth({ enabled: canSeeNetWorth !== false });
   // La del workspace (ver Workspace.base_currency): es en la que ya vienen
   // convertidos los totales agregados -- nunca la de "la primera cartera",
   // que ni siquiera es la moneda correcta si hay más de una en uso.
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
 
+  // Sin useUIStore persistiendo una pestaña que ya no existe para este plan
+  // (p. ej. venía de Calendario antes de bajar a gratis): si el gratis no
+  // tiene "calendar" y la pestaña activa es esa, cae a Resumen sola.
+  useEffect(() => {
+    if (tab === 'calendario' && canSeeCalendar === false) setTab('resumen');
+  }, [tab, canSeeCalendar, setTab]);
+
   return (
     <View className="flex-1 bg-bg">
       <SectionHeader
         title="Inicio"
         right={
-          <Pressable
-            onPress={() => {
-              haptics.tap();
-              router.push('/net-worth-history');
-            }}
-            className="rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
-            accessibilityRole="button"
-            accessibilityLabel="Ver historial de patrimonio neto"
-          >
-            <Text className="text-text text-sm font-semibold">Historial</Text>
-          </Pressable>
+          // Historial (Pro) no tiene mucho sentido ofrecerlo si ni el
+          // patrimonio de hoy está disponible (gratis, ver `canSeeNetWorth`
+          // abajo) -- ambos botones llevarían al mismo upsell.
+          canSeeNetWorth !== false ? (
+            <Pressable
+              onPress={() => {
+                haptics.tap();
+                router.push('/net-worth-history');
+              }}
+              className="rounded-full bg-surface-2 px-3 py-1.5 active:opacity-70"
+              accessibilityRole="button"
+              accessibilityLabel="Ver historial de patrimonio neto"
+            >
+              <Text className="text-text text-sm font-semibold">Historial</Text>
+            </Pressable>
+          ) : undefined
         }
         subtitle={
           // El monto ya no es tocable: era el elemento más grande de toda la
@@ -87,12 +107,28 @@ export default function OverviewScreen() {
           // mandaba a Historial por error. Ese acceso ahora vive en el botón
           // de arriba, chico y a propósito.
           <View className="w-full items-center">
-            <Money
-              value={netWorth.data?.net}
-              currency={currency}
-              hero
-              className="text-center text-[52px] leading-[56px]"
-            />
+            {canSeeNetWorth === false ? (
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  router.push('/pro');
+                }}
+                className="items-center gap-1 py-2 active:opacity-60"
+                accessibilityRole="button"
+              >
+                <Icon name="star" size={22} color={colors.textMuted} />
+                <Text className="text-text-muted text-sm">
+                  Patrimonio neto -- pasate a Plus para verlo
+                </Text>
+              </Pressable>
+            ) : (
+              <Money
+                value={netWorth.data?.net}
+                currency={currency}
+                hero
+                className="text-center text-[52px] leading-[56px]"
+              />
+            )}
           </View>
         }
       >
@@ -102,7 +138,7 @@ export default function OverviewScreen() {
           options={[
             { value: 'resumen', label: 'Resumen' },
             { value: 'lista', label: 'Lista' },
-            { value: 'calendario', label: 'Calendario' },
+            ...(canSeeCalendar !== false ? [{ value: 'calendario' as const, label: 'Calendario' }] : []),
           ]}
         />
       </SectionHeader>
@@ -111,8 +147,10 @@ export default function OverviewScreen() {
         <ResumenTab currency={currency} />
       ) : tab === 'lista' ? (
         <ListaTab month={month} onMonth={setMonth} currency={currency} />
-      ) : (
+      ) : canSeeCalendar !== false ? (
         <CalendarTab currency={currency} />
+      ) : (
+        <ResumenTab currency={currency} />
       )}
 
       <AddTransactionFab />
@@ -129,10 +167,23 @@ function ResumenTab({ currency }: { currency: string }) {
   const wallets = useWallets();
   const budget = useBudgetReport();
   const scheduled = useScheduled();
-  const netWorth = useNetWorth();
+  const canSeeNetWorth = useHasFeature('net_worth');
+  const netWorth = useNetWorth({ enabled: canSeeNetWorth !== false });
   const { map: categories } = useCategoryMap();
 
   const spendingWallets = (wallets.data ?? []).filter((w) => w.purpose === 'spending');
+  // Sin la feature "net_worth" (gratis, ver ECONOMIA-POR-PLAN.md), el tile
+  // "Carteras" de abajo no puede sacar el total de `netWorth` (gateado
+  // aparte, ver `apps.reports.api.NetWorthView`) -- lo suma él mismo desde
+  // las carteras que ya tiene igual. No hace falta convertir moneda acá: el
+  // gratis tampoco tiene "multi_currency", así que todas sus carteras están
+  // en la misma moneda.
+  const spendingTotal =
+    canSeeNetWorth === false
+      ? spendingWallets
+          .filter((w) => w.currency === currency)
+          .reduce((sum, w) => sum + toNumber(w.current_balance), 0)
+      : toNumber(netWorth.data?.by_purpose.spending);
   // Todas las tarjetas de crédito (cualquier moneda, para el conteo), pero
   // el monto sumado se limita a la moneda base -- mismo criterio que el
   // resto de los totales de esta pantalla (ver `ListaTab`), para no mezclar
@@ -151,7 +202,7 @@ function ResumenTab({ currency }: { currency: string }) {
     wallets.refetch();
     budget.refetch();
     scheduled.refetch();
-    netWorth.refetch();
+    if (canSeeNetWorth !== false) netWorth.refetch();
   });
 
   if (loading) {
@@ -225,7 +276,7 @@ function ResumenTab({ currency }: { currency: string }) {
               <Text className="text-text-muted text-sm">Crear una</Text>
             ) : (
               <>
-                <Money value={netWorth.data?.by_purpose.spending} currency={currency} className="text-lg font-bold" />
+                <Money value={spendingTotal} currency={currency} className="text-lg font-bold" />
                 <Text className="text-text-muted text-[11px]" numberOfLines={1}>
                   {spendingWallets.length === 1 ? '1 cartera' : `${spendingWallets.length} carteras`}
                 </Text>

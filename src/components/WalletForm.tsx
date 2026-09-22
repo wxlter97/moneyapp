@@ -19,6 +19,7 @@ import {
   useCreateWallet,
   useDeleteWallet,
   useGoalProjection,
+  useHasFeature,
   useLoyaltyBanks,
   useSavingsInterestProjection,
   useSplitWallet,
@@ -106,6 +107,8 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const archive = useArchiveWallet();
   const unarchive = useUnarchiveWallet();
   const split = useSplitWallet();
+  const canSplitWallet = useHasFeature('wallet_split');
+  const canSeeStatements = useHasFeature('statements');
 
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('USD');
@@ -774,7 +777,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 />
               </View>
             </View>
-            {editing && existing.data?.billing_cycle_day ? (
+            {editing && existing.data?.billing_cycle_day && canSeeStatements !== false ? (
               <Pressable
                 onPress={() => {
                   haptics.tap();
@@ -858,20 +861,22 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 {isArchived ? 'Desarchivar cartera' : 'Archivar cartera'}
               </Text>
             </Pressable>
-            <Pressable
-              onPress={() => {
-                haptics.tap();
-                setSplitError(null);
-                setSplittingOpen(true);
-              }}
-              disabled={busy}
-              className="active:opacity-60"
-              accessibilityRole="button"
-            >
-              <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
-                Dividir cartera…
-              </Text>
-            </Pressable>
+            {canSplitWallet !== false ? (
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  setSplitError(null);
+                  setSplittingOpen(true);
+                }}
+                disabled={busy}
+                className="active:opacity-60"
+                accessibilityRole="button"
+              >
+                <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                  Dividir cartera…
+                </Text>
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={() => {
                 haptics.tap();

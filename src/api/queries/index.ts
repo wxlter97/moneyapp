@@ -1302,12 +1302,18 @@ export function useClearFailedEmailImports() {
 }
 
 // --- reportes ---------------------------------------------------
-export function useNetWorth() {
+/**
+ * `options.enabled`: además de `!!ws`, para que un caller que ya sabe que el
+ * plan no tiene la feature `net_worth` (ver `useHasFeature`) no dispare el
+ * pedido para nada -- el backend lo rechazaría igual (`NetWorthView`), pero
+ * evitarlo ahorra un round-trip perdido en cada carga del dashboard.
+ */
+export function useNetWorth(options?: { enabled?: boolean }) {
   const ws = useActiveWs();
   return useQuery({
     queryKey: qk.ws(ws).reportNetWorth(),
     queryFn: res.reports.netWorth,
-    enabled: !!ws,
+    enabled: !!ws && (options?.enabled ?? true),
   });
 }
 

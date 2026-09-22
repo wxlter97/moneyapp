@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import BalancesScreen from '@/app/(app)/balances';
+import BalancesScreen from '@/screens/BalancesScreen';
 import type { Person, PersonBalance, Workspace } from '@/api/types';
 
 jest.mock('expo-router', () => ({
@@ -19,6 +19,9 @@ jest.mock('@/api/queries', () => ({
   useCreatePerson: () => ({ mutateAsync: mockCreatePerson, isPending: false }),
   useSettleBalance: () => ({ mutateAsync: mockSettleBalance, isPending: false }),
   useDeletePerson: () => ({ mutateAsync: mockDeletePerson, isPending: false }),
+  // Plan con la feature -- este archivo prueba el contenido de la
+  // pantalla, no el gate en sí (eso lo cubre ProFeatureGate.test.tsx).
+  useHasFeature: () => true,
 }));
 
 const mockWorkspaces: Workspace[] = [

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 
 import type { IconName } from '@/components/ui/Icon';
 import { MONEY_CALC_URL } from '@/lib/moneyCalc';
+import type { FeatureKey } from '@/lib/planFeatures';
 
 export interface Tool {
   icon: IconName;
@@ -11,6 +12,10 @@ export interface Tool {
   onPress: () => void;
   /** Acción destructiva: es el único ícono que se pinta con color (rojo). */
   destructive?: boolean;
+  /** Si el plan efectivo no tiene esta feature, el tile se oculta directo
+   * (no se muestra para después fallar) -- ver `/tools/[group].tsx`, que la
+   * filtra con el plan ya en caché (`useMyPlan`), sin pedirlo de nuevo. */
+  feature?: FeatureKey;
 }
 
 export interface ToolGroup {
@@ -57,6 +62,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: 'Notificaciones',
         hint: 'Recordatorios de recurrentes, cuotas y presupuesto',
         onPress: () => router.push('/notifications'),
+        feature: 'notifications',
       },
       {
         icon: 'users',
@@ -101,12 +107,14 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: 'Compras a plazo',
         hint: 'Pagos en cuotas',
         onPress: () => router.push('/installments'),
+        feature: 'installments',
       },
       {
         icon: 'users',
         label: 'Personas',
         hint: 'Quién le debe a quién en gastos divididos',
         onPress: () => router.push('/balances'),
+        feature: 'split_people',
       },
       {
         icon: 'bolt',
@@ -145,6 +153,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: 'Estado de cuenta',
         hint: 'Cuánto debes en tus tarjetas',
         onPress: () => router.push('/statements'),
+        feature: 'statements',
       },
       {
         icon: 'calculator',
@@ -216,6 +225,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: 'Atajos',
         hint: 'Agregar gastos desde Apple Shortcuts',
         onPress: () => router.push('/shortcuts'),
+        feature: 'quick_add',
       },
       {
         icon: 'info',

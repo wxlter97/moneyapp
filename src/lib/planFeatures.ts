@@ -13,7 +13,17 @@ export type FeatureKey =
   | 'backup'
   | 'loyalty'
   | 'multi_currency'
-  | 'quick_add';
+  | 'quick_add'
+  | 'calendar'
+  | 'notifications'
+  | 'wallet_split'
+  | 'transaction_duplicate'
+  | 'refunds'
+  | 'split_categories'
+  | 'split_people'
+  | 'installments'
+  | 'statements'
+  | 'net_worth';
 
 /** Un renglón por feature en "Con Pro conseguís" (`pro.tsx`). */
 export const FEATURE_LABEL: Record<FeatureKey, string> = {
@@ -26,6 +36,45 @@ export const FEATURE_LABEL: Record<FeatureKey, string> = {
   loyalty: 'Puntos y cashback de tarjetas',
   multi_currency: 'Múltiples monedas con conversión',
   quick_add: 'Atajos de Apple Shortcuts',
+  calendar: 'Calendario financiero',
+  notifications: 'Avisos y recordatorios',
+  wallet_split: 'Dividir una cartera en varias',
+  transaction_duplicate: 'Duplicar una transacción',
+  refunds: 'Registrar reembolsos',
+  split_categories: 'Dividir una transacción entre categorías',
+  split_people: 'Dividir gastos entre personas',
+  installments: 'Compras a plazo',
+  statements: 'Estados de cuenta de tarjeta',
+  net_worth: 'Patrimonio neto',
+};
+
+/**
+ * Desde qué plan se desbloquea cada feature -- estático a propósito (mismo
+ * criterio que `seed_billing_plans.py` en el backend: es una decisión de
+ * producto, no algo que valga la pena traer con una consulta aparte sólo
+ * para saber qué botón mostrar). Determina si `ProFeatureGate` ofrece
+ * "Pasate a Plus" o "Pasate a Pro".
+ */
+export const FEATURE_MIN_PLAN: Record<FeatureKey, 'plus' | 'pro'> = {
+  import_email: 'pro',
+  import_excel: 'pro',
+  net_worth_history: 'plus',
+  advanced_reports: 'pro',
+  export: 'plus',
+  backup: 'pro',
+  loyalty: 'pro',
+  multi_currency: 'plus',
+  quick_add: 'pro',
+  calendar: 'plus',
+  notifications: 'plus',
+  wallet_split: 'plus',
+  transaction_duplicate: 'plus',
+  refunds: 'plus',
+  split_categories: 'plus',
+  split_people: 'plus',
+  installments: 'plus',
+  statements: 'plus',
+  net_worth: 'plus',
 };
 
 /** Copy más largo para el upsell de pantalla completa (`ProFeatureGate`). */
@@ -67,5 +116,45 @@ export const FEATURE_COPY: Record<FeatureKey, { title: string; description: stri
   quick_add: {
     title: 'Atajos de carga rápida',
     description: 'Creá un atajo de Apple Shortcuts para registrar un gasto sin abrir la app.',
+  },
+  calendar: {
+    title: 'Calendario financiero',
+    description: 'Mirá tus recurrentes, cuotas y vencimientos acomodados en un calendario, no sólo en una lista.',
+  },
+  notifications: {
+    title: 'Avisos y recordatorios',
+    description: 'Recordatorios de recurrentes y cuotas por vencer, presupuesto por pasarte, saldo bajo y vencimiento de tarjeta -- push y en la app.',
+  },
+  wallet_split: {
+    title: 'Dividir una cartera',
+    description: 'Separá una cartera con actividad en dos, sin perder su historial ni su saldo.',
+  },
+  transaction_duplicate: {
+    title: 'Duplicar una transacción',
+    description: 'Repetí una transacción ya cargada en un toque, en vez de volver a escribirla.',
+  },
+  refunds: {
+    title: 'Reembolsos',
+    description: 'Registrá la plata que te devolvieron de un gasto como un movimiento real, no sólo un flag.',
+  },
+  split_categories: {
+    title: 'Dividir entre categorías',
+    description: 'Repartí una sola compra entre varias categorías -- p. ej. supermercado entre Comida e Higiene.',
+  },
+  split_people: {
+    title: 'Dividir entre personas',
+    description: 'Repartí un gasto con amigos o familia y llevá la cuenta de quién te debe qué.',
+  },
+  installments: {
+    title: 'Compras a plazo',
+    description: 'Registrá una compra en cuotas de tarjeta y seguí cuánto llevás pagado.',
+  },
+  statements: {
+    title: 'Estados de cuenta',
+    description: 'Mirá el estado de cuenta de tus tarjetas de crédito a la fecha de corte.',
+  },
+  net_worth: {
+    title: 'Patrimonio neto',
+    description: 'Cuánto tenés en total entre todas tus carteras, de un vistazo.',
   },
 };
