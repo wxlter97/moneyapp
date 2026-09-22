@@ -86,10 +86,12 @@ function limitsSummary(plan: Plan | null | undefined): string {
     bits.push(`${plan.max_workspaces_owned} presupuesto${plan.max_workspaces_owned === 1 ? '' : 's'}`);
   }
   if (plan.max_members_per_workspace != null) {
-    bits.push(`${plan.max_members_per_workspace} miembros por presupuesto`);
+    const n = plan.max_members_per_workspace;
+    bits.push(n === 1 ? 'sin invitados' : `${n} miembros por presupuesto`);
   }
   if (plan.max_active_recurring != null) {
-    bits.push(`${plan.max_active_recurring} recurrentes activos`);
+    const n = plan.max_active_recurring;
+    bits.push(n === 0 ? 'sin recurrentes' : `${n} recurrentes activos`);
   }
   return bits.length ? `Hasta ${bits.join(', ')}` : 'Sin límites';
 }

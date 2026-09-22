@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 
 import type { Category, InstallmentPurchase, Wallet } from '@/api/types';
-import InstallmentsScreen from '@/app/(app)/installments';
+import InstallmentsScreen from '@/screens/InstallmentsScreen';
 import { formatMoney } from '@/lib/money';
 
 jest.mock('expo-router', () => ({
@@ -40,6 +40,9 @@ jest.mock('@/api/queries', () => ({
   }),
   useCategories: () => ({ data: [mockCategory], isLoading: false }),
   useWallets: () => ({ data: [mockWallet], isLoading: false }),
+  // Plan con la feature -- este archivo prueba el contenido de la lista,
+  // no el gate en sí (eso lo cubre ProFeatureGate.test.tsx).
+  useHasFeature: () => true,
 }));
 
 describe('InstallmentsScreen', () => {

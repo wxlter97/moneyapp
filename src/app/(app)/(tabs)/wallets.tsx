@@ -2,16 +2,18 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { useNetWorth, useReorderWallets, useWallets } from '@/api/queries';
+import { useHasFeature, useNetWorth, useReorderWallets, useWallets } from '@/api/queries';
 import { NetWorthPager } from '@/components/NetWorthPager';
 import { SectionHeader } from '@/components/SectionHeader';
 import { WalletRow, walletRowLabel } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
 import { DragList } from '@/components/ui/DragList';
+import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Segmented } from '@/components/ui/Segmented';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { flattenTree } from '@/lib/wallets';
 import { useDesktopContentWidth } from '@/lib/responsive';
@@ -34,7 +36,13 @@ export default function WalletsScreen() {
   // `SideNav` a anchos de escritorio "justos" -- ver el mismo fix en
   // budgets.tsx.
   const contentWidth = useDesktopContentWidth(DESKTOP_MAX_WIDTH);
-  const netWorth = useNetWorth();
+  // "patrimonio" es del gratis restrictivo (22-sep-2026, ver
+  // ECONOMIA-POR-PLAN.md) -- pero la LISTA de carteras (lo que esta
+  // pantalla es, ante todo) no: `netWorth` sólo alimenta el pager de
+  // arriba, así que sin la feature ni se pide (ver `enabled` abajo) y el
+  // resto de la pantalla no depende de que resuelva.
+  const canSeeNetWorth = useHasFeature('net_worth');
+  const netWorth = useNetWorth({ enabled: canSeeNetWorth !== false });
   const wallets = useWallets();
   const reorder = useReorderWallets();
   const [reordering, setReordering] = useState(false);
@@ -50,10 +58,10 @@ export default function WalletsScreen() {
     const wantsNet = netFilter === 'net';
     return allNodes.filter((n) => n.wallet.counts_toward_net_worth === wantsNet);
   }, [allNodes, netFilter]);
-  const loading = netWorth.isLoading || wallets.isLoading;
-  const refreshing = (netWorth.isFetching || wallets.isFetching) && !loading;
+  const loading = (canSeeNetWorth !== false && netWorth.isLoading) || wallets.isLoading;
+  const refreshing = ((canSeeNetWorth !== false && netWorth.isFetching) || wallets.isFetching) && !loading;
   const refresh = usePullRefresh(refreshing, () => {
-    netWorth.refetch();
+    if (canSeeNetWorth !== false) netWorth.refetch();
     wallets.refetch();
   });
 
@@ -97,17 +105,31 @@ export default function WalletsScreen() {
       >
         {loading ? (
           <LoadingState />
-        ) : netWorth.isError || wallets.isError || !netWorth.data ? (
+        ) : wallets.isError || (canSeeNetWorth !== false && (netWorth.isError || !netWorth.data)) ? (
           <ErrorState
             error={netWorth.error ?? wallets.error}
             onRetry={() => {
-              netWorth.refetch();
+              if (canSeeNetWorth !== false) netWorth.refetch();
               wallets.refetch();
             }}
           />
         ) : (
           <>
-            {!reordering ? (
+            {!reordering && canSeeNetWorth === false ? (
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  router.push('/pro');
+                }}
+                className="flex-row items-center gap-2 rounded-2xl bg-surface-2 px-4 py-3 active:opacity-70"
+                accessibilityRole="button"
+              >
+                <Icon name="star" size={16} color={colors.textMuted} />
+                <Text className="text-text-muted flex-1 text-sm">
+                  Patrimonio neto -- pasate a Plus para verlo
+                </Text>
+              </Pressable>
+            ) : !reordering && netWorth.data ? (
               <NetWorthPager data={netWorth.data} currency={currency} maxWidth={contentWidth} />
             ) : null}
 

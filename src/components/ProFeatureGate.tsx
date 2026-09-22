@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { LoadingState } from '@/components/ui/states';
-import { FEATURE_COPY, type FeatureKey } from '@/lib/planFeatures';
+import { FEATURE_COPY, FEATURE_MIN_PLAN, type FeatureKey } from '@/lib/planFeatures';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -39,8 +39,9 @@ export function ProFeatureGate({ feature, children, variant = 'screen' }: ProFea
 
   if (enabled) return <>{children}</>;
 
+  const minPlanLabel = FEATURE_MIN_PLAN[feature] === 'plus' ? 'Plus' : 'Pro';
   const upsellButton = (
-    <Button label="Pasate a Pro" onPress={() => router.push('/pro')} />
+    <Button label={`Pasate a ${minPlanLabel}`} onPress={() => router.push('/pro')} />
   );
 
   if (variant === 'inline') {

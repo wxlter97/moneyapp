@@ -1,7 +1,7 @@
 import { Linking } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import ShortcutsScreen from '@/app/(app)/shortcuts';
+import ShortcutsScreen from '@/screens/ShortcutsScreen';
 import type { PersonalAccessToken, Wallet } from '@/api/types';
 
 // `ModalHeader`/`Screen` importan `expo-router` para el gesto de "volver" --
@@ -37,6 +37,9 @@ jest.mock('@/api/queries', () => ({
   useWallets: () => ({ data: mockWallets, isLoading: false }),
   useCreatePersonalToken: () => ({ mutateAsync: mockCreate, isPending: false }),
   useDeletePersonalToken: () => ({ mutateAsync: mockDelete, isPending: false }),
+  // Plan con la feature -- este archivo prueba el contenido de la
+  // pantalla, no el gate en sí (eso lo cubre ProFeatureGate.test.tsx).
+  useHasFeature: () => true,
 }));
 
 const TOKEN: PersonalAccessToken = {

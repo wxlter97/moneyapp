@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
 import {
   useCategories,
@@ -13,6 +13,7 @@ import { walletLabel } from '@/api/queries/lookups';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import type { CategoryType } from '@/api/types';
 import { CategoryPickerField } from '@/components/CategoryGrid';
+import { ProFeatureGate } from '@/components/ProFeatureGate';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { dismissModal, ModalHeader } from '@/components/ui/ModalHeader';
@@ -24,7 +25,6 @@ import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { todayISO } from '@/lib/date';
 import { toNumber } from '@/lib/money';
-import { isPlanUpgradeError } from '@/lib/planErrors';
 
 type OpenRow = 'category' | 'wallet' | null;
 
@@ -104,6 +104,7 @@ export default function ConfirmImportScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Confirmar importación" />
+      <ProFeatureGate feature="import_email">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <ScrollView contentContainerClassName="gap-4 py-2" keyboardShouldPersistTaps="handled">
           {log ? (
@@ -118,9 +119,6 @@ export default function ConfirmImportScreen() {
 
           {disabledMessage ? <Text className="text-warning text-sm">{disabledMessage}</Text> : null}
           {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
-          {isPlanUpgradeError(formError) ? (
-            <Button label="Pasate a Pro" variant="ghost" onPress={() => router.push('/pro')} />
-          ) : null}
 
           <Segmented
             value={type}
@@ -191,6 +189,7 @@ export default function ConfirmImportScreen() {
           <Button label="Confirmar e importar" disabled={!canSubmit} loading={confirm.isPending} onPress={onSubmit} />
         </ScrollView>
       </KeyboardAvoidingView>
+      </ProFeatureGate>
     </Screen>
   );
 }
