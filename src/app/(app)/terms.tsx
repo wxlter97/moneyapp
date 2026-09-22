@@ -7,7 +7,7 @@ import { haptics } from '@/lib/haptics';
 import { fonts } from '@/theme/typography';
 
 const CONTACT_EMAIL = 'me@wxlter.dev';
-const LAST_UPDATED = '13 de septiembre de 2026';
+const LAST_UPDATED = '22 de septiembre de 2026';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -63,7 +63,7 @@ export default function TermsScreen() {
         </Section>
 
         <Section title="Plan Pro y pagos">
-          El plan Pro es una suscripción paga (mensual, anual o de por vida, según elijas).
+          El plan Pro es una suscripción paga (mensual o anual, según elijas).
           Se cobra a través de un proveedor de pagos externo (hoy, Wompi) -- nunca vemos ni
           guardamos el número completo de tu tarjeta. Podés cancelar cuando quieras desde
           Herramientas → Cuenta → Pro; seguís teniendo acceso Pro hasta el final del

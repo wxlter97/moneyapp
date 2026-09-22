@@ -7,7 +7,7 @@ import { haptics } from '@/lib/haptics';
 import { fonts } from '@/theme/typography';
 
 const CONTACT_EMAIL = 'me@wxlter.dev';
-const LAST_UPDATED = '20 de septiembre de 2026';
+const LAST_UPDATED = '22 de septiembre de 2026';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -93,9 +93,12 @@ export default function PrivacyScreen() {
           errores), Cloudflare (que sirve la versión web de la app), y la infraestructura
           donde corre el backend, los recibos y la base de datos (Google Cloud Run, Google
           Cloud Storage y Neon/PostgreSQL). Estos proveedores procesan tus datos sólo para
-          prestarnos el servicio. Además, cuando nos escribís desde Soporte llega un aviso
-          a un canal privado de Discord que sólo ve el equipo, con tu correo, el asunto y el
-          comienzo del mensaje.
+          prestarnos el servicio. Además, mandamos avisos a canales privados de Discord que
+          sólo ve el equipo: cuando escribís desde Soporte (tu correo, el nombre de tu
+          presupuesto, el asunto, el comienzo del mensaje, y la plataforma/versión de la
+          app), y cuando pasa algo con tu suscripción Pro -- se activa, se renueva, falla
+          un cobro o vence sin renovarse (tu correo, el plan y el monto, sin ningún dato de
+          tu tarjeta).
         </Section>
 
         <Section title="Dónde vive tu información">
