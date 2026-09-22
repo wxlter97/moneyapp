@@ -202,6 +202,10 @@ export interface NotificationPreferences {
    * hormiga, día pico, categoría/frecuencia en alza) -- un solo toggle para
    * los seis, ver `apps.reports.services.behavior_insights` en el backend. */
   warn_insights: boolean;
+  /** Un mensaje mensual (redactado por IA, o el texto de respaldo si no hay)
+   * que conecta los mismos patrones de arriba -- toggle propio, independiente
+   * de `warn_insights` (ver `apps.ai.summary` en el backend). */
+  warn_monthly_summary: boolean;
 }
 
 export type NotificationKind =
