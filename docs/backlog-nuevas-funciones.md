@@ -1,7 +1,8 @@
 # Backlog — funciones nuevas (18 sep 2026)
 
-> **Estado: implementados el 1 (base de IA), el 2 (recibos) y el parser del 3 (texto libre).
-> Los canales del 3 (Telegram, voz) y del 4 al 8 siguen siendo diseño.** Este archivo existe
+> **Estado (22 sep 2026): implementados el 1 (base de IA), el 2 (recibos), el 3 completo (texto
+> libre y voz/dictado), el 5 (chat) y el 6 (resumen mensual). Telegram (3.1), el 4 (analítica),
+> el 7 (DTE/QR) y el 8 quedaron diferidos por decisión, no por bloqueo técnico.** Este archivo existe
 > para tener el diseño mapeado en el repo y poder retomarlo sin volver a discutirlo. Formato:
 > `[ ]` pendiente, `[x]` hecho. Las referencias entre backticks son archivos reales, leídos
 > del repo.
@@ -159,6 +160,8 @@ habla con Gemini. Todo lo demás la usa por dentro.
       que es sólo gasto.
 
 ### 3.1 Telegram
+> **Diferido por decisión (22-sep-2026).** No es prioridad ahora; queda diseñado para retomar.
+
 - [ ] Bot con token de @BotFather (gratis), webhook a `POST /api/v1/channels/telegram/`,
       verificado con el `secret_token` del propio webhook de Telegram (mismo criterio que
       `INBOUND_WEBHOOK_SECRET`: sin secreto, el endpoint rechaza todo).
@@ -171,12 +174,25 @@ habla con Gemini. Todo lo demás la usa por dentro.
 - **Configuración externa:** crear el bot (2 minutos) y setear `TELEGRAM_BOT_TOKEN`.
 
 ### 3.2 Voz / dictado en la app
-- [ ] `expo-audio` para grabar (no está instalado todavía; **leer primero los docs de la
-      versión exacta de Expo del repo**, ver `AGENTS.md`).
-- [ ] `POST /api/v1/ai/voice/` — el audio va a Gemini (acepta audio directo, no hace falta un
-      proveedor aparte de transcripción) y sale por el mismo parser que el texto libre.
-- [ ] Botón de micrófono en el alta rápida. En web, `MediaRecorder`; verificar que Safari
-      grabe en un formato que Gemini acepte.
+
+> **Implementado el 22 sep 2026.**
+
+- [x] `expo-audio` instalado (`57.0.5`, la que matchea el SDK 57 del repo — instalada leyendo
+      los tipos del propio paquete, ya que `docs.expo.dev` está bloqueado por la política de red
+      de este entorno; **vale la pena una pasada por la doc real cuando se pueda**, ver
+      `AGENTS.md`).
+- [x] `POST /api/v1/ai/voice/` — el audio va a Gemini como `inline_data` con `has_audio=True`
+      (mismo precio de audio que ya tenía `pricing.py`) y sale por el mismo parser que el texto
+      libre: `apps/ai/parsing.py` se separó en un contexto compartido
+      (`_build_context`/`_candidate_from_response`) y `parse()`/`parse_audio()` arriba de eso.
+      Comparte la cuota de `parse`, no es una operación aparte.
+- [x] Botón de dictado (`VoiceInputButton`) en el alta de transacción, junto al campo de texto
+      libre. En nativo graba `.m4a` (AAC) con `RecordingPresets.HIGH_QUALITY`. En web, el
+      `mimeType` de `MediaRecorder` se fuerza a `audio/mp4` (el único que Gemini documenta que
+      además sabe grabar un navegador) — **Safari lo soporta, Chrome/Firefox de escritorio no**;
+      en esos navegadores el botón directamente no aparece (mismo criterio que "sin IA no se
+      muestra el botón, en vez de mostrarlo y fallar al tocarlo"), en vez de grabar en un
+      formato que el backend termina rechazando.
 
 ---
 
@@ -222,48 +238,61 @@ habla con Gemini. Todo lo demás la usa por dentro.
 
 ## 5. Chat sobre tus finanzas
 
-**Backend**
-- [ ] `POST /api/v1/ai/chat/`. **No darle acceso a la base ni generar SQL.** Darle un juego
-      chico de funciones ya existentes y que elija cuál llamar: `budget_vs_actual`,
-      `upcoming_scheduled`, `behavior_insights` y totales por categoría/mes, todo en
-      `apps/reports/services.py`.
-- [ ] Todas las lecturas tienen que pasar por `visible_transactions(workspace, user)`, que ya
-      respeta carteras privadas y compartidas. El aislamiento por workspace no se negocia:
-      hay tests dedicados a eso (`apps/common/tests/test_workspace_isolation.py`) y esto
-      tiene que sumar los suyos.
-- [ ] Respuestas con cifras **siempre** citando el período y la moneda base, y excluyendo lo
-      que no tenga tasa de cambio (mismo criterio que los reportes: se excluye, no se estima).
-- [ ] Sin consejos de inversión ni nada que suene a asesoría financiera regulada: describir lo
-      que pasó con sus datos, no recomendar productos.
+> **Implementado el 22 sep 2026.**
 
-**Frontend**
-- [ ] Pantalla de chat en Herramientas, con historial local (no en el servidor, al menos al
-      principio) y un aviso claro de que puede equivocarse.
+**Backend** (`apps/ai/chat.py`)
+- [x] `POST /api/v1/ai/chat/`. **No le da acceso a la base ni genera SQL:** dos llamadas a
+      Gemini, no `tools` nativas de la API. La primera sólo ELIGE una función cerrada de
+      `apps/reports/services.py` (`budget_vs_actual`, `spending_by_category`,
+      `monthly_cashflow`, `upcoming_scheduled`, `behavior_insights`) o ninguna; la segunda sólo
+      redacta con lo que esa función devuelve, ejecutada en código, nunca por el modelo. Las dos
+      llamadas cuentan como **una sola** unidad de la cuota de chat, no dos.
+- [x] Todas las lecturas pasan por las funciones de `apps/reports/services.py` que ya usan
+      `visible_transactions(workspace, user)` — el aislamiento por workspace lo hereda de ahí,
+      no hay una query nueva que pueda saltárselo.
+- [x] El prompt de la segunda llamada exige citar período y moneda base en toda cifra, y avisar
+      si algo quedó afuera por no tener tasa de cambio (mismo criterio que el resto de la app:
+      se excluye, no se estima).
+- [x] El prompt de la primera llamada dice explícitamente que una pregunta de inversión o que no
+      tenga que ver con las finanzas del workspace elige `function: "none"` con un motivo corto,
+      en vez de intentar responderla igual.
+
+**Frontend** (`src/app/(app)/chat.tsx`)
+- [x] Pantalla de chat en Herramientas → Análisis, con historial sólo en memoria de la pantalla
+      (no se guarda ni se lee del servidor) y un aviso fijo arriba de la conversación de que
+      puede equivocarse y no da consejos de inversión.
 
 ---
 
 ## 6. Resumen y consejos mensuales
 
-**Lo que ya existe y se reusa**
-- `behavior_insights()` en `apps/reports/services.py` con sus 6 detectores (fin de semana,
-  después de cobrar, gasto hormiga, día pico, alza de categoría, alza de frecuencia).
-- `notify_insights()` en `apps/notifications/services.py`, el kind `insight` y el toggle
-  `warn_insights`, más el truco de la `dedupe_key` con el mes calendario para que un job que
-  corre a diario entregue algo mensual.
+> **Implementado el 22 sep 2026.**
 
-**Backend**
-- [ ] Tomar la salida de `behavior_insights()` (que hoy son títulos y cuerpos armados a mano) y
-      pasarla por Gemini para redactar **un** texto mensual que los conecte, en vez de seis
-      avisos sueltos. La detección sigue siendo determinista: la IA sólo redacta. Así, si la IA
-      no está disponible, se sigue mandando el texto de siempre.
-- [ ] Kind nuevo (`monthly_summary`) o reusar `insight` con `dedupe_key` mensual. Inclinado a
-      kind nuevo, para que se pueda apagar aparte de los patrones.
+**Lo que ya existía y se reusó**
+- `behavior_insights()` en `apps/reports/services.py` con sus 6 detectores (fin de semana,
+  después de cobrar, gasto hormiga, día pico, alza de categoría, alza de frecuencia) —
+  **sin cambios**: la detección sigue siendo 100% determinista, la IA sólo redacta.
+- `notify_insights()`, el kind `insight` y el toggle `warn_insights` — se dejaron intactos: el
+  resumen mensual es un aviso aparte, no un reemplazo (dos toggles independientes a propósito).
+
+**Backend** (`apps/ai/summary.py` + `apps/notifications/services.py`)
+- [x] `apps/ai/summary.generate()` toma la salida de `behavior_insights()` (títulos y cuerpos) y
+      la pasa por Gemini para redactar **un** texto que los conecta, en 2-4 oraciones. Si Gemini
+      no responde, `notifications.services._monthly_summary_text` cae al texto armado a mano
+      concatenando los mismos títulos y cuerpos — nunca se manda "nada".
+- [x] Kind nuevo `monthly_summary` (no reusa `insight`), con su propio
+      `NotificationPreference.warn_monthly_summary`. `notify_monthly_summary()` corre el día 1
+      de cada mes, sobre `behavior_insights()` calculado con el último día del mes que terminó.
+      No consume cuota (`OP_SUMMARY` no está en `quotas.PLAN_FEATURE_KEYS`): lo dispara el
+      servidor, no el usuario.
 
 **Frontend**
-- [ ] Icono y ruta en `KIND_ICON` (`src/app/(app)/notification-center.tsx`) y en
-      `src/lib/notificationRouting.ts` — el `Record<NotificationKind, IconName>` obliga a no
-      olvidarse, `tsc` lo caza.
-- [ ] Toggle propio en Ajustes → Notificaciones si se va por kind nuevo.
+- [x] El resumen mensual llega como una notificación más del centro de notificaciones
+      (`Notification.kind = "monthly_summary"`) — no necesitó ícono ni ruta nuevos en
+      `KIND_ICON`/`notificationRouting.ts` porque no abre una pantalla propia, igual que
+      `insight`.
+- [x] Toggle propio ("Resumen mensual") en `NotificationsScreen.tsx`, junto a "Patrones de
+      gasto".
 
 ---
 
@@ -408,26 +437,30 @@ así que el tope y el registro de consumo van en código desde el día uno, no e
       `import_email`, `quick_add`, etc.), no cableados en el código de IA. **Hecho**: claves
       `ai_receipts_per_month`, `ai_parses_per_month` y `ai_chats_per_month`; `apps/ai/quotas.py`
       las lee de ahí.
-- [ ] Mostrar "te quedan N de N" en la app antes de que el usuario choque con el tope.
+- [x] Mostrar "te quedan N de N" en la app antes de que el usuario choque con el tope — en los
+      cuatro puntos de entrada (recibo, texto, voz, chat).
 
-> Aparte de la IA: a un precio de $0.99 al mes, **la comisión del procesador de pagos pesa más
-> que todos los tokens juntos** (un fijo de ~$0.30 por cargo se lleva ~un tercio del ingreso
-> mensual, contra ~6% en el anual de $9.99). Verificar la tarifa real de Wompi y empujar el plan
-> anual. La capacidad y el costo de la infraestructura están en
-> `budget-app-django/COSTOS-Y-ESCALA.md`.
+> Aparte de la IA: **la tarifa real de Wompi ya se confirmó (22-sep-2026)** — 3.5% de comisión +
+> 2% de anticipo de IVA, **sin cuota fija por cobro**. Con eso la comisión deja de pesar
+> desproporcionadamente en Plus/Pro mensual (antes se asumía un fijo de $0.30 que sí pesaba
+> ~un tercio del ingreso de $0.99). Detalle y tablas actualizadas:
+> `budget-app-django/ECONOMIA-POR-PLAN.md`. La capacidad y el costo de la infraestructura están
+> en `budget-app-django/COSTOS-Y-ESCALA.md`.
 
 ---
 
 ## Orden sugerido
 
-1. **Base de IA** (punto 1) — sin esto no hay nada de lo demás. Con el tope de consumo desde el
-   día uno, no después.
-2. **Recibos** (punto 2) — el que más se nota y el que menos piezas nuevas necesita.
-3. **Texto libre + Telegram** (punto 3) — Telegram es el canal más rápido de montar y sirve de
-   banco de pruebas del parser antes de invertir en voz.
-4. **Decisión de analítica** (punto 4) — decidir ya, implementar cuando se decida: es la que
-   menos código lleva y la que más depende de una decisión tuya.
-5. **JSON de DTE por correo** (punto 7, segunda mitad) — reusa toda la importación por correo y
-   es el que da datos más ricos.
-6. **Resumen mensual** (punto 6) y **chat** (punto 5) — los dos suben encima de todo lo
-   anterior; el chat es el de mayor superficie de riesgo, así que va al final.
+> **Actualizado 22-sep-2026** — 1 a 3 (parte de texto/voz) y 5, 6 ya están. Lo que sigue,
+> diferido por decisión y no por bloqueo técnico:
+
+1. ~~**Base de IA** (punto 1)~~ — hecho.
+2. ~~**Recibos** (punto 2)~~ — hecho.
+3. ~~**Texto libre + voz** (punto 3, salvo Telegram)~~ — hecho. **Telegram (3.1) queda
+   diferido**: era el canal más rápido de montar y el banco de pruebas del parser antes de
+   invertir en voz, pero ya no hace falta ese orden porque la voz se hizo directo.
+4. **Decisión de analítica** (punto 4) — sigue pendiente de una decisión tuya; es la que menos
+   código lleva.
+5. ~~**Resumen mensual** (punto 6) y **chat** (punto 5)~~ — hechos, sin esperar al DTE.
+6. **JSON de DTE por correo y QR** (punto 7) — diferido por decisión. Reusa toda la importación
+   por correo y sigue siendo el que daría los datos más ricos cuando se retome.
