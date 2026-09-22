@@ -1,17 +1,19 @@
 import { useEffect } from 'react';
 import { Platform, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { BrandMark } from '@/components/BrandMark';
+import { SummaryTriple } from '@/components/SummaryTriple';
 import { Button } from '@/components/ui/Button';
+import { BudgetMeter } from '@/components/ui/BudgetMeter';
+import { CategoryAvatar } from '@/components/ui/CategoryAvatar';
 import { FadeInView } from '@/components/ui/FadeInView';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { Money } from '@/components/ui/Money';
 import { Screen } from '@/components/ui/Screen';
 import { haptics } from '@/lib/haptics';
 import { FEATURE_LABEL } from '@/lib/planFeatures';
 import { useColors, type ThemeColors } from '@/theme';
-import { lighten } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 
 interface Feature {
@@ -50,49 +52,76 @@ const TRUST_ITEMS: TrustItem[] = [
   { icon: 'bolt', label: 'Listo en minutos' },
 ];
 
-/** Filas de la vista previa ilustrativa del presupuesto (dato de ejemplo, no
- * una cuenta real) -- variación tonal de UN solo acento (más el neutro
- * `border`), nunca de `income`/`expense`/`warning`: esos tres son semántica
- * fija en toda la app (ver `theme/index.ts`), no colores decorativos para
- * "dar variedad" a una demo. */
-interface MockRow {
-  label: string;
-  amount: string;
-  pct: number;
+/** Categorías de ejemplo para la vista previa -- mismos nombres/emoji que
+ * cualquier categoría real de la app (`Category.icon` es un emoji, ver
+ * `CategoryAvatar`), no una demo inventada. Ni los montos ni la fecha son de
+ * una cuenta real. */
+interface PreviewCategory {
+  name: string;
+  icon: string;
+  color: string;
+  spent: number;
+  budgeted: number;
 }
 
-const MOCK_ROWS: MockRow[] = [
-  { label: 'Comida', amount: '$186', pct: 0.62 },
-  { label: 'Transporte', amount: '$54', pct: 0.31 },
-  { label: 'Suscripciones', amount: '$41', pct: 0.88 },
+const PREVIEW_CATEGORIES: PreviewCategory[] = [
+  { name: 'Comida', icon: '🍔', color: '#E5503B', spent: 186.4, budgeted: 300 },
+  { name: 'Transporte', icon: '🚌', color: '#3B82C4', spent: 54.2, budgeted: 175 },
+  { name: 'Suscripciones', icon: '📺', color: '#8B5CF6', spent: 41, budgeted: 45 },
 ];
 
-function MockBudgetPreview({ colors }: { colors: ThemeColors }) {
+const PREVIEW_TOTAL_SPENT = 892.4;
+const PREVIEW_TOTAL_BUDGETED = 1100;
+const PREVIEW_INCOME = 1450;
+
+/**
+ * Vista previa del panel de presupuesto -- reutiliza los mismos componentes
+ * que `(app)/budgets.tsx` y el dashboard real (`SummaryTriple`,
+ * `BudgetMeter`, `CategoryAvatar`, `Money`), con la misma disposición que
+ * `BudgetProgressRow` (nombre + montos + medidor). No es una maqueta
+ * inventada para la landing: es literalmente el mismo pixel que ve cualquier
+ * cuenta real, con datos de ejemplo en vez de los tuyos.
+ */
+function DashboardPreview() {
   return (
-    <View className="bg-surface border-border gap-4 rounded-3xl border p-5">
+    <View className="bg-surface border-border gap-5 rounded-3xl border p-5">
       <View className="flex-row items-center justify-between">
         <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-          Presupuesto de este mes
+          Setiembre
         </Text>
-        <Text className="text-text-muted text-xs">Ejemplo</Text>
+        <View className="bg-surface-2 rounded-full px-2 py-0.5">
+          <Text className="text-text-muted text-[10px] uppercase tracking-wide">vista de ejemplo</Text>
+        </View>
       </View>
+
+      <SummaryTriple income={PREVIEW_INCOME} expenses={PREVIEW_TOTAL_SPENT} currency="USD" />
+
+      <View className="gap-1.5">
+        <View className="flex-row items-baseline justify-between">
+          <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+            Presupuesto del mes
+          </Text>
+          <Text className="text-text-muted text-xs">
+            <Money value={PREVIEW_TOTAL_SPENT} tone="muted" /> / <Money value={PREVIEW_TOTAL_BUDGETED} tone="muted" />
+          </Text>
+        </View>
+        <BudgetMeter spent={PREVIEW_TOTAL_SPENT} budgeted={PREVIEW_TOTAL_BUDGETED} showTicks size="lg" />
+      </View>
+
       <View className="gap-3">
-        {MOCK_ROWS.map((row, i) => (
-          <View key={row.label} className="gap-1.5">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-text-muted text-xs">{row.label}</Text>
-              <Text className="text-text text-xs" style={{ fontFamily: fonts.semibold }}>
-                {row.amount}
-              </Text>
-            </View>
-            <View className="bg-surface-2 h-2 overflow-hidden rounded-full">
-              <View
-                className="h-2 rounded-full"
-                style={{
-                  width: `${Math.round(row.pct * 100)}%`,
-                  backgroundColor: i === 0 ? colors.primary : lighten(colors.primary, 0.2 + i * 0.18),
-                }}
-              />
+        {PREVIEW_CATEGORIES.map((c) => (
+          <View key={c.name} className="flex-row gap-3">
+            <CategoryAvatar icon={c.icon} color={c.color} size={36} />
+            <View className="flex-1 gap-1.5">
+              <View className="flex-row flex-wrap items-baseline justify-between gap-x-2">
+                <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                  {c.name}
+                </Text>
+                <Text className="text-text-muted text-xs">
+                  <Money value={c.spent} tone="muted" /> / <Money value={c.budgeted} tone="muted" />
+                </Text>
+              </View>
+              <BudgetMeter spent={c.spent} budgeted={c.budgeted} size="sm" />
             </View>
           </View>
         ))}
@@ -101,32 +130,33 @@ function MockBudgetPreview({ colors }: { colors: ThemeColors }) {
   );
 }
 
-/** Tarjeta de "prueba visual": una mini maqueta de UI real (no un ícono
- * genérico) + una afirmación concreta -- el mismo recurso que usan las
- * mejores landings de producto para no quedarse en promesas abstractas,
- * adaptado a los primitivos y la paleta monocromática de esta app (nunca un
- * color vivo "porque sí"). */
-function ProofCard({ mock, title, body }: { mock: React.ReactNode; title: string; body: string }) {
+/**
+ * Vista previa de un movimiento recurrente ya registrado -- mismo layout que
+ * `TransactionRow` (avatar de categoría + título/subtítulo + monto en
+ * paréntesis + pill de estado), no un ícono genérico con una frase debajo.
+ * Demuestra el fix real de recurrentes duplicados: si ya cargaste el gasto a
+ * mano, el proceso automático no lo vuelve a crear al día siguiente.
+ */
+function RecurringPreview({ colors }: { colors: ThemeColors }) {
   return (
-    <View className="bg-surface border-border gap-4 rounded-3xl border p-5">
-      {mock}
-      <View className="gap-1">
-        <Text className="text-text text-base" style={{ fontFamily: fonts.bold }}>
-          {title}
+    <View className="bg-surface border-border flex-row items-center gap-3 rounded-3xl border p-4">
+      <CategoryAvatar icon="📺" color="#8B5CF6" size={40} />
+      <View className="flex-1 gap-0.5">
+        <Text className="text-text text-base" style={{ fontFamily: fonts.semibold }}>
+          Netflix
         </Text>
-        <Text className="text-text-muted text-sm">{body}</Text>
+        <Text className="text-text-muted text-xs">Suscripciones · cada mes</Text>
+      </View>
+      <View className="items-end gap-1">
+        <Money value={-9} tone="expense" parens className="font-semibold" style={{ fontSize: 20, lineHeight: 24 }} />
+        <View className="flex-row items-center gap-1">
+          <Icon name="check" size={10} color={colors.income} />
+          <Text style={{ color: colors.income, fontSize: 10 }}>Ya registrado, sin duplicar</Text>
+        </View>
       </View>
     </View>
   );
 }
-
-const WALLET_MOCK_ROWS = [
-  { label: 'Efectivo', amount: '$120.00' },
-  { label: 'Tarjeta BAC', amount: '-$340.00' },
-  { label: 'Ahorros', amount: '$900.00' },
-];
-
-const NET_WORTH_MOCK_BARS = [18, 30, 24, 40, 52];
 
 interface PrivacyItem {
   icon: IconName;
@@ -318,19 +348,11 @@ const FEATURES: Feature[] = [
   },
 ];
 
-interface SectionHeaderProps {
-  title: string;
-  subtitle?: string;
-}
-
-function SectionHeader({ title, subtitle }: SectionHeaderProps) {
+function SectionHeader({ title }: { title: string }) {
   return (
-    <View className="gap-1.5">
-      <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
-        {title}
-      </Text>
-      {subtitle ? <Text className="text-text-muted text-sm">{subtitle}</Text> : null}
-    </View>
+    <Text className="text-text text-lg" style={{ fontFamily: fonts.bold }}>
+      {title}
+    </Text>
   );
 }
 
@@ -341,12 +363,18 @@ function SectionHeader({ title, subtitle }: SectionHeaderProps) {
  * resto de la app a propósito: es la misma app, no un micrositio aparte con
  * su propio sistema de diseño.
  *
- * Estructura pensada para explicar todo en una sola página larga (pedido
- * explícito: "algo llamativo donde explica todo, da precios... muestra
- * bastante contenido de forma muy creativa"), pero sin salirse de la
- * identidad monocromática de la marca ni inventar datos: cada afirmación de
- * cada sección está respaldada por código real (ver comentarios puntuales
- * en `PRIVACY_ITEMS`/`PRICING` más arriba). */
+ * Página larga con mucho contenido real: cada sección respalda una
+ * afirmación con código o datos concretos (ver comentarios puntuales en
+ * `PRIVACY_ITEMS`/`PRICING`), y la vista previa de "así se ve" (
+ * `DashboardPreview`/`RecurringPreview`) reutiliza los componentes REALES
+ * del dashboard (`SummaryTriple`, `BudgetMeter`, `CategoryAvatar`, `Money`)
+ * en vez de una maqueta inventada -- lo que se ve acá es exactamente lo que
+ * se ve adentro de la app. A propósito, sin nada de esto: ni degradados de
+ * color vivo, ni "kicker" arriba del título, ni subtítulo genérico bajo
+ * cada encabezado de sección -- son recursos de landing de SaaS genérica
+ * que no aportan nada acá y sólo la hacían parecerse a cualquier otro
+ * sitio de finanzas personales.
+ */
 export function LandingScreen() {
   const colors = useColors();
 
@@ -382,160 +410,56 @@ export function LandingScreen() {
           </Text>
         </View>
 
-        <LinearGradient
-          colors={[`${colors.primary}26`, `${colors.primary}00`]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={{ marginHorizontal: -16, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}
-        >
-          <View className="gap-6">
-            <View className="gap-3">
-              <View className="bg-surface-2 border-border flex-row items-center gap-1.5 self-start rounded-full border px-3 py-1.5">
-                <Icon name="trending" color={colors.primary} size={14} />
-                <Text className="text-text-muted text-xs" style={{ fontFamily: fonts.semibold }}>
-                  Presupuesto pensado para cómo pagás de verdad
-                </Text>
-              </View>
-              <Text className="text-text text-4xl leading-[42px]" style={{ fontFamily: fonts.bold }}>
-                Presupuesto para cómo se paga de verdad
-              </Text>
-              <Text className="text-text-muted text-base">
-                Efectivo, tarjetas, cuotas y varias monedas en un solo lugar -- con presupuesto por
-                categoría, no una hoja de cálculo genérica.
-              </Text>
-            </View>
-
-            <View className="gap-3">
-              <Button
-                label="Crear cuenta gratis"
-                onPress={() => router.push('/register')}
-                accessibilityLabel="Crear una cuenta"
-              />
-              <Button
-                label="Ya tengo cuenta"
-                variant="ghost"
-                onPress={() => router.push('/login')}
-                accessibilityLabel="Ingresar a mi cuenta"
-              />
-            </View>
-
-            <View className="flex-row flex-wrap gap-x-5 gap-y-2">
-              {TRUST_ITEMS.map((item) => (
-                <View key={item.label} className="flex-row items-center gap-1.5">
-                  <Icon name={item.icon} color={colors.textMuted} size={14} />
-                  <Text className="text-text-muted text-xs">{item.label}</Text>
-                </View>
-              ))}
-            </View>
+        <View className="gap-6">
+          <View className="gap-3">
+            <Text className="text-text text-4xl leading-[42px]" style={{ fontFamily: fonts.bold }}>
+              Presupuesto para cómo se paga de verdad
+            </Text>
+            <Text className="text-text-muted text-base">
+              Efectivo, tarjetas, cuotas y varias monedas en un solo lugar -- con presupuesto por
+              categoría, no una hoja de cálculo genérica.
+            </Text>
           </View>
-        </LinearGradient>
 
-        <FadeInView index={1}>
-          <MockBudgetPreview colors={colors} />
-        </FadeInView>
+          <View className="gap-3">
+            <Button
+              label="Crear cuenta gratis"
+              onPress={() => router.push('/register')}
+              accessibilityLabel="Crear una cuenta"
+            />
+            <Button
+              label="Ya tengo cuenta"
+              variant="ghost"
+              onPress={() => router.push('/login')}
+              accessibilityLabel="Ingresar a mi cuenta"
+            />
+          </View>
+
+          <View className="flex-row flex-wrap gap-x-5 gap-y-2">
+            {TRUST_ITEMS.map((item) => (
+              <View key={item.label} className="flex-row items-center gap-1.5">
+                <Icon name={item.icon} color={colors.textMuted} size={14} />
+                <Text className="text-text-muted text-xs">{item.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
 
         <View className="gap-4">
-          <SectionHeader
-            title="Menos estrés, más claridad con tu plata"
-            subtitle="No se trata de gastar menos. Se trata de saber siempre en qué estás parado."
-          />
-          <View className="gap-4">
-            <FadeInView index={2}>
-              <ProofCard
-                title="Sabés antes de pasarte"
-                body="Los avisos de presupuesto llegan cuando una categoría se acerca al límite, no cuando ya la pasaste."
-                mock={
-                  <View className="bg-surface-2 gap-2 rounded-2xl p-4">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center gap-1.5">
-                        <Icon name="alert" size={14} color={colors.warning} />
-                        <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                          Comida
-                        </Text>
-                      </View>
-                      <Text className="text-text-muted text-xs">Quedan $34.00</Text>
-                    </View>
-                    <View className="bg-surface h-2 overflow-hidden rounded-full">
-                      <View className="h-2 rounded-full" style={{ width: '83%', backgroundColor: colors.warning }} />
-                    </View>
-                  </View>
-                }
-              />
-            </FadeInView>
-
-            <FadeInView index={3}>
-              <ProofCard
-                title="Recurrentes sin duplicados"
-                body="Si ya registraste una suscripción a mano, el proceso automático no la vuelve a crear al día siguiente."
-                mock={
-                  <View className="bg-surface-2 flex-row items-center gap-3 rounded-2xl p-4">
-                    <View className="bg-surface h-9 w-9 items-center justify-center rounded-xl">
-                      <Icon name="repeat" size={16} color={colors.textMuted} />
-                    </View>
-                    <View className="flex-1 gap-0.5">
-                      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                        Netflix
-                      </Text>
-                      <Text className="text-text-muted text-xs">Recurrente · cada mes</Text>
-                    </View>
-                    <View className="items-end gap-0.5">
-                      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                        -$9.00
-                      </Text>
-                      <View className="flex-row items-center gap-1">
-                        <Icon name="check" size={10} color={colors.income} />
-                        <Text style={{ color: colors.income, fontSize: 10 }}>Ya registrado</Text>
-                      </View>
-                    </View>
-                  </View>
-                }
-              />
-            </FadeInView>
-
-            <FadeInView index={4}>
-              <ProofCard
-                title="Todo en un solo lugar"
-                body="Efectivo, tarjetas y cuotas juntos, sin sumar a mano entre apps distintas."
-                mock={
-                  <View className="bg-surface-2 gap-2.5 rounded-2xl p-4">
-                    {WALLET_MOCK_ROWS.map((w) => (
-                      <View key={w.label} className="flex-row items-center justify-between">
-                        <Text className="text-text-muted text-xs">{w.label}</Text>
-                        <Text className="text-text text-xs" style={{ fontFamily: fonts.semibold }}>
-                          {w.amount}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                }
-              />
-            </FadeInView>
-
-            <FadeInView index={5}>
-              <ProofCard
-                title="Tu patrimonio, no sólo tu gasto"
-                body="Mirá cuánto tenés de verdad entre cuentas, ahorros y deudas -- no sólo cuánto gastaste este mes."
-                mock={
-                  <View className="bg-surface-2 flex-row items-end gap-1.5 rounded-2xl p-4" style={{ height: 64 }}>
-                    {NET_WORTH_MOCK_BARS.map((h, i) => (
-                      <View
-                        key={i}
-                        className="flex-1 rounded-md"
-                        style={{ height: h, backgroundColor: i === NET_WORTH_MOCK_BARS.length - 1 ? colors.primary : colors.border }}
-                      />
-                    ))}
-                  </View>
-                }
-              />
-            </FadeInView>
-          </View>
+          <SectionHeader title="Así se ve de verdad" />
+          <FadeInView index={1}>
+            <DashboardPreview />
+          </FadeInView>
+          <FadeInView index={2}>
+            <RecurringPreview colors={colors} />
+          </FadeInView>
         </View>
 
         <View className="gap-4">
           <SectionHeader title="Todo lo que ya hace, sin vueltas" />
           <View className="gap-4">
             {FEATURES.map((f, i) => (
-              <FadeInView key={f.title} index={i + 6}>
+              <FadeInView key={f.title} index={i + 3}>
                 <View className="flex-row gap-3">
                   <View
                     className="h-10 w-10 items-center justify-center rounded-xl"
@@ -556,10 +480,7 @@ export function LandingScreen() {
         </View>
 
         <View className="gap-4">
-          <SectionHeader
-            title="Tus finanzas son tuyas, punto"
-            subtitle="Ni ads ni venta de datos: el negocio es el plan pago, no vos."
-          />
+          <SectionHeader title="Tus finanzas son tuyas, punto" />
           <View className="gap-4">
             {PRIVACY_ITEMS.map((item) => (
               <View key={item.title} className="flex-row gap-3">
@@ -578,10 +499,7 @@ export function LandingScreen() {
         </View>
 
         <View className="gap-4">
-          <SectionHeader
-            title="Es una app web, no una descarga"
-            subtitle="Ningún app store, ninguna actualización manual."
-          />
+          <SectionHeader title="Es una app web, no una descarga" />
           <View className="gap-3">
             {WEB_ITEMS.map((item) => (
               <View key={item.title} className="bg-surface-2 gap-2 rounded-2xl p-4">
@@ -596,10 +514,7 @@ export function LandingScreen() {
         </View>
 
         <View className="gap-4">
-          <SectionHeader
-            title="Empezar toma tres pasos"
-            subtitle="Tan simple que lo configurás en el tiempo que te toma un café."
-          />
+          <SectionHeader title="Empezar toma tres pasos" />
           <View className="gap-4">
             {STEPS.map((step, i) => (
               <View key={step.title} className="flex-row gap-3">
@@ -620,10 +535,7 @@ export function LandingScreen() {
         </View>
 
         <View className="gap-4">
-          <SectionHeader
-            title="Empezá gratis. Subí de nivel cuando quieras."
-            subtitle="Te suscribís desde adentro de la app, después de crear tu cuenta -- en dólares, sin permanencia."
-          />
+          <SectionHeader title="Empezá gratis. Subí de nivel cuando quieras." />
           <View className="gap-4">
             {PRICING.map((tier) => (
               <PricingCard key={tier.name} colors={colors} tier={tier} />
