@@ -27,6 +27,10 @@ import { planFeatureLabels } from '@/lib/planFeatures';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
+/** Mismo piso que `MIN_CHARGE_CENTS` del backend: un plan de por vida con
+ * crédito nunca se cobra por menos de esto. */
+const MIN_CHARGE = 1;
+
 const PERIOD_LABEL: Record<BillingPeriod, string> = {
   monthly: 'Mensual',
   annual: 'Anual',
@@ -133,6 +137,7 @@ export default function ProScreen() {
   // Cualquier plan que no sea el default (gratis) cuenta como "pago", sin
   // asumir que el único pago se llama "pro" -- puede haber varios tiers.
   const isPaid = currentPlan != null && !currentPlan.is_default;
+  const credit = myPlan.data?.proration_credit ?? 0;
   const paidPlans = [...(plansQuery.data ?? [])]
     .filter((p) => !p.is_default)
     .sort((a, b) => cheapestActivePrice(a) - cheapestActivePrice(b));
@@ -208,6 +213,13 @@ export default function ProScreen() {
     );
   }
 
+  /** Lo que se cobra al elegir `price`: el precio, salvo un plan de por vida
+   * con crédito del plan actual (ver `Subscription.charge_cents` del backend). */
+  function chargeFor(price: PlanPrice): number {
+    if (price.billing_period !== 'lifetime' || credit <= 0) return price.amount;
+    return Math.max(price.amount - credit, Math.min(price.amount, MIN_CHARGE));
+  }
+
   /** Catálogo de planes pagos: para elegir uno desde el gratis, o para
    * cambiar de plan/período teniendo ya uno pago. */
   function renderCatalog() {
@@ -258,13 +270,16 @@ export default function ProScreen() {
               <View className="gap-2">
                 {planPrices.map((price) => {
                   const isCurrent = isCurrentPrice(plan, price);
+                  const charge = chargeFor(price);
                   return (
                     <Button
                       key={price.id}
                       label={`${PERIOD_LABEL[price.billing_period]} · ${formatMoney(
-                        price.amount,
+                        charge,
                         price.currency,
-                      )}${isCurrent ? ' · Tu plan actual' : ''}`}
+                      )}${charge < price.amount ? ' con tu crédito' : ''}${
+                        isCurrent ? ' · Tu plan actual' : ''
+                      }`}
                       variant={isCurrent ? 'ghost' : 'primary'}
                       loading={pendingPriceId === price.id}
                       disabled={isCurrent || checkout.isPending}
@@ -395,7 +410,13 @@ export default function ProScreen() {
               <>
                 <Text className="text-text-muted px-2 text-xs leading-4">
                   Para cambiar de plan, elegí otro abajo: el nuevo empieza apenas se confirme el
-                  pago y el actual deja de renovarse (sin reembolso por los días que le quedaban).
+                  pago y el actual deja de renovarse.
+                  {credit > 0
+                    ? ` Lo que no usaste del actual (${formatMoney(
+                        credit,
+                        myPlan.data?.subscription?.plan.prices?.[0]?.currency ?? 'USD',
+                      )}) se suma como días extra en un plan mensual o anual, o se descuenta del precio si elegís De por vida.`
+                    : ''}
                 </Text>
                 {renderCatalog()}
                 {error && !confirmCancel ? (

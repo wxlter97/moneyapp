@@ -1233,6 +1233,10 @@ export interface Subscription {
 export interface MyPlan {
   plan: Plan | null;
   subscription: Subscription | null;
+  /** Valor sin usar del plan pago actual (moneda del precio): al cambiar de
+   * plan se suma como tiempo extra (mensual/anual) o se descuenta del precio
+   * (de por vida). `0` sin plan pago, o en uno gratis/manual/de prueba. */
+  proration_credit?: number;
 }
 
 export interface CheckoutResult {
