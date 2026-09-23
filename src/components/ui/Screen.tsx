@@ -168,7 +168,7 @@ export function Screen({ children, edges = ['top'], noPadding = false, variant =
   // gracias a `transparentModal` (antes, con `modal`, expo-router la sacaba y
   // el panel quedaba pegado a la derecha sobre un fondo vacío).
   return (
-    <View className="flex-1 items-center justify-center p-6">
+    <View className="flex-1 items-center justify-center p-6" style={styles.overlay}>
       <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
         <Pressable
           onPress={dismissModal}
@@ -192,9 +192,27 @@ export function Screen({ children, edges = ['top'], noPadding = false, variant =
   );
 }
 
+// Estilos sólo de web (`fixed`, `backdropFilter`, `boxShadow`): los tipos de
+// React Native no los conocen, pero react-native-web los pasa tal cual al CSS.
+const webOnly = (style: Record<string, unknown>) => (Platform.OS === 'web' ? style : {});
+
 const styles = StyleSheet.create({
-  backdrop: { backgroundColor: 'rgba(0, 0, 0, 0.45)' },
+  // Por encima de todo lo que la pantalla de atrás tenga en `fixed` o con
+  // `zIndex` (la navegación lateral, el botón "+"): sin esto quedaban sin
+  // oscurecer y por encima del diálogo.
+  overlay: webOnly({ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 1000 }),
+  // Oscurecido fuerte y desenfocado: la pantalla de atrás da contexto, pero
+  // no compite con el formulario.
+  backdrop: {
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    ...webOnly({ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }),
+  },
   // Alto según el contenido, con tope en el alto de la ventana: un
   // formulario largo scrollea adentro en vez de salirse de la pantalla.
-  dialog: { width: '100%', maxWidth: DIALOG_WIDTH, maxHeight: '100%' },
+  dialog: {
+    width: '100%',
+    maxWidth: DIALOG_WIDTH,
+    maxHeight: '100%',
+    ...webOnly({ boxShadow: '0 24px 64px rgba(0, 0, 0, 0.45)' }),
+  },
 });
