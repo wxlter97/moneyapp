@@ -25,6 +25,8 @@ export interface RegisterInput {
   password: string;
   first_name?: string;
   last_name?: string;
+  /** Código de influencer del enlace con el que llegó (ver `store/referral`). */
+  ref?: string;
 }
 
 /** Resultado de `login`: o entró directo, o hace falta el código de 2FA
@@ -64,10 +66,14 @@ export async function register(input: RegisterInput): Promise<User> {
  * nativo/web y trae el `id_token`; el backend lo valida y crea la cuenta la
  * primera vez. Devuelve también `created`, para poder saludar distinto.
  */
-export async function loginWithGoogle(idToken: string): Promise<{ user: User; created: boolean }> {
+export async function loginWithGoogle(
+  idToken: string,
+  ref?: string,
+): Promise<{ user: User; created: boolean }> {
   const { data } = await api.post<GoogleLoginResponse>(
     '/auth/google/',
-    { id_token: idToken },
+    // `ref` sólo cuenta si la cuenta se crea en este login.
+    ref ? { id_token: idToken, ref } : { id_token: idToken },
     { skipWorkspace: true },
   );
   await setTokens({ access: data.access, refresh: data.refresh });
