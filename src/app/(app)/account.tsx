@@ -22,7 +22,10 @@ export default function AccountScreen() {
   const colors = useColors();
   const user = useAuthStore((s) => s.user);
   const myPlan = useMyPlan();
-  const isPro = myPlan.data?.plan?.code === 'pro';
+  // Cualquier plan que no sea el default (gratis) es pago -- hay más de uno
+  // (Plus, Pro), así que no alcanza con mirar si el code es 'pro'.
+  const currentPlan = myPlan.data?.plan;
+  const isPaid = currentPlan != null && !currentPlan.is_default;
 
   if (!user) return null;
 
@@ -64,17 +67,17 @@ export default function AccountScreen() {
           <View className="flex-row items-center gap-3">
             <View
               className="h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: isPro ? colors.primary : colors.surface2 }}
+              style={{ backgroundColor: isPaid ? colors.primary : colors.surface2 }}
             >
-              <Icon name="star" size={16} color={isPro ? '#FFFFFF' : colors.textMuted} />
+              <Icon name="star" size={16} color={isPaid ? '#FFFFFF' : colors.textMuted} />
             </View>
             <View className="flex-1">
               <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
-                {myPlan.isLoading ? 'Cargando...' : isPro ? 'Pro' : 'Gratis'}
+                {myPlan.isLoading ? 'Cargando...' : isPaid ? currentPlan!.name : 'Gratis'}
               </Text>
             </View>
             <Button
-              label={isPro ? 'Gestionar' : 'Pasate a Pro'}
+              label={isPaid ? 'Gestionar' : 'Ver planes'}
               variant="ghost"
               onPress={() => router.push('/pro')}
             />

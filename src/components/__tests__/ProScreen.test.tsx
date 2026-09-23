@@ -179,6 +179,89 @@ describe('ProScreen', () => {
     expect(mockCancel).toHaveBeenCalled();
   });
 
+  it('con un plan pago, ofrece cambiar a otro y deja deshabilitado el precio actual', async () => {
+    mockPlansQuery.mockReturnValue({ data: [FREE_PLAN, PRO_PLAN, PLUS_PLAN], isLoading: false });
+    mockMyPlanQuery.mockReturnValue(
+      myPlan({
+        plan: PLUS_PLAN,
+        subscription: {
+          id: 's1',
+          plan: PLUS_PLAN,
+          billing_period: 'monthly',
+          status: 'active',
+          provider: 'wompi',
+          is_trial: false,
+          current_period_end: '2026-12-01T00:00:00Z',
+          canceled_at: null,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }),
+    );
+    await render(<ProScreen />);
+
+    expect(screen.getByText('Tenés Plus')).toBeTruthy();
+    const current = screen.getByRole('button', { name: 'Mensual · USD 0.99 · Tu plan actual' });
+    expect(current.props.accessibilityState?.disabled).toBe(true);
+    // La prueba gratis de Pro no se ofrece teniendo ya un plan pago.
+    expect(screen.queryByRole('button', { name: /Probar gratis/ })).toBeNull();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Anual · USD 19.99' }));
+    await waitFor(() =>
+      expect(mockCheckout).toHaveBeenCalledWith(expect.objectContaining({ plan_price: 'price-annual' })),
+    );
+  });
+
+  it('con crédito del plan actual, lo explica y lo descuenta solo del precio de por vida', async () => {
+    const proWithLifetime: Plan = {
+      ...PRO_PLAN,
+      prices: [
+        ...PRO_PLAN.prices,
+        { id: 'price-life', billing_period: 'lifetime', amount: 49.99, currency: 'USD', is_active: true },
+      ],
+    };
+    mockPlansQuery.mockReturnValue({ data: [FREE_PLAN, PLUS_PLAN, proWithLifetime], isLoading: false });
+    mockMyPlanQuery.mockReturnValue(
+      myPlan({
+        plan: PLUS_PLAN,
+        proration_credit: 0.5,
+        subscription: {
+          id: 's1',
+          plan: PLUS_PLAN,
+          billing_period: 'monthly',
+          status: 'active',
+          provider: 'wompi',
+          is_trial: false,
+          current_period_end: '2026-12-01T00:00:00Z',
+          canceled_at: null,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }),
+    );
+    await render(<ProScreen />);
+
+    expect(screen.getByText(/Lo que no usaste del actual \(USD 0.50\)/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'De por vida · USD 49.49 con tu crédito' })).toBeTruthy();
+    // Mensual/anual se cobran completos: el crédito se suma como días.
+    expect(screen.getByRole('button', { name: 'Mensual · USD 1.99' })).toBeTruthy();
+  });
+
+  it('muestra las cuotas de IA con su cantidad, no la clave cruda', async () => {
+    mockPlansQuery.mockReturnValue({
+      data: [
+        FREE_PLAN,
+        { ...PRO_PLAN, features: { ai_receipts_per_month: 30, ai_chats_per_month: 0, ai_parses_per_month: null } },
+      ],
+      isLoading: false,
+    });
+    mockMyPlanQuery.mockReturnValue(myPlan());
+    await render(<ProScreen />);
+
+    expect(screen.getByText('30 recibos leídos con IA al mes')).toBeTruthy();
+    expect(screen.getByText('Carga con IA escribiendo una frase, ilimitada')).toBeTruthy();
+    expect(screen.queryByText(/ai_/)).toBeNull();
+    expect(screen.queryByText(/asistente/)).toBeNull(); // 0 = no incluido
+  });
+
   it('canjear un código válido muestra confirmación con el plan obtenido', async () => {
     mockRedeem.mockResolvedValue({
       id: 'sub-promo',

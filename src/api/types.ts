@@ -1206,7 +1206,9 @@ export interface Plan {
   max_workspaces_owned: number | null;
   max_members_per_workspace: number | null;
   max_active_recurring: number | null;
-  features: Record<string, boolean>;
+  /** Casi todo son flags (`true`/`false`), pero las cuotas de IA
+   * (`ai_*_per_month`) son un número por mes, y `null` = ilimitado. */
+  features: Record<string, boolean | number | null>;
   prices: PlanPrice[];
 }
 
@@ -1231,6 +1233,10 @@ export interface Subscription {
 export interface MyPlan {
   plan: Plan | null;
   subscription: Subscription | null;
+  /** Valor sin usar del plan pago actual (moneda del precio): al cambiar de
+   * plan se suma como tiempo extra (mensual/anual) o se descuenta del precio
+   * (de por vida). `0` sin plan pago, o en uno gratis/manual/de prueba. */
+  proration_credit?: number;
 }
 
 export interface CheckoutResult {
