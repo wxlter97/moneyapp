@@ -20,7 +20,7 @@
  * El revalidate en segundo plano de acá abajo acorta esa ventana: alcanza
  * con reabrir la PWA una vez para que quede lista la versión nueva.
  */
-const CACHE = 'budget-v1.7.0';
+const CACHE = 'budget-v1.7.1';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.png'];
 
 self.addEventListener('install', (event) => {
@@ -89,7 +89,12 @@ self.addEventListener('fetch', (event) => {
           cached ||
           fetch(request)
             .then((res) => {
-              if (res.ok) {
+              // Un asset que no existe en el hosting igual responde 200: el
+              // rewrite SPA de `_redirects` devuelve index.html. Guardar eso
+              // con cache-first dejaría el HTML pegado en lugar de la fuente
+              // o la imagen hasta el próximo cambio de `CACHE`.
+              const isHtml = (res.headers.get('content-type') || '').includes('text/html');
+              if (res.ok && !isHtml) {
                 const copy = res.clone();
                 caches.open(CACHE).then((c) => c.put(request, copy));
               }
