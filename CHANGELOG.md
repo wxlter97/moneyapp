@@ -8,6 +8,22 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.7.1] - 2026-09-23
+
+### Corregido
+- Las fuentes (Archivo, Archivo Black, JetBrains Mono) no cargaban en
+  producción desde la mudanza a Cloudflare Pages: Expo las exporta a
+  `assets/node_modules/`, y Pages no sube nada dentro de una carpeta
+  `node_modules`. El navegador recibía el `index.html` del rewrite SPA en vez
+  de la fuente. Ahora el build las mueve a `assets/vendor/`. Afectaba a
+  cualquier navegador; la PWA lo disimulaba con fuentes viejas en caché,
+  hasta que el cambio de caché de la 1.7.0 las borró.
+- El service worker ya no guarda como asset una respuesta HTML (lo que
+  devuelve el rewrite SPA para un archivo que no existe).
+- La app espera a que las fuentes estén descargadas antes de mostrarse en
+  Safari/iOS, donde `expo-font` no lo hace, y en web cada fuente tiene un
+  respaldo del sistema en vez de caer en Times.
+
 ## [1.7.0] - 2026-09-22
 
 Antes de este archivo no hubo changelog formal. Esta primera entrada

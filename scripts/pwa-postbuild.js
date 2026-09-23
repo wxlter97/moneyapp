@@ -69,6 +69,54 @@ const UMAMI_SCRIPT = UMAMI_WEBSITE_ID
   ? `    <script defer src="https://cloud.umami.is/script.js" data-website-id="${UMAMI_WEBSITE_ID}"></script>\n`
   : '';
 
+// Expo exporta los assets que vienen de dependencias (las fuentes de
+// `@expo-google-fonts/*`, los íconos de `expo-router`) a
+// `dist/assets/node_modules/...`. Cloudflare Pages NO sube nada que coincida
+// con `**/node_modules` (lista `IGNORE_LIST` del upload de wrangler), así que
+// en producción esos archivos no existían: el rewrite SPA de `_redirects`
+// respondía index.html con 200 y el navegador recibía HTML en vez de la
+// fuente. Se mueven a `assets/vendor/` y se reescriben las rutas del bundle,
+// que las trae como strings literales ("/assets/node_modules/...").
+const NODE_MODULES_PREFIX = '/assets/node_modules/';
+const VENDOR_PREFIX = '/assets/vendor/';
+
+function relocateNodeModulesAssets() {
+  const distDir = path.dirname(INDEX);
+  const from = path.join(distDir, 'assets', 'node_modules');
+  if (!fs.existsSync(from)) return;
+  const to = path.join(distDir, 'assets', 'vendor');
+  if (fs.existsSync(to)) {
+    console.error('[pwa-postbuild] ya existe', to, '— no se pisa');
+    process.exit(1);
+  }
+  fs.renameSync(from, to);
+
+  const textFiles = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(?:js|html|css|json)$/.test(entry.name)) textFiles.push(full);
+    }
+  };
+  walk(distDir);
+
+  let rewritten = 0;
+  for (const file of textFiles) {
+    const content = fs.readFileSync(file, 'utf8');
+    if (!content.includes(NODE_MODULES_PREFIX)) continue;
+    fs.writeFileSync(file, content.split(NODE_MODULES_PREFIX).join(VENDOR_PREFIX));
+    rewritten++;
+  }
+  if (rewritten === 0) {
+    // Se movió la carpeta pero nada la referenciaba con ese prefijo: el
+    // formato del bundle cambió y las rutas quedarían rotas en silencio.
+    console.error('[pwa-postbuild] se movió assets/node_modules pero no se reescribió ninguna ruta');
+    process.exit(1);
+  }
+  console.log(`[pwa-postbuild] assets/node_modules → assets/vendor (${rewritten} archivos reescritos)`);
+}
+
 // `<link rel="preload">` por cada .ttf que empaquetó Expo: sin esto el
 // navegador recién pide las fuentes cuando el bundle de JS (~3 MB) ya bajó,
 // corrió y registró los `@font-face` -- y la app espera esas fuentes antes de
@@ -105,6 +153,8 @@ function main() {
     console.log('[pwa-postbuild] ya inyectado, nada que hacer.');
     return;
   }
+  relocateNodeModulesAssets();
+  html = fs.readFileSync(INDEX, 'utf8');
   html = html.replace('<html lang="en">', '<html lang="es">');
   // El <title> que pone Expo por defecto no dice nada (ver README) -- se
   // reemplaza, no se duplica.
