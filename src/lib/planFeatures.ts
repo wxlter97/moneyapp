@@ -48,6 +48,36 @@ export const FEATURE_LABEL: Record<FeatureKey, string> = {
   net_worth: 'Patrimonio neto',
 };
 
+/** Cuotas mensuales de IA (`apps/ai/quotas.py`): en `Plan.features` son un
+ * número, no un flag -- se muestran con la cantidad, no como una clave cruda. */
+const AI_LIMIT_LABEL: Record<string, (n: number | null) => string> = {
+  ai_receipts_per_month: (n) =>
+    n == null ? 'Lectura de recibos con IA ilimitada' : `${n} recibos leídos con IA al mes`,
+  ai_parses_per_month: (n) =>
+    n == null
+      ? 'Carga con IA escribiendo una frase, ilimitada'
+      : `${n} movimientos cargados con IA escribiendo una frase, al mes`,
+  ai_chats_per_month: (n) =>
+    n == null ? 'Consultas al asistente de IA ilimitadas' : `${n} consultas al asistente de IA al mes`,
+};
+
+/** Renglones de beneficios de un plan para el catálogo (`pro.tsx`): los flags
+ * en `true` y las cuotas de IA mayores a 0 (o ilimitadas). Una clave que la
+ * app todavía no conoce se omite en vez de mostrarse cruda. */
+export function planFeatureLabels(features: Record<string, boolean | number | null> | undefined): string[] {
+  const labels: string[] = [];
+  const aiLabels: string[] = [];
+  for (const [key, value] of Object.entries(features ?? {})) {
+    const aiLabel = AI_LIMIT_LABEL[key];
+    if (aiLabel) {
+      if (value === null || (typeof value === 'number' && value > 0)) aiLabels.push(aiLabel(value));
+    } else if (value === true && key in FEATURE_LABEL) {
+      labels.push(FEATURE_LABEL[key as FeatureKey]);
+    }
+  }
+  return [...labels, ...aiLabels];
+}
+
 /**
  * Desde qué plan se desbloquea cada feature -- estático a propósito (mismo
  * criterio que `seed_billing_plans.py` en el backend: es una decisión de

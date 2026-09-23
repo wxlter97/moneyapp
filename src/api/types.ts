@@ -1206,7 +1206,9 @@ export interface Plan {
   max_workspaces_owned: number | null;
   max_members_per_workspace: number | null;
   max_active_recurring: number | null;
-  features: Record<string, boolean>;
+  /** Casi todo son flags (`true`/`false`), pero las cuotas de IA
+   * (`ai_*_per_month`) son un número por mes, y `null` = ilimitado. */
+  features: Record<string, boolean | number | null>;
   prices: PlanPrice[];
 }
 

@@ -23,7 +23,7 @@ import { ErrorState, LoadingState } from '@/components/ui/states';
 import { formatLongDateTime } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
 import { formatMoney } from '@/lib/money';
-import { FEATURE_LABEL, type FeatureKey } from '@/lib/planFeatures';
+import { planFeatureLabels } from '@/lib/planFeatures';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -197,6 +197,89 @@ export default function ProScreen() {
     }
   }
 
+  /** El precio que ya está pagando: se muestra deshabilitado en vez de
+   * ofrecer volver a comprarlo. */
+  function isCurrentPrice(plan: Plan, price: PlanPrice): boolean {
+    const sub = myPlan.data?.subscription;
+    return (
+      isPaid &&
+      plan.id === currentPlan?.id &&
+      (sub?.billing_period == null || sub.billing_period === price.billing_period)
+    );
+  }
+
+  /** Catálogo de planes pagos: para elegir uno desde el gratis, o para
+   * cambiar de plan/período teniendo ya uno pago. */
+  function renderCatalog() {
+    return plansQuery.isLoading ? (
+      <Card title="Elegí tu plan">
+        <LoadingState />
+      </Card>
+    ) : paidPlans.length === 0 ? (
+      <Card title="Elegí tu plan">
+        <Text className="text-text-muted text-sm">
+          Todavía no hay planes configurados.
+        </Text>
+      </Card>
+    ) : (
+      paidPlans.map((plan) => {
+        const planFeatures = planFeatureLabels(plan.features);
+        const planPrices = (plan.prices ?? []).filter((p) => p.is_active);
+        return (
+          <Card key={plan.id} title={plan.name}>
+            {planFeatures.length > 0 ? (
+              <View className="mb-3 gap-2.5">
+                {planFeatures.map((label) => (
+                  <View key={label} className="flex-row items-center gap-2">
+                    <Icon name="check" size={14} color={colors.income} />
+                    <Text className="text-text-muted flex-1 text-sm">{label}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {plan.trial_days && !isPaid ? (
+              <View className="mb-2">
+                <Button
+                  label={`Probar gratis ${plan.trial_days} día${
+                    plan.trial_days === 1 ? '' : 's'
+                  }`}
+                  variant="ghost"
+                  loading={pendingTrialPlanId === plan.id}
+                  disabled={startTrial.isPending}
+                  onPress={() => onStartTrial(plan)}
+                />
+              </View>
+            ) : null}
+            {planPrices.length === 0 ? (
+              <Text className="text-text-muted text-sm">
+                Todavía no hay precios configurados.
+              </Text>
+            ) : (
+              <View className="gap-2">
+                {planPrices.map((price) => {
+                  const isCurrent = isCurrentPrice(plan, price);
+                  return (
+                    <Button
+                      key={price.id}
+                      label={`${PERIOD_LABEL[price.billing_period]} · ${formatMoney(
+                        price.amount,
+                        price.currency,
+                      )}${isCurrent ? ' · Tu plan actual' : ''}`}
+                      variant={isCurrent ? 'ghost' : 'primary'}
+                      loading={pendingPriceId === price.id}
+                      disabled={isCurrent || checkout.isPending}
+                      onPress={() => onSubscribe(price)}
+                    />
+                  );
+                })}
+              </View>
+            )}
+          </Card>
+        );
+      })
+    );
+  }
+
   return (
     <Screen edges={['top', 'bottom']}>
       <ModalHeader title="Pro" />
@@ -306,75 +389,22 @@ export default function ProScreen() {
                   />
                 )}
               </Card>
+            ) : null}
+
+            {isPaid ? (
+              <>
+                <Text className="text-text-muted px-2 text-xs leading-4">
+                  Para cambiar de plan, elegí otro abajo: el nuevo empieza apenas se confirme el
+                  pago y el actual deja de renovarse (sin reembolso por los días que le quedaban).
+                </Text>
+                {renderCatalog()}
+                {error && !confirmCancel ? (
+                  <Text className="text-expense px-2 text-xs">{error}</Text>
+                ) : null}
+              </>
             ) : (
               <>
-                {plansQuery.isLoading ? (
-                  <Card title="Elegí tu plan">
-                    <LoadingState />
-                  </Card>
-                ) : paidPlans.length === 0 ? (
-                  <Card title="Elegí tu plan">
-                    <Text className="text-text-muted text-sm">
-                      Todavía no hay planes configurados.
-                    </Text>
-                  </Card>
-                ) : (
-                  paidPlans.map((plan) => {
-                    const planFeatures = Object.keys(plan.features ?? {}).filter(
-                      (key) => plan.features[key],
-                    );
-                    const planPrices = (plan.prices ?? []).filter((p) => p.is_active);
-                    return (
-                      <Card key={plan.id} title={plan.name}>
-                        {planFeatures.length > 0 ? (
-                          <View className="mb-3 gap-2.5">
-                            {planFeatures.map((key) => (
-                              <View key={key} className="flex-row items-center gap-2">
-                                <Icon name="check" size={14} color={colors.income} />
-                                <Text className="text-text-muted flex-1 text-sm">
-                                  {FEATURE_LABEL[key as FeatureKey] ?? key}
-                                </Text>
-                              </View>
-                            ))}
-                          </View>
-                        ) : null}
-                        {plan.trial_days ? (
-                          <View className="mb-2">
-                            <Button
-                              label={`Probar gratis ${plan.trial_days} día${
-                                plan.trial_days === 1 ? '' : 's'
-                              }`}
-                              variant="ghost"
-                              loading={pendingTrialPlanId === plan.id}
-                              disabled={startTrial.isPending}
-                              onPress={() => onStartTrial(plan)}
-                            />
-                          </View>
-                        ) : null}
-                        {planPrices.length === 0 ? (
-                          <Text className="text-text-muted text-sm">
-                            Todavía no hay precios configurados.
-                          </Text>
-                        ) : (
-                          <View className="gap-2">
-                            {planPrices.map((price) => (
-                              <Button
-                                key={price.id}
-                                label={`${PERIOD_LABEL[price.billing_period]} · ${formatMoney(
-                                  price.amount,
-                                  price.currency,
-                                )}`}
-                                loading={pendingPriceId === price.id}
-                                disabled={checkout.isPending}
-                                onPress={() => onSubscribe(price)}
-                              />
-                            ))}
-                          </View>
-                        )}
-                      </Card>
-                    );
-                  })
-                )}
+                {renderCatalog()}
                 {error ? <Text className="text-expense px-2 text-xs">{error}</Text> : null}
 
                 <Text className="text-text-muted px-2 text-center text-xs leading-4">
