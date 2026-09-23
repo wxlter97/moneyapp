@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { Gesture, type GestureType } from 'react-native-gesture-handler';
 import Animated, {
@@ -23,8 +23,9 @@ interface ScreenProps {
   /**
    * 'page' (default): pantalla completa, igual en mobile y desktop, columna
    * centrada de hasta 560px -- lo que ya hacía este componente. 'drawer': en
-   * desktop se muestra como panel lateral (ancho fijo, entra desde la
-   * derecha) en vez de tomar toda la pantalla -- para formularios rápidos de
+   * desktop se muestra como diálogo centrado sobre la pantalla de atrás
+   * oscurecida (la ruta usa `transparentModal` en web, ver `DIALOG_OPTIONS`
+   * en `(app)/_layout.tsx`) en vez de tomar toda la pantalla -- para formularios rápidos de
    * alta/edición (nueva transacción, cuota, recurrente...), no para
    * pantallas con más contenido (Herramientas, un estado de cuenta) ni para
    * login/register, que se quedan en 'page' (hallazgo de la auditoría de
@@ -41,6 +42,13 @@ interface ScreenProps {
 }
 
 const DismissGestureContext = createContext<GestureType | null>(null);
+const DialogContext = createContext(false);
+
+/** `true` dentro del diálogo centrado de desktop (`variant="drawer"`): ahí
+ * `ModalHeader` no muestra la manija de arrastre, que no hace nada. */
+export function useIsDialog(): boolean {
+  return useContext(DialogContext);
+}
 
 /**
  * Gesto de "arrastrar para cerrar", expuesto para que `ModalHeader` lo
@@ -56,11 +64,9 @@ export function useDismissGesture(): GestureType | null {
 /** Cuánto hay que arrastrar (px) para que soltar cierre el modal. */
 const DISMISS_THRESHOLD = 110;
 
-/** Ancho del panel en modo 'drawer' -- suficiente para un formulario de
- * alta/edición sin sentirse angosto, bastante menos que el máximo de 560 de
- * una pantalla 'page' completa (a esta escala, sigue leyéndose como un panel
- * lateral, no como la pantalla entera corrida a la derecha). */
-const DRAWER_WIDTH = 440;
+/** Ancho máximo del diálogo en modo 'drawer' -- suficiente para un formulario
+ * de alta/edición sin sentirse angosto. */
+const DIALOG_WIDTH = 480;
 
 /**
  * Contenedor de pantalla: fondo del tema + columna centrada con ancho máximo
@@ -111,15 +117,17 @@ export function Screen({ children, edges = ['top'], noPadding = false, variant =
 
   const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
 
-  // Entrada del panel lateral: desliza desde la derecha en vez de aparecer
-  // de golpe -- mismo lenguaje de movimiento que la hoja modal de mobile
-  // (`slide_from_right` del Stack), sólo que acá es el panel, no toda la
-  // pantalla.
-  const enterX = useSharedValue(isDrawer ? DRAWER_WIDTH : 0);
+  // Entrada del diálogo: aparece con un fundido y un leve zoom en vez de
+  // golpe (la ruta no tiene animación propia en web, ver `DIALOG_OPTIONS`).
+  const enter = useSharedValue(isDrawer ? 0 : 1);
   useEffect(() => {
-    if (isDrawer) enterX.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.cubic) });
-  }, [isDrawer, enterX]);
-  const drawerStyle = useAnimatedStyle(() => ({ transform: [{ translateX: enterX.value }] }));
+    if (isDrawer) enter.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.cubic) });
+  }, [isDrawer, enter]);
+  const backdropStyle = useAnimatedStyle(() => ({ opacity: enter.value }));
+  const dialogStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [{ scale: 0.97 + enter.value * 0.03 }],
+  }));
 
   // Escape para cerrar -- sólo tiene sentido en web (el resto de las formas
   // de cerrar en desktop -- click en el backdrop, la X -- ya andan igual que
@@ -156,26 +164,37 @@ export function Screen({ children, edges = ['top'], noPadding = false, variant =
 
   if (!isDrawer) return content;
 
-  // El panel lateral no dimeriza la pantalla anterior de verdad -- en web,
-  // `expo-router` desmonta la ruta anterior en vez de dejarla viva detrás
-  // (así es como funciona un modal nativo en iOS, no como navega la versión
-  // web) -- así que "atrás" no es visible ni dimerizable. Lo que sí se
-  // resuelve es el problema real: el formulario ya no ocupa el ancho
-  // completo con casi todo vacío, vive en una columna fija a la derecha.
+  // Diálogo centrado sobre la pantalla de atrás, que sigue montada y visible
+  // gracias a `transparentModal` (antes, con `modal`, expo-router la sacaba y
+  // el panel quedaba pegado a la derecha sobre un fondo vacío).
   return (
-    <View className="flex-1 flex-row bg-bg">
-      <Pressable
-        onPress={dismissModal}
-        // Sin accessibilityRole/Label a propósito: `ModalHeader` ya expone
-        // un botón "Cerrar" real (foco de teclado, lector de pantalla) --
-        // duplicar la misma etiqueta acá sólo confundiría qué botón es cuál.
-        // Este backdrop es puntero-only (mouse/touch); quien navega por
-        // teclado ya tiene Escape (ver el `useEffect` de arriba) y la X.
-        className="flex-1"
-      />
-      <Animated.View style={[drawerStyle, { width: DRAWER_WIDTH }]} className="border-l border-border">
-        {content}
+    <View className="flex-1 items-center justify-center p-6">
+      <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
+        <Pressable
+          onPress={dismissModal}
+          // Sin accessibilityRole/Label a propósito: `ModalHeader` ya expone
+          // un botón "Cerrar" real (foco de teclado, lector de pantalla) --
+          // duplicar la misma etiqueta acá sólo confundiría qué botón es cuál.
+          // Este backdrop es puntero-only (mouse/touch); quien navega por
+          // teclado ya tiene Escape (ver el `useEffect` de arriba) y la X.
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View
+        role="dialog"
+        aria-modal
+        style={[styles.dialog, dialogStyle]}
+        className="overflow-hidden rounded-2xl border border-border bg-bg"
+      >
+        <DialogContext.Provider value>{content}</DialogContext.Provider>
       </Animated.View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  backdrop: { backgroundColor: 'rgba(0, 0, 0, 0.45)' },
+  // Alto según el contenido, con tope en el alto de la ventana: un
+  // formulario largo scrollea adentro en vez de salirse de la pantalla.
+  dialog: { width: '100%', maxWidth: DIALOG_WIDTH, maxHeight: '100%' },
+});

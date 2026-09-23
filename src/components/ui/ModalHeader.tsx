@@ -4,7 +4,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { IconButton } from './IconButton';
-import { useDismissGesture } from './Screen';
+import { useDismissGesture, useIsDialog } from './Screen';
 import { dismissModal } from '@/lib/modal';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -20,6 +20,7 @@ export function ModalHeader({ title, right }: { title: string; right?: ReactNode
   const press = useSharedValue(1);
   const enter = useSharedValue(0);
   const dismissGesture = useDismissGesture();
+  const isDialog = useIsDialog();
 
   useEffect(() => {
     enter.value = withTiming(1, { duration: 260 });
@@ -46,7 +47,14 @@ export function ModalHeader({ title, right }: { title: string; right?: ReactNode
 
   return (
     <View>
-      {dismissGesture ? <GestureDetector gesture={dismissGesture}>{handle}</GestureDetector> : handle}
+      {/* En el diálogo de desktop no hay nada que arrastrar: sin manija. */}
+      {isDialog ? (
+        <View className="pt-3" />
+      ) : dismissGesture ? (
+        <GestureDetector gesture={dismissGesture}>{handle}</GestureDetector>
+      ) : (
+        handle
+      )}
       <Animated.View style={headerStyle}>
         <View className="flex-row items-center justify-between py-2">
           <Text

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { useEffect, useState, type ComponentProps } from 'react';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import { Redirect, router, Stack } from 'expo-router';
 
 import { Button } from '@/components/ui/Button';
@@ -18,6 +18,34 @@ import { useAuthStore } from '@/store/auth';
 import { useSecurityStore } from '@/store/security';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
+
+// Al recargar (o entrar por un enlace directo) estando en un formulario de
+// `DIALOG_OPTIONS`, monta las tabs detrás: sin esto el diálogo quedaba sobre
+// un fondo vacío, y cerrarlo no tenía a dónde volver.
+export const unstable_settings = { anchor: '(tabs)' };
+
+type StackOptions = ComponentProps<typeof Stack.Screen>['options'] & object;
+
+/**
+ * Formularios rápidos de alta/edición (`<Screen variant="drawer">`): en web se
+ * presentan como `transparentModal` para que la pantalla de atrás siga visible
+ * y montada detrás -- con `modal`, expo-router la saca y el diálogo quedaba
+ * sobre un fondo vacío. En desktop `Screen` los dibuja como un diálogo
+ * centrado con fondo oscurecido; en web angosto, a pantalla completa (opaco).
+ * Ver https://docs.expo.dev/router/advanced/web-modals/.
+ */
+const DIALOG_OPTIONS: StackOptions = {
+  presentation: Platform.OS === 'web' ? 'transparentModal' : 'modal',
+  animation: Platform.OS === 'web' ? 'none' : undefined,
+  headerShown: false,
+};
+
+/** Igual que `DIALOG_OPTIONS` en web, pero sin tocar nativo: para las rutas
+ * con `variant="drawer"` que en el teléfono se abren como pantalla normal. */
+const WEB_DIALOG_OPTIONS: StackOptions = {
+  presentation: Platform.OS === 'web' ? 'transparentModal' : undefined,
+  animation: Platform.OS === 'web' ? 'none' : undefined,
+};
 
 function Centered({ children }: { children: React.ReactNode }) {
   return <View className="flex-1 items-center justify-center bg-bg px-8 gap-4">{children}</View>;
@@ -171,19 +199,19 @@ export default function AppLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="transaction/new"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="transaction/[id]"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="wallet/new"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="wallet/[id]"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="categories"
@@ -191,7 +219,7 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="budget-edit"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="recurring"
@@ -199,11 +227,11 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="recurring/new"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="recurring/[id]"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="installments"
@@ -211,11 +239,11 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="installment/new"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="installment/[id]"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="export"
@@ -227,11 +255,11 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="category/new"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="category/[id]"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
         <Stack.Screen
           name="imports"
@@ -291,8 +319,11 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="split-transaction"
-          options={{ presentation: 'modal', headerShown: false }}
+          options={DIALOG_OPTIONS}
         />
+        <Stack.Screen name="split-people" options={WEB_DIALOG_OPTIONS} />
+        <Stack.Screen name="support-new" options={WEB_DIALOG_OPTIONS} />
+        <Stack.Screen name="support-ticket" options={WEB_DIALOG_OPTIONS} />
         <Stack.Screen
           name="trends"
           options={{ presentation: 'modal', headerShown: false }}
