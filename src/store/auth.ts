@@ -13,6 +13,7 @@ import { pushDevices } from '@/api/resources';
 import type { User } from '@/api/types';
 import { getCachedPushDevice, clearCachedPushDevice } from '@/lib/notifications';
 import { unsubscribeWebPush } from '@/lib/webPush';
+import { getPendingReferral, useReferralStore } from './referral';
 import { useWorkspaceStore } from './workspace';
 
 type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
@@ -103,12 +104,17 @@ export const useAuthStore = create<AuthState>()((set) => ({
   cancelTwoFactor: () => set({ pendingMfaToken: null }),
 
   signUp: async (input) => {
-    const user = await authApi.register(input);
+    const ref = getPendingReferral() ?? undefined;
+    const user = await authApi.register(ref ? { ...input, ref } : input);
+    useReferralStore.getState().clear();
     set({ status: 'authenticated', user });
   },
 
   signInWithGoogle: async (idToken) => {
-    const { user, created } = await authApi.loginWithGoogle(idToken);
+    const { user, created } = await authApi.loginWithGoogle(idToken, getPendingReferral() ?? undefined);
+    // Una cuenta que ya existía no se atribuye: el código se guarda por si
+    // en este dispositivo se crea otra.
+    if (created) useReferralStore.getState().clear();
     set({ status: 'authenticated', user });
     return { created };
   },

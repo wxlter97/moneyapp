@@ -11,6 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { colorScheme, vars } from 'nativewind';
 import { useFonts } from 'expo-font';
+import * as ExpoLinking from 'expo-linking';
 
 import { queryClient } from '@/lib/queryClient';
 import {
@@ -27,6 +28,7 @@ import { resolveAccent, hexToRgbTriplet } from '@/theme/accents';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
 import { useAccentStore } from '@/store/accent';
+import { captureReferralFromUrl } from '@/store/referral';
 import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { SplashOverlay } from '@/components/SplashOverlay';
 import { SnackbarHost } from '@/components/ui/Snackbar';
@@ -93,6 +95,13 @@ export default function RootLayout() {
   // (`Appearance.addChangeListener` sí lo hace, y es lo mismo que usa por
   // dentro; posible desajuste de instancias entre bundlers). Suscripción
   // manual, misma API, funciona en las tres plataformas.
+  // Enlaces de influencers (`?ref=ANA30`): el de arranque y cualquiera que
+  // abra la app ya abierta. Se usa recién al crear la cuenta.
+  const incomingUrl = ExpoLinking.useLinkingURL();
+  useEffect(() => {
+    captureReferralFromUrl(incomingUrl);
+  }, [incomingUrl]);
+
   const [systemScheme, setSystemScheme] = useState(() => Appearance.getColorScheme());
   useEffect(() => {
     const sub = Appearance.addChangeListener(({ colorScheme: next }) => setSystemScheme(next));

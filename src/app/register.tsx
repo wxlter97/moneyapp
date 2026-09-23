@@ -9,6 +9,7 @@ import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { errorMessage, fieldErrors } from '@/api/errors';
 import { useAuthStore } from '@/store/auth';
+import { getPendingReferral, useReferralStore } from '@/store/referral';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -16,6 +17,7 @@ export default function RegisterScreen() {
   const colors = useColors();
   const status = useAuthStore((s) => s.status);
   const signUp = useAuthStore((s) => s.signUp);
+  const referral = useReferralStore((s) => getPendingReferral(s));
 
   const [form, setForm] = useState({
     username: '',
@@ -121,6 +123,13 @@ export default function RegisterScreen() {
               </View>
             </View>
           </View>
+
+          {referral ? (
+            <Text className="text-text-muted text-sm">
+              Código de invitación <Text className="text-text" style={{ fontFamily: fonts.semibold }}>{referral}</Text>:
+              se aplica solo al crear tu cuenta.
+            </Text>
+          ) : null}
 
           {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
 
