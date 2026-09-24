@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
-import { useCreditCardStatement, useWallet } from '@/api/queries';
+import { useCreditCardStatement, useWallet, useWallets } from '@/api/queries';
 import type { StatementInstallmentLine } from '@/api/types';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { DateField } from '@/components/ui/DateField';
 import { Money } from '@/components/ui/Money';
@@ -28,6 +29,7 @@ export default function StatementDetailScreen() {
   const [asOf, setAsOf] = useState(todayISO());
 
   const walletQ = useWallet(id);
+  const walletsQ = useWallets();
   const stmtQ = useCreditCardStatement(id, asOf);
   const refresh = usePullRefresh(stmtQ.isFetching && !stmtQ.isLoading, () => {
     walletQ.refetch();
@@ -39,6 +41,30 @@ export default function StatementDetailScreen() {
   const currency = wallet?.currency ?? 'USD';
 
   const notDue = data ? toNumber(data.installments_not_due) : 0;
+  const owes = data ? toNumber(data.total_due) > 0.005 : false;
+  const isToday = asOf === todayISO();
+  // De dónde sale el pago: la cartera de gasto por defecto, o la primera
+  // cuenta bancaria en la misma moneda. Sin ninguna, el formulario igual
+  // abre con la tarjeta como destino y se elige el origen a mano.
+  const spending = (walletsQ.data ?? []).filter(
+    (w) => w.purpose === 'spending' && w.currency === currency && w.id !== id && !w.is_archived,
+  );
+  const payFrom = spending.find((w) => w.is_default) ?? spending.find((w) => w.kind === 'bank') ?? spending[0];
+
+  function registerPayment() {
+    if (!data) return;
+    router.push({
+      pathname: '/transaction/new',
+      params: {
+        prefillType: 'transfer',
+        prefillWallet: payFrom?.id ?? id,
+        prefillToWallet: id,
+        prefillAmount: toNumber(data.total_due).toFixed(2),
+        prefillDate: todayISO(),
+        prefillNote: `Pago de ${wallet?.name ?? 'tarjeta'}`,
+      },
+    });
+  }
 
   return (
     <Screen edges={['top', 'bottom']}>
@@ -65,6 +91,21 @@ export default function StatementDetailScreen() {
                 Corte del {formatLongDate(data.cutoff_date)}
                 {data.payment_due_date ? ` · vence el ${formatShortDate(data.payment_due_date)}` : ''}
               </Text>
+              {owes && data.payment_due_date ? (
+                <Text className="text-text mt-2 text-center text-sm">
+                  Pagá este monto antes del {formatShortDate(data.payment_due_date)} para no pagar
+                  intereses.
+                </Text>
+              ) : null}
+              <Text className="text-text-muted mt-2 text-center text-xs">
+                Próximo corte: {formatShortDate(data.next_cutoff_date)}. Lo que compres después de
+                esa fecha entra al estado siguiente.
+              </Text>
+              {owes && isToday ? (
+                <View className="mt-3 w-full">
+                  <Button label="Registrar el pago" onPress={registerPayment} />
+                </View>
+              ) : null}
             </Card>
 
             <Card title="Cómo se calcula">

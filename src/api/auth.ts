@@ -103,7 +103,9 @@ export async function me(): Promise<User> {
 
 /** PATCH /auth/me/ — hoy sólo lo usa el tour de bienvenida
  * (`(app)/onboarding.tsx`) para marcarse visto/saltado. */
-export async function updateMe(input: Partial<Pick<User, 'onboarding_completed'>>): Promise<User> {
+export async function updateMe(
+  input: Partial<Pick<User, 'onboarding_completed' | 'first_name' | 'last_name'>>,
+): Promise<User> {
   const { data } = await api.patch<User>('/auth/me/', input, { skipWorkspace: true });
   return data;
 }

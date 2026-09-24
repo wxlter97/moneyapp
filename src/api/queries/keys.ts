@@ -86,6 +86,11 @@ export const qk = {
       ['ws', ws, 'reports', 'category-trends', months] as const,
     reportScheduled: (range?: { since?: string; until?: string }) =>
       ['ws', ws, 'reports', 'scheduled', range ?? {}] as const,
+    reportMembers: (year: number, month: number) =>
+      ['ws', ws, 'reports', 'members', year, month] as const,
+    reportCanAfford: (amount: string, category?: string) =>
+      ['ws', ws, 'reports', 'can-afford', amount, category ?? null] as const,
+    walletContributions: (id: string) => ['ws', ws, 'wallet', id, 'contributions'] as const,
 
     loyaltyMovements: (wallet?: string) => ['ws', ws, 'loyalty-movements', wallet ?? 'all'] as const,
     loyaltyEarnings: (wallet?: string) => ['ws', ws, 'loyalty-earnings', wallet ?? 'all'] as const,

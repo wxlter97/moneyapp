@@ -185,6 +185,24 @@ export default function WorkspacesScreen() {
                     </Pressable>
                   )}
 
+                  {!isEditing && !isOwner ? (
+                    <View className="mb-3 flex-row gap-2">
+                      <Pressable
+                        onPress={() => {
+                          haptics.tap();
+                          setActiveId(w.id);
+                          router.push('/members');
+                        }}
+                        className="flex-1 items-center rounded-full border border-border py-2 active:opacity-70"
+                        accessibilityRole="button"
+                      >
+                        <Text className="text-text text-xs" style={{ fontFamily: fonts.semibold }}>
+                          Miembros o salir
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
+
                   {!isEditing && isOwner ? (
                     isConfirmingDelete ? (
                       <View className="mb-3 gap-2 rounded-2xl bg-expense/10 p-3">

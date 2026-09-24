@@ -42,6 +42,8 @@ interface AuthState {
   /** Termina o saltea el tour de bienvenida (`(app)/onboarding.tsx`) -- lo
    * marca en el backend para que no dependa del dispositivo. */
   markOnboardingCompleted: () => Promise<void>;
+  /** Nombre visible: es el que ven los demás miembros de un presupuesto compartido. */
+  updateName: (firstName: string, lastName: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -126,6 +128,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   markOnboardingCompleted: async () => {
     const user = await authApi.updateMe({ onboarding_completed: true });
+    set({ user });
+  },
+
+  updateName: async (firstName, lastName) => {
+    const user = await authApi.updateMe({ first_name: firstName, last_name: lastName });
     set({ user });
   },
 

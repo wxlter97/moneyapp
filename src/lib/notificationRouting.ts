@@ -20,10 +20,24 @@ export function routeForNotification(data: Record<string, unknown>): Href {
       return '/invitations';
     case 'email_import_pending':
       return '/imports';
+    case 'recurring_due':
+      return '/recurring';
+    case 'installment_due':
+      return '/installments';
+    case 'statement_due':
+    case 'statement_cutoff':
+      return typeof data.wallet === 'string' ? `/statement/${data.wallet}` : '/statements';
+    case 'low_balance':
+      return typeof data.wallet === 'string' ? `/wallet/${data.wallet}` : '/wallets';
+    case 'subscription_renewal_due':
+    case 'subscription_expired':
+      return '/pro';
     case 'insight':
-      // Sin pantalla propia todavía (ver `apps.reports.services.
-      // behavior_insights` en el backend) -- el dashboard ya muestra el
-      // resumen de gasto que le da contexto al patrón detectado.
+    case 'monthly_summary':
+    case 'weekly_summary':
+      // Sin pantalla propia (ver `apps.reports.services.behavior_insights` en
+      // el backend) -- el dashboard ya muestra el resumen de gasto que le da
+      // contexto.
       return '/dashboard';
     default:
       return '/dashboard';
