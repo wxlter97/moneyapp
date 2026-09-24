@@ -3,10 +3,14 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import {
+  useCancelWorkspaceInvitation,
   useInviteMember,
+  useLeaveWorkspace,
   useMemberships,
   useRemoveMembership,
+  useResendWorkspaceInvitation,
   useUpdateMembershipRole,
+  useWorkspaceInvitations,
 } from '@/api/queries';
 import { isInvitation } from '@/api/resources';
 import { errorMessage } from '@/api/errors';
@@ -19,8 +23,10 @@ import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { formatDateTime } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
 import { isPlanUpgradeError } from '@/lib/planErrors';
+import { notifyError } from '@/lib/notifyError';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { useAuthStore } from '@/store/auth';
@@ -28,8 +34,8 @@ import { useWorkspaceStore } from '@/store/workspace';
 
 /**
  * Miembros del workspace activo: quién está adentro, invitar por correo
- * (solo el dueño), cambiar rol y quitar a alguien. El backend ya soportaba
- * todo esto (`/memberships/`) — esta pantalla era la única pieza que faltaba.
+ * (solo el dueño), cambiar rol y quitar a alguien, las invitaciones que
+ * todavía nadie aceptó (reenviar / cancelar) y salir del presupuesto.
  */
 export default function MembersScreen() {
   const colors = useColors();
@@ -38,23 +44,46 @@ export default function MembersScreen() {
     s.workspaces.find((w) => w.id === s.activeId),
   );
   const isOwner = activeWorkspace?.role === 'owner';
+  const otherWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id !== s.activeId));
 
   const membershipsQ = useMemberships();
   const invite = useInviteMember();
   const updateRole = useUpdateMembershipRole();
   const remove = useRemoveMembership();
+  const invitationsQ = useWorkspaceInvitations();
+  const cancelInvitation = useCancelWorkspaceInvitation();
+  const resendInvitation = useResendWorkspaceInvitation();
+  const leave = useLeaveWorkspace();
 
   const [email, setEmail] = useState('');
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSentTo, setInviteSentTo] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  // Resultado del último reenviar/cancelar, por invitación: el backend
+  // limita el reenvío a uno por minuto y ese mensaje hay que mostrarlo.
+  const [invitationNote, setInvitationNote] = useState<{ id: string; text: string } | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
 
   const members = membershipsQ.data ?? [];
+  const pendingInvitations = invitationsQ.data ?? [];
+  const ownerCount = members.filter((m) => m.role === 'owner').length;
   const refresh = usePullRefresh(
-    membershipsQ.isFetching && !membershipsQ.isLoading,
-    () => membershipsQ.refetch(),
+    (membershipsQ.isFetching && !membershipsQ.isLoading) ||
+      (invitationsQ.isFetching && !invitationsQ.isLoading),
+    () => Promise.all([membershipsQ.refetch(), invitationsQ.refetch()]),
   );
+
+  // Por qué no se puede salir, o null si se puede. Las mismas reglas que
+  // valida `leave` en el backend, para no ofrecer un botón que va a fallar.
+  const leaveBlockedReason = !otherWorkspace
+    ? 'Es tu único presupuesto: creá otro antes de salir de éste.'
+    : isOwner && ownerCount <= 1
+      ? members.length > 1
+        ? 'Sos el único dueño: nombrá a otro dueño antes de salir.'
+        : 'Sos la única persona en este presupuesto: si ya no lo usás, borralo desde Presupuestos.'
+      : null;
 
   async function onInvite() {
     const trimmed = email.trim();
@@ -82,8 +111,8 @@ export default function MembersScreen() {
         role: m.role === 'owner' ? 'member' : 'owner',
       });
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo cambiar el rol.');
     } finally {
       setBusyId(null);
     }
@@ -94,11 +123,53 @@ export default function MembersScreen() {
     try {
       await remove.mutateAsync(id);
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo quitar a esa persona.');
     } finally {
       setBusyId(null);
       setConfirmRemoveId(null);
+    }
+  }
+
+  async function onResend(id: string) {
+    setBusyId(id);
+    setInvitationNote(null);
+    try {
+      await resendInvitation.mutateAsync(id);
+      haptics.success();
+      setInvitationNote({ id, text: 'Listo, le volvimos a mandar el correo.' });
+    } catch (err) {
+      haptics.error();
+      setInvitationNote({ id, text: errorMessage(err, 'No se pudo reenviar la invitación.') });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onCancelInvitation(id: string) {
+    setBusyId(id);
+    setInvitationNote(null);
+    try {
+      await cancelInvitation.mutateAsync(id);
+      haptics.success();
+    } catch (err) {
+      haptics.error();
+      setInvitationNote({ id, text: errorMessage(err, 'No se pudo cancelar la invitación.') });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onLeave() {
+    if (!otherWorkspace) return;
+    setLeaveError(null);
+    try {
+      await leave.mutateAsync({ nextActiveId: otherWorkspace.id });
+      haptics.success();
+      router.replace('/dashboard');
+    } catch (err) {
+      haptics.error();
+      setLeaveError(errorMessage(err, 'No se pudo salir del presupuesto.'));
     }
   }
 
@@ -134,7 +205,7 @@ export default function MembersScreen() {
                         style={{ fontFamily: fonts.semibold }}
                         numberOfLines={1}
                       >
-                        {m.username}
+                        {m.display_name || m.username}
                         {isSelf ? ' (vos)' : ''}
                       </Text>
                       <Text className="text-text-muted text-xs" numberOfLines={1}>
@@ -151,7 +222,7 @@ export default function MembersScreen() {
                   {isOwner && !isSelf ? (
                     confirmRemoveId === m.id ? (
                       <View className="mb-3 gap-2 rounded-2xl bg-expense/10 p-3">
-                        <Text className="text-text text-sm">¿Quitar a {m.username} del presupuesto?</Text>
+                        <Text className="text-text text-sm">¿Quitar a {m.display_name || m.username} del presupuesto?</Text>
                         <View className="flex-row gap-2">
                           <View className="flex-1">
                             <Button
@@ -203,6 +274,61 @@ export default function MembersScreen() {
           </Card>
         )}
 
+        {pendingInvitations.length > 0 ? (
+          <Card title={`Invitaciones pendientes · ${pendingInvitations.length}`}>
+            {pendingInvitations.map((inv, i) => (
+              <View key={inv.id}>
+                {i > 0 ? <View className="h-px bg-border/30" /> : null}
+                <View className="flex-row items-center gap-3 py-3">
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+                    <Icon name="mail" size={16} color={colors.textMuted} />
+                  </View>
+                  <View className="flex-1">
+                    <Text
+                      className="text-text text-base"
+                      style={{ fontFamily: fonts.semibold }}
+                      numberOfLines={1}
+                    >
+                      {inv.email}
+                    </Text>
+                    <Text className="text-text-muted text-xs" numberOfLines={1}>
+                      Invitado el {formatDateTime(inv.created_at)}
+                      {inv.invited_by_name ? ` por ${inv.invited_by_name}` : ''}
+                    </Text>
+                  </View>
+                </View>
+                {invitationNote?.id === inv.id ? (
+                  <Text className="text-text-muted mb-2 text-xs">{invitationNote.text}</Text>
+                ) : null}
+                {isOwner ? (
+                  <View className="mb-3 flex-row gap-2">
+                    <Pressable
+                      onPress={() => onResend(inv.id)}
+                      disabled={busyId === inv.id}
+                      className="flex-1 items-center rounded-full border border-border py-2 active:opacity-70"
+                      accessibilityRole="button"
+                    >
+                      <Text className="text-text text-xs" style={{ fontFamily: fonts.semibold }}>
+                        {busyId === inv.id ? '…' : 'Reenviar correo'}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => onCancelInvitation(inv.id)}
+                      disabled={busyId === inv.id}
+                      className="flex-1 items-center rounded-full border border-border py-2 active:opacity-70"
+                      accessibilityRole="button"
+                    >
+                      <Text className="text-expense text-xs" style={{ fontFamily: fonts.semibold }}>
+                        Cancelar invitación
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
+            ))}
+          </Card>
+        ) : null}
+
         {isOwner ? (
           <Card title="Invitar por correo">
             <Text className="text-text-muted mb-3 text-sm">
@@ -253,6 +379,53 @@ export default function MembersScreen() {
             Sólo el dueño del presupuesto puede invitar o quitar miembros.
           </Text>
         )}
+
+        {membershipsQ.isSuccess ? (
+          <Card title="Salir del presupuesto">
+            {leaveBlockedReason ? (
+              <Text className="text-text-muted text-sm">{leaveBlockedReason}</Text>
+            ) : confirmLeave ? (
+              <View className="gap-2 rounded-2xl bg-expense/10 p-3">
+                <Text className="text-text text-sm">
+                  ¿Salir de {activeWorkspace?.name ?? 'este presupuesto'}? Dejás de verlo; para
+                  volver, alguien te tiene que invitar de nuevo.
+                </Text>
+                {leaveError ? <Text className="text-expense text-xs">{leaveError}</Text> : null}
+                <View className="flex-row gap-2">
+                  <View className="flex-1">
+                    <Button
+                      label="Cancelar"
+                      variant="ghost"
+                      onPress={() => {
+                        setConfirmLeave(false);
+                        setLeaveError(null);
+                      }}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Button label="Salir" loading={leave.isPending} onPress={onLeave} />
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <View className="gap-3">
+                <Text className="text-text-muted text-sm">
+                  Dejás de ver este presupuesto y sus movimientos. Lo que cargaste queda para
+                  los demás.
+                </Text>
+                <Pressable
+                  onPress={() => setConfirmLeave(true)}
+                  className="items-center rounded-full border border-border py-2 active:opacity-70"
+                  accessibilityRole="button"
+                >
+                  <Text className="text-expense text-sm" style={{ fontFamily: fonts.semibold }}>
+                    Salir del presupuesto
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+          </Card>
+        ) : null}
       </ScrollView>
     </Screen>
   );

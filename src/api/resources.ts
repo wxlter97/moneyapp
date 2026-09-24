@@ -28,7 +28,10 @@ import type {
   EmailImportStatus,
   ExchangeRate,
   GamificationSummary,
+  CanAfford,
+  GoalContributions,
   GoalProjection,
+  MemberSpending,
   InstallmentPurchase,
   InstallmentPurchaseInput,
   Invitation,
@@ -183,6 +186,18 @@ export const memberships = {
   updateRole: (id: string, role: Exclude<WorkspaceRole, ''>) =>
     api.patch<Membership>(`/memberships/${id}/`, { role }).then((r) => r.data),
   remove: (id: string) => api.delete(`/memberships/${id}/`).then(() => undefined),
+  /** El usuario actual se va del workspace activo (cualquier rol). */
+  leave: () => api.post('/memberships/leave/', {}).then(() => undefined),
+};
+
+// --- invitaciones pendientes DEL workspace activo (vistas desde adentro) ----
+export const workspaceInvitations = {
+  list: () => fetchAll<Invitation>('/workspace-invitations/'),
+  /** Sólo el dueño. El enlace del correo deja de funcionar. */
+  cancel: (id: string) => api.delete(`/workspace-invitations/${id}/`).then(() => undefined),
+  /** Sólo el dueño; como mucho una vez por minuto por invitación. */
+  resend: (id: string) =>
+    api.post<Invitation>(`/workspace-invitations/${id}/resend/`, {}).then((r) => r.data),
 };
 
 export function isInvitation(x: Membership | Invitation): x is Invitation {
@@ -386,6 +401,9 @@ export const wallets = {
   /** Fija `sort_order` según el orden de `ids`. */
   reorder: (ids: string[]) =>
     api.post<{ reordered: number }>('/wallets/reorder/', { ids }).then((r) => r.data),
+  /** Aportes por miembro a una cartera de ahorro -- 404 si no es de ahorro. */
+  contributions: (id: string) =>
+    api.get<GoalContributions>(`/wallets/${id}/contributions/`).then((r) => r.data),
   /** Solo tiene sentido en una cartera de ahorro con meta -- 404 si no. */
   projection: (id: string) =>
     api.get<GoalProjection>(`/wallets/${id}/projection/`).then((r) => r.data),
@@ -679,6 +697,14 @@ export const reports = {
   /** Recurrentes + cuotas próximas, sin materializarlas. Fechas ISO. */
   scheduled: (params?: { since?: string; until?: string }) =>
     api.get<ScheduledItem[]>('/reports/scheduled/', { params }).then((r) => r.data),
+
+  /** Gasto del mes por miembro (quién pagó o quién lo cargó). */
+  members: (params?: { year?: number; month?: number }) =>
+    api.get<MemberSpending>('/reports/members/', { params }).then((r) => r.data),
+
+  /** "¿Me alcanza?": cómo quedarían el presupuesto y la categoría. No crea nada. */
+  canAfford: (params: { amount: string; category?: string }) =>
+    api.get<CanAfford>('/reports/can-afford/', { params }).then((r) => r.data),
 };
 
 // --- soporte (reportar errores, consultas, sugerencias) -----------------

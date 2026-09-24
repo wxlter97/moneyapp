@@ -21,7 +21,7 @@ import { PickerRow } from '@/components/ui/PickerRow';
 import { Screen } from '@/components/ui/Screen';
 import { Segmented } from '@/components/ui/Segmented';
 import { TextField } from '@/components/ui/TextField';
-import { LoadingState } from '@/components/ui/states';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { todayISO } from '@/lib/date';
 import { toNumber } from '@/lib/money';
@@ -97,6 +97,17 @@ export default function ConfirmImportScreen() {
     }
   }
 
+  if (logQ.isError || walletsQ.isError) {
+    return (
+      <ErrorState
+        error={logQ.error ?? walletsQ.error}
+        onRetry={() => {
+          logQ.refetch();
+          walletsQ.refetch();
+        }}
+      />
+    );
+  }
   if (logQ.isLoading || !prefilled) return <LoadingState />;
 
   const log = logQ.data;

@@ -1,7 +1,7 @@
 {
   "name": "web",
   "main": "expo-router/entry",
-  "version": "1.7.1",
+  "version": "1.9.0",
   "dependencies": {
     "@expo-google-fonts/archivo": "^0.4.2",
     "@expo-google-fonts/archivo-black": "^0.4.1",
@@ -80,5 +80,6 @@
     "test": "jest",
     "typecheck": "tsc --noEmit"
   },
-  "private": true
+  "private": true,
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

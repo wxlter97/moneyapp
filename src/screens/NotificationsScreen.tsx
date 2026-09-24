@@ -134,7 +134,9 @@ export default function NotificationsScreen() {
       | 'remind_low_balance'
       | 'warn_statement_due'
       | 'warn_insights'
-      | 'warn_monthly_summary',
+      | 'warn_monthly_summary'
+      | 'warn_statement_cutoff'
+      | 'warn_weekly_summary',
     value: boolean,
   ) {
     setSaveError(null);
@@ -229,6 +231,13 @@ export default function NotificationsScreen() {
               />
               <View className="h-px bg-border/30" />
               <ToggleRow
+                title="Corte de tarjeta cerca"
+                hint="Dos días antes del corte: lo que compres después entra al estado siguiente."
+                value={prefs.warn_statement_cutoff}
+                onChange={(v) => onToggle('warn_statement_cutoff', v)}
+              />
+              <View className="h-px bg-border/30" />
+              <ToggleRow
                 title="Patrones de gasto"
                 hint="Fin de semana, después de cobrar, gasto hormiga, día pico, categorías en alza."
                 value={prefs.warn_insights}
@@ -240,6 +249,13 @@ export default function NotificationsScreen() {
                 hint="Un mensaje que conecta esos mismos patrones, una vez al mes."
                 value={prefs.warn_monthly_summary}
                 onChange={(v) => onToggle('warn_monthly_summary', v)}
+              />
+              <View className="h-px bg-border/30" />
+              <ToggleRow
+                title="Resumen semanal"
+                hint="Los lunes: cuánto gastaste la semana pasada, en qué y cómo vas con el presupuesto."
+                value={prefs.warn_weekly_summary}
+                onChange={(v) => onToggle('warn_weekly_summary', v)}
               />
             </Card>
 

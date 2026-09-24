@@ -8,6 +8,51 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.9.0] - 2026-09-23
+
+### Agregado
+- "¿Me alcanza?": ponés un monto (y opcionalmente la categoría) y te dice
+  cómo queda el presupuesto, contando lo programado. Desde el dashboard o
+  Herramientas → Análisis.
+- Dashboard: aviso de cobros que se repiten (suscripciones) para marcarlos
+  como recurrentes, ya con su nombre («Netflix»), y en presupuestos compartidos, quién gastó cuánto este mes.
+- Metas de ahorro compartidas: quién aportó cuánto, en la cartera de ahorro.
+- Estado de cuenta: cuánto pagar para no pagar intereses, el próximo corte y
+  un botón para registrar el pago.
+- Avisos nuevos: corte de tarjeta cerca y resumen semanal.
+- Onboarding: se cargan todas las cuentas con su saldo en un solo paso; el
+  tour pasó de 8 a 5 pasos.
+- Perfil: cambiar tu nombre (es el que ven los demás en un presupuesto
+  compartido). Etiquetas: renombrar.
+- Carteras: acceso a las carteras ocultas desde la misma pestaña.
+- Presupuestos: quien no es dueño puede ir a Miembros o salir desde la lista.
+
+### Corregido
+- Muchas acciones de un toque que fallaban sin decir nada (sólo vibraban,
+  en la web ni eso) ahora muestran el error: quitar un miembro, subir un
+  comprobante, marcar un recurrente, saldar una cuenta, entre otras. Si es
+  un límite del plan, ofrecen ver los planes.
+- Pantallas que quedaban cargando para siempre si fallaba la carga
+  (importación por correo, reporte de soporte, dividir transacción) o que
+  mostraban un formulario vacío que al guardar pisaba los datos (editar
+  presupuesto, transacción, recurrente, compra a plazo).
+- Aceptar una invitación ahora te lleva al presupuesto nuevo.
+- Las notificaciones de cuotas, recurrentes, saldo bajo y tarjeta abren su
+  pantalla en vez del dashboard; las de resumen mensual y suscripción tenían
+  ícono vacío.
+
+## [1.8.0] - 2026-09-23
+
+### Agregado
+- Miembros: la lista de invitaciones que todavía nadie aceptó, con
+  "Reenviar correo" y "Cancelar invitación" para el dueño.
+- Miembros: "Salir del presupuesto". Si no se puede (sos el único dueño o
+  es tu único presupuesto), la pantalla dice por qué en vez del botón.
+
+### Corregido
+- Volver a invitar a alguien que se había ido o al que habían quitado
+  fallaba con un error del servidor (arreglado en el backend 1.8.0).
+
 ## [1.7.1] - 2026-09-23
 
 ### Corregido

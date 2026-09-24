@@ -15,6 +15,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { formatDateTime } from '@/lib/date';
 import { routeForNotification } from '@/lib/notificationRouting';
+import { notifyError } from '@/lib/notifyError';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -27,7 +28,12 @@ const KIND_ICON: Record<NotificationKind, IconName> = {
   budget_threshold: 'bars',
   low_balance: 'card',
   statement_due: 'card',
+  statement_cutoff: 'calendar',
   insight: 'trending',
+  monthly_summary: 'trending',
+  weekly_summary: 'calendar',
+  subscription_renewal_due: 'star',
+  subscription_expired: 'star',
 };
 
 /**
@@ -58,8 +64,8 @@ export default function NotificationCenterScreen() {
     haptics.tap();
     try {
       await markAllRead.mutateAsync();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudieron marcar como leídas.');
     }
   }
 

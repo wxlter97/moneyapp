@@ -8,6 +8,8 @@ import { useUIStore } from '@/store/ui';
 import {
   useBudgetReport,
   useDashboardSummary,
+  useMemberSpending,
+  useRecurringSuggestions,
   useGamificationSummary,
   useHasFeature,
   useNetWorth,
@@ -257,7 +259,26 @@ function ResumenTab({ currency }: { currency: string }) {
         </View>
       ) : null}
 
+      <Pressable
+        onPress={() => {
+          haptics.tap();
+          router.push('/can-afford');
+        }}
+        accessibilityRole="button"
+        className="flex-row items-center justify-between rounded-2xl border border-border px-4 py-3 active:opacity-60"
+      >
+        <View className="flex-row items-center gap-2">
+          <Icon name="calculator" size={16} color={colors.primary} />
+          <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+            ¿Me alcanza para…?
+          </Text>
+        </View>
+        <Icon name="chevron-right" size={14} color={colors.textMuted} />
+      </Pressable>
+
       <StreakCard />
+
+      <SubscriptionsNudge />
 
       <ScheduledCard items={scheduled.data ?? []} loading={scheduled.isLoading} currency={currency} />
 
@@ -316,6 +337,8 @@ function ResumenTab({ currency }: { currency: string }) {
               </Text>
             </GlanceTile>
           ) : null}
+
+          <MemberSpendingTile currency={currency} />
 
           <GlanceTile
             icon="tag"
@@ -424,6 +447,82 @@ function StreakCard() {
       </View>
       <Icon name="chevron-right" size={14} color={colors.textMuted} />
     </Pressable>
+  );
+}
+
+/**
+ * "Detectamos N cobros que se repiten": las candidatas a recurrente
+ * (suscripciones, servicios) que antes sólo aparecían si uno entraba a
+ * Herramientas → Recurrentes. Ver `detect_recurring_candidates` en el backend.
+ */
+function SubscriptionsNudge() {
+  const colors = useColors();
+  const q = useRecurringSuggestions();
+  const items = q.data ?? [];
+  if (items.length === 0) return null;
+  const names = items
+    .map((s) => s.name || s.category_name)
+    .slice(0, 2)
+    .join(', ');
+  return (
+    <Pressable
+      onPress={() => {
+        haptics.tap();
+        router.push('/recurring');
+      }}
+      accessibilityRole="button"
+      className="flex-row items-center justify-between gap-3 rounded-2xl bg-surface-2 px-4 py-3 active:opacity-60"
+    >
+      <Icon name="repeat" size={18} color={colors.primary} />
+      <View className="flex-1">
+        <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+          {items.length === 1
+            ? 'Detectamos un cobro que se repite'
+            : `Detectamos ${items.length} cobros que se repiten`}
+        </Text>
+        <Text className="text-text-muted text-xs" numberOfLines={1}>
+          {names}
+          {items.length > 2 ? '…' : ''} · ¿los marcamos como recurrentes?
+        </Text>
+      </View>
+      <Icon name="chevron-right" size={14} color={colors.textMuted} />
+    </Pressable>
+  );
+}
+
+/** Quién gastó cuánto este mes. Sólo en un presupuesto compartido. */
+function MemberSpendingTile({ currency }: { currency: string }) {
+  const colors = useColors();
+  const memberCount = useWorkspaceStore(
+    (s) => s.workspaces.find((w) => w.id === s.activeId)?.member_count ?? 1,
+  );
+  const { year, month } = currentYearMonth();
+  const q = useMemberSpending(year, month, memberCount > 1);
+  if (memberCount <= 1 || !q.data || toNumber(q.data.total) <= 0) return null;
+
+  return (
+    <GlanceTile icon="users" label="Quién gastó este mes" wide onPress={() => router.push('/members')}>
+      <View className="mt-1 gap-2">
+        {q.data.members
+          .filter((m) => toNumber(m.spent) > 0)
+          .map((m) => (
+            <View key={m.user ?? 'none'} className="gap-1">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-text text-sm" numberOfLines={1}>
+                  {m.name}
+                </Text>
+                <Money value={m.spent} currency={currency} className="text-sm font-semibold" />
+              </View>
+              <View className="h-1.5 overflow-hidden rounded-full bg-border/40">
+                <View
+                  className="h-full rounded-full"
+                  style={{ width: `${Math.min(100, m.share_pct)}%`, backgroundColor: colors.primary }}
+                />
+              </View>
+            </View>
+          ))}
+      </View>
+    </GlanceTile>
   );
 }
 

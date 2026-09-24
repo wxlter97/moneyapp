@@ -289,6 +289,49 @@ export function useUpdateMembershipRole() {
   });
 }
 
+/** Invitaciones pendientes del workspace activo (a quién se invitó y no entró). */
+export function useWorkspaceInvitations() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).workspaceInvitations(),
+    queryFn: () => res.workspaceInvitations.list(),
+    enabled: !!ws,
+  });
+}
+
+export function useCancelWorkspaceInvitation() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.workspaceInvitations.cancel(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.ws(ws).workspaceInvitations() }),
+  });
+}
+
+export function useResendWorkspaceInvitation() {
+  return useMutation({
+    mutationFn: (id: string) => res.workspaceInvitations.resend(id),
+  });
+}
+
+/**
+ * Salir del workspace activo. Antes de refrescar la lista se cambia a otro
+ * workspace: si no, `setWorkspaces` elegiría el primero de la lista, que
+ * puede no ser el que el usuario esperaba (ni el más usado).
+ */
+export function useLeaveWorkspace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ nextActiveId }: { nextActiveId: string }) =>
+      res.memberships.leave().then(() => nextActiveId),
+    onSuccess: async (nextActiveId) => {
+      track('workspace_left');
+      useWorkspaceStore.getState().setActiveId(nextActiveId);
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
 export function useRemoveMembership() {
   const invalidate = useInvalidateWorkspace();
   const qc = useQueryClient();
@@ -1370,6 +1413,38 @@ export function useScheduled(range?: { since?: string; until?: string }) {
     queryKey: qk.ws(ws).reportScheduled(range),
     queryFn: () => res.reports.scheduled(range),
     enabled: !!ws,
+  });
+}
+
+/** Gasto del mes por miembro. Sólo vale la pena pedirlo en un presupuesto
+ * compartido: el caller pasa `enabled`. */
+export function useMemberSpending(year: number, month: number, enabled = true) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).reportMembers(year, month),
+    queryFn: () => res.reports.members({ year, month }),
+    enabled: !!ws && enabled,
+  });
+}
+
+/** "¿Me alcanza?". `amount` vacío o en cero = no consulta. */
+export function useCanAfford(amount: string, category?: string) {
+  const ws = useActiveWs();
+  const valid = Number(amount) > 0;
+  return useQuery({
+    queryKey: qk.ws(ws).reportCanAfford(amount, category),
+    queryFn: () => res.reports.canAfford({ amount, ...(category && { category }) }),
+    enabled: !!ws && valid,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useGoalContributions(id: string | undefined, enabled: boolean) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletContributions(id ?? ''),
+    queryFn: () => res.wallets.contributions(id!),
+    enabled: !!ws && !!id && enabled,
   });
 }
 

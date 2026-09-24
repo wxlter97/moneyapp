@@ -22,6 +22,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { config } from '@/config';
 import { formatDateTime } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
+import { notifyError } from '@/lib/notifyError';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -101,8 +102,8 @@ export default function ShortcutsScreen() {
     try {
       await deleteToken.mutateAsync(id);
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo revocar el token.');
     } finally {
       setConfirmRevokeId(null);
     }
