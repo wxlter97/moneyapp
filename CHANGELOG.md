@@ -8,6 +8,18 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.8.0] - 2026-09-23
+
+### Agregado
+- Miembros: la lista de invitaciones que todavía nadie aceptó, con
+  "Reenviar correo" y "Cancelar invitación" para el dueño.
+- Miembros: "Salir del presupuesto". Si no se puede (sos el único dueño o
+  es tu único presupuesto), la pantalla dice por qué en vez del botón.
+
+### Corregido
+- Volver a invitar a alguien que se había ido o al que habían quitado
+  fallaba con un error del servidor (arreglado en el backend 1.8.0).
+
 ## [1.7.1] - 2026-09-23
 
 ### Corregido

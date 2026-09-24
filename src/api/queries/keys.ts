@@ -30,6 +30,7 @@ export const qk = {
     all: ['ws', ws] as const,
 
     memberships: () => ['ws', ws, 'memberships'] as const,
+    workspaceInvitations: () => ['ws', ws, 'workspace-invitations'] as const,
     personalTokens: () => ['ws', ws, 'personal-tokens'] as const,
     exchangeRates: () => ['ws', ws, 'exchange-rates'] as const,
 

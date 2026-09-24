@@ -183,6 +183,18 @@ export const memberships = {
   updateRole: (id: string, role: Exclude<WorkspaceRole, ''>) =>
     api.patch<Membership>(`/memberships/${id}/`, { role }).then((r) => r.data),
   remove: (id: string) => api.delete(`/memberships/${id}/`).then(() => undefined),
+  /** El usuario actual se va del workspace activo (cualquier rol). */
+  leave: () => api.post('/memberships/leave/', {}).then(() => undefined),
+};
+
+// --- invitaciones pendientes DEL workspace activo (vistas desde adentro) ----
+export const workspaceInvitations = {
+  list: () => fetchAll<Invitation>('/workspace-invitations/'),
+  /** Sólo el dueño. El enlace del correo deja de funcionar. */
+  cancel: (id: string) => api.delete(`/workspace-invitations/${id}/`).then(() => undefined),
+  /** Sólo el dueño; como mucho una vez por minuto por invitación. */
+  resend: (id: string) =>
+    api.post<Invitation>(`/workspace-invitations/${id}/resend/`, {}).then((r) => r.data),
 };
 
 export function isInvitation(x: Membership | Invitation): x is Invitation {

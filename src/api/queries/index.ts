@@ -289,6 +289,49 @@ export function useUpdateMembershipRole() {
   });
 }
 
+/** Invitaciones pendientes del workspace activo (a quién se invitó y no entró). */
+export function useWorkspaceInvitations() {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).workspaceInvitations(),
+    queryFn: () => res.workspaceInvitations.list(),
+    enabled: !!ws,
+  });
+}
+
+export function useCancelWorkspaceInvitation() {
+  const ws = useActiveWs();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => res.workspaceInvitations.cancel(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.ws(ws).workspaceInvitations() }),
+  });
+}
+
+export function useResendWorkspaceInvitation() {
+  return useMutation({
+    mutationFn: (id: string) => res.workspaceInvitations.resend(id),
+  });
+}
+
+/**
+ * Salir del workspace activo. Antes de refrescar la lista se cambia a otro
+ * workspace: si no, `setWorkspaces` elegiría el primero de la lista, que
+ * puede no ser el que el usuario esperaba (ni el más usado).
+ */
+export function useLeaveWorkspace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ nextActiveId }: { nextActiveId: string }) =>
+      res.memberships.leave().then(() => nextActiveId),
+    onSuccess: async (nextActiveId) => {
+      track('workspace_left');
+      useWorkspaceStore.getState().setActiveId(nextActiveId);
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
 export function useRemoveMembership() {
   const invalidate = useInvalidateWorkspace();
   const qc = useQueryClient();

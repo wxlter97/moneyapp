@@ -147,7 +147,7 @@ Celery). Desde el 20-sep-2026 el front ya no corre en Vercel. Guía completa:
   Vercel; ya no lo usa nada.
 - `npm run build:web` → export local a `dist/` (para inspeccionar el bundle).
 
-Pendiente: gestión de miembros del workspace; pulido visual de alta fidelidad;
+Pendiente: pulido visual de alta fidelidad;
 más tests (componentes con React Native Testing Library — pendiente de afinar el
 setup con RN 0.86 / React 19).
 
