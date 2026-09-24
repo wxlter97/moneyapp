@@ -20,6 +20,7 @@ import { Icon } from '@/components/ui/Icon';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { notifyError } from '@/lib/notifyError';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -259,6 +260,8 @@ function DeletedCategories() {
     setPurgeError(null);
     try {
       await restore.mutateAsync(id);
+    } catch (err) {
+      notifyError(err, 'No se pudo restaurar la categoría.');
     } finally {
       setBusyId(null);
     }

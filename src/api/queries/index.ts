@@ -1416,6 +1416,38 @@ export function useScheduled(range?: { since?: string; until?: string }) {
   });
 }
 
+/** Gasto del mes por miembro. Sólo vale la pena pedirlo en un presupuesto
+ * compartido: el caller pasa `enabled`. */
+export function useMemberSpending(year: number, month: number, enabled = true) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).reportMembers(year, month),
+    queryFn: () => res.reports.members({ year, month }),
+    enabled: !!ws && enabled,
+  });
+}
+
+/** "¿Me alcanza?". `amount` vacío o en cero = no consulta. */
+export function useCanAfford(amount: string, category?: string) {
+  const ws = useActiveWs();
+  const valid = Number(amount) > 0;
+  return useQuery({
+    queryKey: qk.ws(ws).reportCanAfford(amount, category),
+    queryFn: () => res.reports.canAfford({ amount, ...(category && { category }) }),
+    enabled: !!ws && valid,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useGoalContributions(id: string | undefined, enabled: boolean) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletContributions(id ?? ''),
+    queryFn: () => res.wallets.contributions(id!),
+    enabled: !!ws && !!id && enabled,
+  });
+}
+
 // --- soporte (reportar errores, consultas, sugerencias) -----------------
 export function useSupportTickets(params: res.SupportTicketListParams = {}) {
   const ws = useActiveWs();

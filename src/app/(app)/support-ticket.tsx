@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
-import { LoadingState } from '@/components/ui/states';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { formatDateTime } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
 import { fonts } from '@/theme/typography';
@@ -64,6 +64,15 @@ export default function SupportTicketScreen() {
       haptics.error();
       setError(errorMessage(err, 'No se pudo mandar el mensaje.'));
     }
+  }
+
+  if (ticketQ.isError) {
+    return (
+      <Screen edges={['top', 'bottom']} variant="drawer">
+        <ModalHeader title="Reporte" />
+        <ErrorState error={ticketQ.error} onRetry={ticketQ.refetch} />
+      </Screen>
+    );
   }
 
   if (ticketQ.isLoading || !ticket) {

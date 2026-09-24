@@ -24,7 +24,7 @@ import { DateField } from '@/components/ui/DateField';
 import { Segmented } from '@/components/ui/Segmented';
 import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
-import { LoadingState } from '@/components/ui/states';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -156,6 +156,11 @@ export function RecurringForm({ recurringId }: { recurringId?: string }) {
   }
 
   if (editing && existing.isLoading) return <LoadingState />;
+  if (editing && existing.isError) {
+    // Sin esto quedaba el formulario vacío, y "Guardar" pisaba el recurrente con
+    // campos en blanco.
+    return <ErrorState error={existing.error} onRetry={existing.refetch} />;
+  }
 
   return (
     <KeyboardAvoidingView

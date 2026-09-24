@@ -26,6 +26,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { formatDateTime } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
 import { isPlanUpgradeError } from '@/lib/planErrors';
+import { notifyError } from '@/lib/notifyError';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { useAuthStore } from '@/store/auth';
@@ -110,8 +111,8 @@ export default function MembersScreen() {
         role: m.role === 'owner' ? 'member' : 'owner',
       });
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo cambiar el rol.');
     } finally {
       setBusyId(null);
     }
@@ -122,8 +123,8 @@ export default function MembersScreen() {
     try {
       await remove.mutateAsync(id);
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo quitar a esa persona.');
     } finally {
       setBusyId(null);
       setConfirmRemoveId(null);
@@ -204,7 +205,7 @@ export default function MembersScreen() {
                         style={{ fontFamily: fonts.semibold }}
                         numberOfLines={1}
                       >
-                        {m.username}
+                        {m.display_name || m.username}
                         {isSelf ? ' (vos)' : ''}
                       </Text>
                       <Text className="text-text-muted text-xs" numberOfLines={1}>
@@ -221,7 +222,7 @@ export default function MembersScreen() {
                   {isOwner && !isSelf ? (
                     confirmRemoveId === m.id ? (
                       <View className="mb-3 gap-2 rounded-2xl bg-expense/10 p-3">
-                        <Text className="text-text text-sm">¿Quitar a {m.username} del presupuesto?</Text>
+                        <Text className="text-text text-sm">¿Quitar a {m.display_name || m.username} del presupuesto?</Text>
                         <View className="flex-row gap-2">
                           <View className="flex-1">
                             <Button

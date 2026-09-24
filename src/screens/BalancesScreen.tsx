@@ -19,6 +19,7 @@ import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { notifyError } from '@/lib/notifyError';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -77,8 +78,8 @@ export default function BalancesScreen() {
     try {
       await settleBalance.mutateAsync({ fromPersonId: b.from_person.id, toPersonId: b.to_person.id });
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo saldar la cuenta.');
     } finally {
       setConfirmSettleKey(null);
     }

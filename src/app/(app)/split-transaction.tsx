@@ -12,7 +12,7 @@ import { Icon } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Money } from '@/components/ui/Money';
 import { Screen } from '@/components/ui/Screen';
-import { LoadingState } from '@/components/ui/states';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { TextField } from '@/components/ui/TextField';
 import { haptics } from '@/lib/haptics';
 import { toNumber } from '@/lib/money';
@@ -99,6 +99,21 @@ export default function SplitTransactionScreen() {
       haptics.error();
       setError(errorMessage(err, 'No se pudo dividir la transacción.'));
     }
+  }
+
+  if (txnQ.isError || categoriesQ.isError) {
+    return (
+      <Screen edges={['top', 'bottom']} variant="drawer">
+        <ModalHeader title="Dividir transacción" />
+        <ErrorState
+          error={txnQ.error ?? categoriesQ.error}
+          onRetry={() => {
+            txnQ.refetch();
+            categoriesQ.refetch();
+          }}
+        />
+      </Screen>
+    );
   }
 
   if (txnQ.isLoading || categoriesQ.isLoading) {

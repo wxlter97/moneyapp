@@ -21,6 +21,7 @@ import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { formatShortDate } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
+import { notifyError } from '@/lib/notifyError';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -59,8 +60,8 @@ export default function ImportsScreen() {
     try {
       await reject.mutateAsync(id);
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo descartar el correo.');
     } finally {
       setRejectingId(null);
     }
@@ -70,8 +71,8 @@ export default function ImportsScreen() {
     try {
       await clearFailed.mutateAsync();
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudieron limpiar los fallidos.');
     } finally {
       setConfirmingClear(false);
     }

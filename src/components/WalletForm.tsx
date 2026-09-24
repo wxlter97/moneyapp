@@ -18,6 +18,7 @@ import {
   useCardProducts,
   useCreateWallet,
   useDeleteWallet,
+  useGoalContributions,
   useGoalProjection,
   useHasFeature,
   useLoyaltyBanks,
@@ -49,6 +50,7 @@ import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { muteColor } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
@@ -660,6 +662,9 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 <CalculatorLink slug="ahorro-mensual" label="Ahorro mensual" />
               </>
             ) : null}
+            {editing && existing.data?.purpose === 'savings' ? (
+              <GoalContributionsCard walletId={walletId!} currency={existing.data.currency} />
+            ) : null}
 
             <TextField
               label="Tasa de interés a ganar (opcional)"
@@ -1030,6 +1035,51 @@ function GoalProjectionCard({
       </Text>
       {data.on_track === false ? (
         <Text className="text-warning text-xs">Vas más lento que tu fecha objetivo.</Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** Cuánto puso cada miembro en esta cartera de ahorro -- sólo en un
+ * presupuesto compartido (con una sola persona no dice nada nuevo). Ver
+ * `services.goal_contributions` en el backend. */
+function GoalContributionsCard({ walletId, currency }: { walletId: string; currency: string }) {
+  const colors = useColors();
+  const memberCount = useWorkspaceStore(
+    (s) => s.workspaces.find((w) => w.id === s.activeId)?.member_count ?? 1,
+  );
+  const q = useGoalContributions(walletId, memberCount > 1);
+  const data = q.data;
+  if (memberCount <= 1 || !data || data.members.length === 0) return null;
+
+  return (
+    <View className="gap-2 rounded-2xl bg-surface-2 px-4 py-3">
+      <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+        Quién aportó
+      </Text>
+      {data.members.map((m) => (
+        <View key={m.user ?? 'none'} className="gap-1">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-text text-sm" numberOfLines={1}>
+              {m.name}
+            </Text>
+            <Text className="text-text-muted text-xs">
+              {formatMoney(m.net, currency)}
+              {toNumber(m.withdrawn) > 0 ? ` (sacó ${formatMoney(m.withdrawn, currency)})` : ''}
+            </Text>
+          </View>
+          <View className="h-1.5 overflow-hidden rounded-full bg-border/40">
+            <View
+              className="h-full rounded-full"
+              style={{ width: `${Math.min(100, m.share_pct)}%`, backgroundColor: colors.income }}
+            />
+          </View>
+        </View>
+      ))}
+      {toNumber(data.opening_balance) > 0 ? (
+        <Text className="text-text-muted text-xs">
+          Más {formatMoney(data.opening_balance, currency)} de saldo inicial.
+        </Text>
       ) : null}
     </View>
   );

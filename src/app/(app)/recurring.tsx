@@ -22,6 +22,7 @@ import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { formatShortDate } from '@/lib/date';
+import { notifyError } from '@/lib/notifyError';
 
 export default function RecurringScreen() {
   const colors = useColors();
@@ -127,10 +128,10 @@ function suggestionKey(s: RecurringSuggestion) {
 }
 
 /**
- * "¿Esto es recurrente?" -- candidatas detectadas en el historial (misma
- * categoría+cartera, monto parecido, varios meses seguidos) que todavía no
- * están marcadas como recurrentes. Ver `services.detect_recurring_candidates`
- * en el backend.
+ * "¿Esto es recurrente?" -- cobros que se repiten (suscripciones, servicios,
+ * el sueldo) y todavía no están marcados como recurrentes. Ver
+ * `services.detect_recurring_candidates` en el backend. También se anuncian
+ * en el dashboard (`SubscriptionsNudge`), que trae hasta acá.
  */
 function RecurringSuggestions() {
   const q = useRecurringSuggestions();
@@ -148,6 +149,8 @@ function RecurringSuggestions() {
     setBusyKey(key);
     try {
       await createRec.mutateAsync({
+        type: s.type,
+        name: s.name,
         category: s.category,
         wallet: s.wallet,
         amount: s.suggested_amount,
@@ -155,8 +158,8 @@ function RecurringSuggestions() {
         next_due_date: s.suggested_next_due_date,
       });
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo crear el recurrente.');
     } finally {
       setBusyKey(null);
     }
@@ -168,8 +171,8 @@ function RecurringSuggestions() {
     setBusyKey(key);
     try {
       await dismiss.mutateAsync({ category: s.category, wallet: s.wallet, amount: s.suggested_amount });
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo descartar la sugerencia.');
     } finally {
       setBusyKey(null);
     }
@@ -189,10 +192,11 @@ function RecurringSuggestions() {
                   style={{ fontFamily: fonts.semibold }}
                   numberOfLines={1}
                 >
-                  {s.category_name}
+                  {s.name || s.category_name}
                 </Text>
                 <Text className="text-text-muted text-xs" numberOfLines={1}>
-                  {s.wallet_name} · se repitió {s.occurrences} meses seguidos
+                  {s.name ? `${s.category_name} · ` : ''}
+                  {s.wallet_name} · se repitió {s.occurrences} de los últimos 4 meses
                 </Text>
               </View>
               <Money
