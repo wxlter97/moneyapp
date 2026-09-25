@@ -222,8 +222,8 @@ export default function NotificationsScreen() {
               />
               <View className="h-px bg-border/30" />
               <ToggleRow
-                title="Estado de cuenta por vencer"
-                hint="El pago de contado completo, no cuota por cuota."
+                title="Fecha límite de pago de tarjeta"
+                hint="Lo que falta pagar del último corte para no generar intereses. Si ya lo pagaste, no avisa."
                 value={prefs.warn_statement_due}
                 onChange={(v) => onToggle('warn_statement_due', v)}
               />
@@ -284,12 +284,12 @@ export default function NotificationsScreen() {
             ) : null}
 
             {prefs.warn_statement_due ? (
-              <Card title="Anticipación del estado de cuenta">
+              <Card title="Anticipación del pago de tarjeta">
                 <View className="flex-row items-center justify-between">
                   <Text className="text-text-muted flex-1 pr-2 text-sm">
                     Avisar {prefs.statement_due_days_before}{' '}
-                    {prefs.statement_due_days_before === 1 ? 'día' : 'días'} antes de que venza el
-                    pago.
+                    {prefs.statement_due_days_before === 1 ? 'día' : 'días'} antes de la fecha
+                    límite de pago.
                   </Text>
                   <View className="flex-row items-center gap-3">
                     <Pressable

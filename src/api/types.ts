@@ -216,7 +216,10 @@ export type NotificationKind =
   | 'budget_threshold'
   | 'low_balance'
   | 'statement_due'
-  | 'insight';
+  | 'insight'
+  | 'monthly_summary'
+  | 'subscription_renewal_due'
+  | 'subscription_expired';
 
 /** `resolved` = ya se resolvió desde su propia pantalla (invitación
  * aceptada/rechazada, correo confirmado/rechazado) -- sigue en el
