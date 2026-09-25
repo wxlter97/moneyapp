@@ -11,6 +11,7 @@ describe('routeForNotification', () => {
     [{ type: 'installment_due', source_id: 'i1' }, '/installment/i1'],
     [{ type: 'low_balance', wallet: 'w1' }, '/wallet-transactions?wallet=w1'],
     [{ type: 'statement_due', wallet: 'w1' }, '/statement/w1'],
+    [{ type: 'statement_closed', wallet: 'w1' }, '/statement/w1'],
     [{ type: 'subscription_expired' }, '/pro'],
     [{ type: 'insight' }, '/dashboard'],
   ])('%j -> %s', (data, expected) => {
@@ -32,6 +33,16 @@ describe('actionsForNotification', () => {
     });
     expect(first).toMatchObject({ kind: 'transfer-to', walletId: 'w1', amount: '120.50' });
     expect(second).toMatchObject({ kind: 'route', href: '/statement/w1' });
+  });
+
+  it('vencido con mínimo: ofrece pagar el total y el mínimo', () => {
+    const actions = actionsForNotification({
+      type: 'statement_overdue',
+      wallet: 'w1',
+      amount: '200.00',
+      minimum: '25.00',
+    });
+    expect(actions.map((a) => a.label)).toEqual(['Registrar pago', 'Pagar el mínimo', 'Ver estado de cuenta']);
   });
 
   it('recurrente: registrar ahora primero', () => {

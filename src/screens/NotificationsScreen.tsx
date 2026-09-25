@@ -223,7 +223,7 @@ export default function NotificationsScreen() {
               <View className="h-px bg-border/30" />
               <ToggleRow
                 title="Fecha límite de pago de tarjeta"
-                hint="Lo que falta pagar del último corte para no generar intereses. Si ya lo pagaste, no avisa."
+                hint="El día del corte, antes de la fecha límite, ese mismo día y si se venció sin el mínimo. Si ya pagaste, no avisa."
                 value={prefs.warn_statement_due}
                 onChange={(v) => onToggle('warn_statement_due', v)}
               />

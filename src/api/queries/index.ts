@@ -3,6 +3,7 @@
  * y se deshabilitan si aún no hay uno seleccionado.
  */
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -683,6 +684,27 @@ export function useCreditCardStatement(id: string | undefined, asOf?: string) {
   });
 }
 
+/** Últimos estados por corte de una tarjeta + lo que ya va al próximo. */
+export function useStatementCycles(id: string | undefined, count = 6) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletStatementCycles(id ?? '', count),
+    queryFn: () => res.wallets.statementCycles(id!, count),
+    enabled: !!ws && !!id,
+  });
+}
+
+/** Extracto de una cartera entre dos fechas (+ el período anterior). */
+export function useWalletPeriodSummary(id: string | undefined, from: string, to: string) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletPeriodSummary(id ?? '', from, to),
+    queryFn: () => res.wallets.periodSummary(id!, from, to),
+    enabled: !!ws && !!id,
+    placeholderData: keepPreviousData,
+  });
+}
+
 /** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
 export function useCreditCardStatements() {
   const ws = useActiveWs();
@@ -906,6 +928,19 @@ export function useTransactionTotals(
   return useQuery({
     queryKey: qk.ws(ws).transactionTotals(params),
     queryFn: () => res.transactions.totals(params),
+    enabled: !!ws && enabled,
+  });
+}
+
+/** Cantidad + desglose por categoría de lo que cumple el filtro (servidor). */
+export function useTransactionBreakdown(
+  params: res.TransactionListParams = {},
+  { enabled = true }: ListOptions = {},
+) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).transactionBreakdown(params),
+    queryFn: () => res.transactions.breakdown(params),
     enabled: !!ws && enabled,
   });
 }

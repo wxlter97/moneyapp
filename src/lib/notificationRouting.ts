@@ -88,6 +88,8 @@ export function actionsForNotification(data: Record<string, unknown>): Notificat
       }
       break;
     case 'statement_due':
+    case 'statement_closed':
+    case 'statement_overdue':
       if (wallet) {
         actions.push({
           kind: 'transfer-to',
@@ -96,6 +98,17 @@ export function actionsForNotification(data: Record<string, unknown>): Notificat
           amount: str(data.amount) ?? undefined,
           note: 'Pago de tarjeta',
         });
+        // Con mínimo configurado, pagar sólo el mínimo es la otra opción real.
+        const minimum = str(data.minimum);
+        if (minimum && minimum !== str(data.amount)) {
+          actions.push({
+            kind: 'transfer-to',
+            label: 'Pagar el mínimo',
+            walletId: wallet,
+            amount: minimum,
+            note: 'Pago mínimo de tarjeta',
+          });
+        }
         actions.push({ kind: 'route', label: 'Ver estado de cuenta', href: `/statement/${wallet}` as Href });
       }
       break;

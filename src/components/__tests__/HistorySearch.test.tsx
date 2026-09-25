@@ -18,6 +18,10 @@ jest.mock('@/api/queries', () => ({
   useTransactions: (params: unknown, opts?: { enabled?: boolean }) => mockMonth(params, opts),
   useInfiniteTransactions: (params: unknown, opts?: { enabled?: boolean }) => mockSearch(params, opts),
   useTransactionTotals: (params: unknown, opts?: { enabled?: boolean }) => mockTotals(params, opts),
+  useTransactionBreakdown: () => ({
+    data: { count: 42, categories: [{ category: 'c1', currency: 'USD', income: '0.00', expenses: '9999.00', count: 42 }] },
+    refetch: jest.fn(),
+  }),
   useWallets: () => ({ data: [{ id: 'w1', name: 'Cuenta', currency: 'USD' }] }),
   useTags: () => ({ data: [] }),
   useDeleteTransaction: () => ({ mutateAsync: jest.fn() }),
@@ -107,5 +111,27 @@ describe('Historial: búsqueda paginada', () => {
     await typeSearch('nadaquever');
     expect(await screen.findByText('Sin resultados')).toBeTruthy();
     expect(screen.queryByText('Sin movimientos este mes')).toBeNull();
+  });
+});
+
+describe('Historial: cantidad y desglose por categoría', () => {
+  it('sin búsqueda ni filtros no se muestra', async () => {
+    await mount();
+    expect(screen.queryByText('Por categoría')).toBeNull();
+  });
+
+  it('con búsqueda muestra la cantidad del servidor y abre el desglose', async () => {
+    mockSearch.mockReturnValue(searchResult([txn('s1')], true));
+    await mount();
+    await typeSearch('super');
+    await fireEvent.press(await screen.findByText('42 movimientos'));
+    expect(await screen.findByText(/Comida/)).toBeTruthy();
+  });
+
+  it('con un filtro en el mes cuenta lo que quedó en la lista', async () => {
+    await mount();
+    await fireEvent.press(screen.getByLabelText('Más filtros'));
+    await fireEvent.press(screen.getAllByText('Gastos').at(-1)!);
+    expect(await screen.findByText('2 movimientos')).toBeTruthy();
   });
 });

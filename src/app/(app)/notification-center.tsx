@@ -17,6 +17,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { formatDateTime, todayISO } from '@/lib/date';
 import { actionsForNotification, type NotificationAction } from '@/lib/notificationRouting';
+import { newTransactionHref, transferToHref } from '@/lib/prefill';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -29,19 +30,13 @@ const KIND_ICON: Record<NotificationKind, IconName> = {
   budget_threshold: 'bars',
   low_balance: 'card',
   statement_due: 'card',
+  statement_closed: 'receipt',
+  statement_overdue: 'alert',
   insight: 'trending',
   monthly_summary: 'trending',
   subscription_renewal_due: 'gift',
   subscription_expired: 'gift',
 };
-
-function newTransactionHref(params: Record<string, string | null | undefined>): Href {
-  const qs = Object.entries(params)
-    .filter((e): e is [string, string] => !!e[1])
-    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-    .join('&');
-  return `/transaction/new?${qs}` as Href;
-}
 
 /** Resuelve las acciones que necesitan datos del servidor (ver
  * `NotificationAction`) y devuelve a dónde ir. Corre DESPUÉS de cambiar al
@@ -64,23 +59,12 @@ async function hrefForAction(action: NotificationAction): Promise<Href> {
         prefillRecurringId: r.id,
       });
     }
-    case 'transfer-to': {
-      // Desde la cartera por defecto (la misma que propone "Agregar
-      // transacción"); nunca desde la misma cartera destino ni desde otra
-      // tarjeta de crédito -- pagar una tarjeta con otra no es el caso común.
-      const wallets = (await res.wallets.list()).filter(
-        (w) => !w.is_archived && w.id !== action.walletId && w.kind !== 'credit',
-      );
-      const from = wallets.find((w) => w.is_default) ?? wallets[0];
-      return newTransactionHref({
-        prefillType: 'transfer',
-        prefillWallet: from?.id,
-        prefillToWallet: action.walletId,
-        prefillAmount: action.amount,
-        prefillDate: todayISO(),
-        prefillNote: action.note,
+    case 'transfer-to':
+      return transferToHref(await res.wallets.list(), action.walletId, {
+        amount: action.amount,
+        note: action.note,
+        date: todayISO(),
       });
-    }
   }
 }
 

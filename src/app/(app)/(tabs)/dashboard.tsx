@@ -14,6 +14,7 @@ import {
   useScheduled,
   useTags,
   useInfiniteTransactions,
+  useTransactionBreakdown,
   useTransactionTotals,
   useTransactions,
   useWallets,
@@ -26,6 +27,7 @@ import { DayHeader } from '@/components/DayHeader';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SubTabs } from '@/components/SubTabs';
+import { FilteredBreakdown } from '@/components/FilteredBreakdown';
 import { SummaryTriple } from '@/components/SummaryTriple';
 import { LoadMoreFooter } from '@/components/ui/LoadMoreFooter';
 import { TransactionRow } from '@/components/TransactionRow';
@@ -43,6 +45,7 @@ import { currentYearMonth, formatDayHeader, formatShortDate, monthRange, todayIS
 import { formatMoney, toNumber } from '@/lib/money';
 import { flattenPages, usePagedScroll } from '@/lib/pagedList';
 import {
+  breakdownByCategory,
   groupByDay,
   summarizeByType,
   totalsForCurrency,
@@ -696,6 +699,7 @@ export function ListaTab({
   }, [debouncedSearch, typeFilter, walletFilter, tagFilter, amountMin, amountMax]);
   const searchQuery = useInfiniteTransactions(searchFilters, { enabled: searching });
   const searchTotalsQuery = useTransactionTotals(searchFilters, { enabled: searching });
+  const searchBreakdownQuery = useTransactionBreakdown(searchFilters, { enabled: searching });
   const paged = usePagedScroll(searchQuery);
 
   // Lo que se muestra en cada modo, con la misma forma para el resto del componente.
@@ -758,9 +762,34 @@ export function ListaTab({
   );
   const days = useMemo(() => groupByDay(items), [items]);
 
+  // Con búsqueda o filtros: cuántos movimientos y de qué categorías sale el
+  // total. Mismo criterio que el total de arriba: en búsqueda lo dice el
+  // servidor (todo, no lo cargado); en el mes, la lista ya está entera acá.
+  const filtering = searching || activeFilterCount > 0;
+  const breakdown = useMemo(
+    () =>
+      searching
+        ? {
+            count: searchBreakdownQuery.data?.count,
+            rows: (searchBreakdownQuery.data?.categories ?? [])
+              .filter((r) => r.currency === currency)
+              .map((r) => ({
+                category: r.category,
+                income: toNumber(r.income),
+                expenses: toNumber(r.expenses),
+                count: r.count,
+              })),
+          }
+        : { count: items.length, rows: breakdownByCategory(items, currency) },
+    [searching, searchBreakdownQuery.data, items, currency],
+  );
+
   const refresh = usePullRefresh(txQuery.isFetching && !txQuery.isLoading, () => {
     void txQuery.refetch();
-    if (searching) void searchTotalsQuery.refetch();
+    if (searching) {
+      void searchTotalsQuery.refetch();
+      void searchBreakdownQuery.refetch();
+    }
   });
 
   return (
@@ -773,6 +802,21 @@ export function ListaTab({
     >
       <MonthSwitcher value={month} onChange={onMonth} />
       <SummaryTriple income={totals.income} expenses={totals.expenses} currency={currency} />
+      {filtering ? (
+        <FilteredBreakdown
+          count={breakdown.count}
+          rows={breakdown.rows}
+          currency={currency}
+          categories={categories}
+          onPressCategory={(category) =>
+            router.push(
+              searching
+                ? `/category-transactions?category=${category}`
+                : `/category-transactions?category=${category}&from=${range.from}&to=${range.to}`,
+            )
+          }
+        />
+      ) : null}
 
       <View className="flex-row items-center gap-2">
         <View className="flex-1">
