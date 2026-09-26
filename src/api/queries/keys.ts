@@ -42,6 +42,10 @@ export const qk = {
     walletStatement: (id: string, asOf?: string) =>
       ['ws', ws, 'wallet', id, 'statement', asOf ?? 'today'] as const,
     walletStatements: () => ['ws', ws, 'wallets', 'statements'] as const,
+    walletStatementCycles: (id: string, count: number) =>
+      ['ws', ws, 'wallet', id, 'statement-cycles', count] as const,
+    walletPeriodSummary: (id: string, from: string, to: string) =>
+      ['ws', ws, 'wallet', id, 'period-summary', from, to] as const,
     categories: () => ['ws', ws, 'categories'] as const,
     categoriesDeleted: () => ['ws', ws, 'categories', 'deleted'] as const,
 
@@ -54,6 +58,8 @@ export const qk = {
       ['ws', ws, 'transactions', 'paged', params ?? {}] as const,
     transactionTotals: (params?: TransactionListParams) =>
       ['ws', ws, 'transactions', 'totals', params ?? {}] as const,
+    transactionBreakdown: (params?: TransactionListParams) =>
+      ['ws', ws, 'transactions', 'breakdown', params ?? {}] as const,
     transaction: (id: string) => ['ws', ws, 'transaction', id] as const,
     receiptImage: (id: string) => ['ws', ws, 'transaction', id, 'receipt'] as const,
 

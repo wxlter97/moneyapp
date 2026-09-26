@@ -1,7 +1,7 @@
 import { Text, type TextProps } from 'react-native';
 
 import type { Money as MoneyValue } from '@/api/types';
-import { formatMoney, formatParens, formatSigned, toNumber } from '@/lib/money';
+import { formatMoney, formatNumber, formatParens, formatSigned, toNumber } from '@/lib/money';
 import { useCountingNumber } from '@/lib/useCountingNumber';
 import { black, mono } from '@/theme/typography';
 
@@ -25,6 +25,10 @@ interface MoneyProps extends TextProps {
    * `false` a propósito: opt-in por pantalla, no un cambio de comportamiento
    * global de `Money`. Respeta "reducir movimiento" (ver `useCountingNumber`). */
   animate?: boolean;
+  /** Sin código de moneda ("1,052.40" en vez de "USD 1,052.40") -- para
+   * filas y bloques densos donde la moneda ya es la del workspace. El
+   * lector de pantalla igual recibe el monto con su moneda. */
+  hideCurrency?: boolean;
   className?: string;
 }
 
@@ -36,6 +40,7 @@ export function Money({
   tone = 'default',
   hero = false,
   animate = false,
+  hideCurrency = false,
   className = '',
   style,
   ...rest
@@ -48,10 +53,12 @@ export function Money({
   // llega un refetch, sin que nadie lo vea.
   const n = useCountingNumber(rawN, undefined, animate);
   const text = parens
-    ? formatParens(n, currency)
+    ? formatParens(n, currency, hideCurrency)
     : signed
-      ? formatSigned(n, currency)
-      : formatMoney(n, currency);
+      ? formatSigned(n, currency, hideCurrency)
+      : hideCurrency
+        ? formatNumber(n)
+        : formatMoney(n, currency);
 
   let color = 'text-text';
   if (tone === 'muted') color = 'text-text-muted';
@@ -80,6 +87,7 @@ export function Money({
     <Text
       className={`${color} ${className}`}
       style={[fontFamily ? { fontFamily } : null, hero ? { letterSpacing: -1.2 } : null, style]}
+      accessibilityLabel={hideCurrency ? formatSigned(rawN, currency) : undefined}
       {...rest}
     >
       {text}

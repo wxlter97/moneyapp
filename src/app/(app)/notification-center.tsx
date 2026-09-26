@@ -1,11 +1,13 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { router, type Href } from 'expo-router';
 
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
 } from '@/api/queries';
+import * as res from '@/api/resources';
 import type { AppNotification, NotificationKind } from '@/api/types';
 import { Card } from '@/components/ui/Card';
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -13,8 +15,9 @@ import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
-import { formatDateTime } from '@/lib/date';
-import { routeForNotification } from '@/lib/notificationRouting';
+import { formatDateTime, todayISO } from '@/lib/date';
+import { actionsForNotification, type NotificationAction } from '@/lib/notificationRouting';
+import { newTransactionHref, transferToHref } from '@/lib/prefill';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -27,8 +30,43 @@ const KIND_ICON: Record<NotificationKind, IconName> = {
   budget_threshold: 'bars',
   low_balance: 'card',
   statement_due: 'card',
+  statement_closed: 'receipt',
+  statement_overdue: 'alert',
   insight: 'trending',
+  monthly_summary: 'trending',
+  subscription_renewal_due: 'gift',
+  subscription_expired: 'gift',
 };
+
+/** Resuelve las acciones que necesitan datos del servidor (ver
+ * `NotificationAction`) y devuelve a dónde ir. Corre DESPUÉS de cambiar al
+ * workspace de la notificación: el cliente HTTP manda `X-Workspace-ID` del
+ * workspace activo, así que la regla/las carteras salen del correcto. */
+async function hrefForAction(action: NotificationAction): Promise<Href> {
+  switch (action.kind) {
+    case 'route':
+      return action.href;
+    case 'record-recurring': {
+      const r = await res.recurringExpenses.get(action.recurringId);
+      return newTransactionHref({
+        prefillType: r.type,
+        prefillWallet: r.wallet,
+        prefillToWallet: r.to_wallet,
+        prefillCategory: r.category,
+        prefillAmount: r.amount,
+        prefillDate: r.next_due_date,
+        prefillNote: r.name,
+        prefillRecurringId: r.id,
+      });
+    }
+    case 'transfer-to':
+      return transferToHref(await res.wallets.list(), action.walletId, {
+        amount: action.amount,
+        note: action.note,
+        date: todayISO(),
+      });
+  }
+}
 
 /**
  * Herramientas → campanita del header → Notificaciones: historial completo
@@ -44,14 +82,38 @@ export default function NotificationCenterScreen() {
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
+  // Tocar una notificación la abre en el lugar (texto completo + sus
+  // acciones) en vez de navegar de una: el texto se cortaba a una/dos
+  // líneas y la única "acción" era saltar a otra pantalla.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [runningAction, setRunningAction] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const notifications = query.data ?? [];
   const hasUnread = notifications.some((n) => n.status === 'unread');
 
   function onPressNotification(n: AppNotification) {
     haptics.tap();
+    setActionError(null);
     if (n.status === 'unread') markRead.mutate(n.id);
+    setExpandedId((cur) => (cur === n.id ? null : n.id));
+  }
+
+  async function onAction(n: AppNotification, action: NotificationAction, key: string) {
+    haptics.tap();
+    setActionError(null);
     if (typeof n.data.workspace === 'string') setActiveId(n.data.workspace);
-    router.push(routeForNotification(n.data));
+    setRunningAction(key);
+    try {
+      router.push(await hrefForAction(action));
+    } catch {
+      haptics.error();
+      // Lo más probable: la regla/cartera ya no existe (se borró después
+      // del aviso).
+      setActionError('No se pudo abrir. Puede que ya no exista.');
+    } finally {
+      setRunningAction(null);
+    }
   }
 
   async function onMarkAllRead() {
@@ -93,12 +155,14 @@ export default function NotificationCenterScreen() {
           <Card>
             {notifications.map((n, i) => {
               const isUnread = n.status === 'unread';
+              const isExpanded = expandedId === n.id;
               return (
                 <View key={n.id}>
                   {i > 0 ? <View className="h-px bg-border/30" /> : null}
                   <Pressable
                     onPress={() => onPressNotification(n)}
                     accessibilityRole="button"
+                    accessibilityState={{ expanded: isExpanded }}
                     className="flex-row items-start gap-3 py-3 active:opacity-70"
                   >
                     <View
@@ -115,11 +179,14 @@ export default function NotificationCenterScreen() {
                       <Text
                         className="text-text text-sm"
                         style={{ fontFamily: isUnread ? fonts.bold : fonts.semibold }}
-                        numberOfLines={1}
+                        numberOfLines={isExpanded ? undefined : 1}
                       >
                         {n.title}
                       </Text>
-                      <Text className="text-text-muted text-xs" numberOfLines={2}>
+                      <Text
+                        className={isExpanded ? 'text-text text-sm' : 'text-text-muted text-xs'}
+                        numberOfLines={isExpanded ? undefined : 2}
+                      >
                         {n.body}
                       </Text>
                       <Text className="text-text-muted mt-0.5 text-[11px]">
@@ -132,8 +199,59 @@ export default function NotificationCenterScreen() {
                         className="mt-2 h-2 w-2 rounded-full"
                         style={{ backgroundColor: colors.primary }}
                       />
-                    ) : null}
+                    ) : (
+                      <View className="mt-1">
+                        <Icon
+                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                          size={14}
+                          color={colors.textMuted}
+                        />
+                      </View>
+                    )}
                   </Pressable>
+                  {isExpanded ? (
+                    <View className="gap-2 pb-3 pl-12">
+                      <View className="flex-row flex-wrap gap-2">
+                        {actionsForNotification(n.data).map((action, idx) => {
+                          const key = `${n.id}:${idx}`;
+                          const primary = idx === 0 && n.status !== 'resolved';
+                          const busy = runningAction === key;
+                          return (
+                            <Pressable
+                              key={key}
+                              onPress={() => onAction(n, action, key)}
+                              disabled={runningAction != null}
+                              accessibilityRole="button"
+                              className={`h-9 flex-row items-center justify-center rounded-full px-4 active:opacity-70 ${
+                                primary ? '' : 'border border-border'
+                              }`}
+                              style={primary ? { backgroundColor: colors.primary } : undefined}
+                            >
+                              {busy ? (
+                                <ActivityIndicator
+                                  size="small"
+                                  color={primary ? colors.primaryFg : colors.text}
+                                />
+                              ) : (
+                                <Text
+                                  className="text-sm"
+                                  style={{
+                                    fontFamily: fonts.semibold,
+                                    color: primary ? colors.primaryFg : colors.text,
+                                  }}
+                                >
+                                  {action.label}
+                                </Text>
+                              )}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                      {actionError ? (
+                        <Text className="text-expense text-xs">{actionError}</Text>
+                      ) : null}
+                    </View>
+                  ) : null}
                 </View>
               );
             })}

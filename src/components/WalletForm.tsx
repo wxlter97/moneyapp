@@ -148,6 +148,8 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [cardProductId, setCardProductId] = useState<string | null>(null);
   const [billingDay, setBillingDay] = useState('');
   const [paymentDueDay, setPaymentDueDay] = useState('');
+  const [minPaymentPct, setMinPaymentPct] = useState('');
+  const [minPaymentFloor, setMinPaymentFloor] = useState('');
   const [counterparty, setCounterparty] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -195,6 +197,8 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setCardProductId(w.card_product);
     setBillingDay(w.billing_cycle_day ? String(w.billing_cycle_day) : '');
     setPaymentDueDay(w.payment_due_day ? String(w.payment_due_day) : '');
+    setMinPaymentPct(w.min_payment_pct ? toNumber(w.min_payment_pct).toString() : '');
+    setMinPaymentFloor(w.min_payment_floor ? toNumber(w.min_payment_floor).toString() : '');
     setCounterparty(w.counterparty ?? '');
     setPrefilled(true);
   }
@@ -360,7 +364,10 @@ export function WalletForm({ walletId }: WalletFormProps) {
         savings_interest_rate_period: savingsInterestRatePeriod,
         savings_interest_compounding: savingsInterestCompounding,
       }),
-      interest_rate: isDebt && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
+      // Una tarjeta de crédito tiene tasa aunque no se lleve como "deuda":
+      // con ella se estima el interés de no pagar el contado (estado de cuenta).
+      interest_rate:
+        (isDebt || cardStatementEligible) && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
       due_date: isDebt && dueDate ? dueDate : null,
       card_last4: cardNumberEligible && cardLast4.trim() ? cardLast4.trim() : null,
       extra_cards: cardNumberEligible ? extraCards : [],
@@ -368,6 +375,10 @@ export function WalletForm({ walletId }: WalletFormProps) {
       card_product: kind === 'credit' ? cardProductId || null : null,
       billing_cycle_day: cardStatementEligible ? parseDay(billingDay) : null,
       payment_due_day: cardStatementEligible ? parseDay(paymentDueDay) : null,
+      min_payment_pct:
+        cardStatementEligible && toNumber(minPaymentPct) > 0 ? toNumber(minPaymentPct).toFixed(2) : null,
+      min_payment_floor:
+        cardStatementEligible && toNumber(minPaymentFloor) > 0 ? toNumber(minPaymentFloor).toFixed(2) : null,
       counterparty: isDebt ? counterparty.trim() : '',
     };
 
@@ -777,6 +788,38 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 />
               </View>
             </View>
+            {/* Pago mínimo = max(piso, % del saldo al corte). Cada banco lo
+                calcula distinto: sin ninguno de los dos, el estado de cuenta
+                no inventa un mínimo. */}
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <TextField
+                  label="Pago mínimo % (opcional)"
+                  value={minPaymentPct}
+                  onChangeText={(t) => setMinPaymentPct(t.replace(/[^0-9.]/g, ''))}
+                  keyboardType="decimal-pad"
+                  placeholder="5"
+                />
+              </View>
+              <View className="flex-1">
+                <TextField
+                  label="Mínimo fijo (opcional)"
+                  value={minPaymentFloor}
+                  onChangeText={(t) => setMinPaymentFloor(t.replace(/[^0-9.]/g, ''))}
+                  keyboardType="decimal-pad"
+                  placeholder="25.00"
+                />
+              </View>
+            </View>
+            {!isDebt ? (
+              <TextField
+                label="Tasa de interés % anual (opcional)"
+                value={interestRate}
+                onChangeText={(t) => setInterestRate(t.replace(/[^0-9.]/g, ''))}
+                keyboardType="decimal-pad"
+                placeholder="36"
+              />
+            ) : null}
             {editing && existing.data?.billing_cycle_day && canSeeStatements !== false ? (
               <Pressable
                 onPress={() => {

@@ -57,7 +57,8 @@ import { useSnackbarStore } from '@/store/snackbar';
  * "Programado" (recurrente o cuota) que todavía no se registró. */
 export interface TransactionPrefill {
   type: TransactionType;
-  amount: string;
+  /** Opcional: un aviso de saldo bajo no sabe cuánto conviene transferir. */
+  amount?: string;
   categoryId?: string | null;
   walletId: string;
   toWalletId?: string | null;
@@ -241,7 +242,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   // para que solo haga falta confirmar y guardar.
   if (!(editing || duplicateFromId || !prefill || prefilled)) {
     setType(prefill.type);
-    setAmount(String(Number(prefill.amount).toFixed(2)));
+    if (prefill.amount) setAmount(String(Number(prefill.amount).toFixed(2)));
     setCategoryId(prefill.categoryId ?? null);
     setWalletId(prefill.walletId);
     setToWalletId(prefill.toWalletId ?? null);

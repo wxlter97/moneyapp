@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import NotificationCenterScreen from '@/app/(app)/notification-center';
 import type { AppNotification } from '@/api/types';
@@ -7,6 +7,12 @@ import { useWorkspaceStore } from '@/store/workspace';
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
   router: { push: (...args: unknown[]) => mockPush(...args), back: jest.fn(), canGoBack: () => false },
+}));
+
+const mockWalletsList = jest.fn();
+jest.mock('@/api/resources', () => ({
+  wallets: { list: () => mockWalletsList() },
+  recurringExpenses: { get: jest.fn() },
 }));
 
 const mockNotificationsQuery = jest.fn();
@@ -68,7 +74,7 @@ describe('NotificationCenterScreen', () => {
     expect(screen.queryByText('Marcar todas leídas')).toBeNull();
   });
 
-  it('tocar una no leída la marca leída, cambia el workspace activo y navega según su tipo', async () => {
+  it('tocar una no leída la marca leída y la abre con su texto completo, sin navegar', async () => {
     mockNotificationsQuery.mockReturnValue({
       data: [n({ id: 'a', kind: 'email_import_pending', data: { type: 'email_import_pending', workspace: 'ws-2' } })],
       isLoading: false,
@@ -79,8 +85,60 @@ describe('NotificationCenterScreen', () => {
     await fireEvent.press(screen.getByText('Te invitaron a un presupuesto'));
 
     expect(mockMarkRead).toHaveBeenCalledWith('a');
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(screen.getByText('Ver correos')).toBeTruthy();
+  });
+
+  it('una acción cambia al workspace de la notificación y navega', async () => {
+    mockNotificationsQuery.mockReturnValue({
+      data: [
+        n({
+          id: 'a',
+          kind: 'email_import_pending',
+          data: { type: 'email_import_pending', workspace: 'ws-2', log_id: 'log-9' },
+        }),
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    await render(<NotificationCenterScreen />);
+
+    await fireEvent.press(screen.getByText('Te invitaron a un presupuesto'));
+    await fireEvent.press(screen.getByText('Revisar movimiento'));
+
     expect(useWorkspaceStore.getState().activeId).toBe('ws-2');
-    expect(mockPush).toHaveBeenCalledWith('/imports');
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/import/log-9'));
+  });
+
+  it('"Registrar pago" abre una transferencia a la tarjeta desde la cartera por defecto', async () => {
+    mockWalletsList.mockResolvedValue([
+      { id: 'card', kind: 'credit', is_default: false, is_archived: false },
+      { id: 'other-card', kind: 'credit', is_default: true, is_archived: false },
+      { id: 'bank', kind: 'regular', is_default: true, is_archived: false },
+    ]);
+    mockNotificationsQuery.mockReturnValue({
+      data: [
+        n({
+          id: 'a',
+          kind: 'statement_due',
+          title: 'Fecha límite de pago',
+          data: { type: 'statement_due', workspace: 'ws-1', wallet: 'card', amount: '120.50' },
+        }),
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    await render(<NotificationCenterScreen />);
+
+    await fireEvent.press(screen.getByText('Fecha límite de pago'));
+    await fireEvent.press(screen.getByText('Registrar pago'));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalled());
+    const href = mockPush.mock.calls[0][0] as string;
+    expect(href).toContain('prefillType=transfer');
+    expect(href).toContain('prefillWallet=bank');
+    expect(href).toContain('prefillToWallet=card');
+    expect(href).toContain('prefillAmount=120.50');
   });
 
   it('tocar una ya leída no la vuelve a marcar', async () => {

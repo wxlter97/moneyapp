@@ -41,9 +41,34 @@ export function formatMoney(
   }
 }
 
+const numberFormatter = new Intl.NumberFormat('es-MX', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const compactFormatter = new Intl.NumberFormat('es-MX', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+/** Desde acá, `formatNumber(..., { compact: true })` abrevia ("1.2 M"): una
+ * cifra de 9+ dígitos no entra en una celda angosta ni achicando la fuente. */
+const COMPACT_FROM = 1_000_000;
+
+/** Sólo el número ("1,052.40"), sin código de moneda -- para bloques densos
+ * donde la moneda ya es obvia por contexto (una sola moneda en toda la
+ * pantalla). `compact` abrevia desde el millón. */
+export function formatNumber(
+  value: Money | number | null | undefined,
+  { compact = false }: { compact?: boolean } = {},
+): string {
+  const n = typeof value === 'number' ? value : toNumber(value);
+  if (compact && Math.abs(n) >= COMPACT_FROM) return compactFormatter.format(n);
+  return numberFormatter.format(n);
+}
+
 /** Formato con signo explícito (para deltas: +/-). */
-export function formatSigned(value: number, currency = 'USD'): string {
-  const s = formatMoney(Math.abs(value), currency);
+export function formatSigned(value: number, currency = 'USD', bare = false): string {
+  const s = bare ? formatNumber(Math.abs(value)) : formatMoney(Math.abs(value), currency);
   if (value > 0) return `+${s}`;
   if (value < 0) return `-${s}`;
   return s;
@@ -53,8 +78,9 @@ export function formatSigned(value: number, currency = 'USD'): string {
 export function formatParens(
   value: Money | number | null | undefined,
   currency = 'USD',
+  bare = false,
 ): string {
   const n = typeof value === 'number' ? value : toNumber(value);
-  const s = formatMoney(Math.abs(n), currency);
+  const s = bare ? formatNumber(Math.abs(n)) : formatMoney(Math.abs(n), currency);
   return n < 0 ? `(${s})` : s;
 }
