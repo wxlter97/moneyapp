@@ -192,6 +192,29 @@ export function useSetBudgetPeriod() {
   });
 }
 
+/** Interruptor global de la provisión acumulada. Solo owner. */
+export function useSetRolloverSurplus() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, value }: { id: string; value: boolean }) =>
+      res.workspaces.setRolloverSurplus(id, value),
+    onSuccess: async () => {
+      invalidate(); // el reporte de presupuesto cambia (provisión visible o no)
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+/** Pone en cero lo acumulado de todas las categorías. Solo owner. */
+export function useResetProvisions() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.workspaces.resetProvisions(id),
+    onSuccess: invalidate,
+  });
+}
+
 // --- tasas de cambio (workspace activo) -------------------------------
 export function useExchangeRates() {
   const ws = useActiveWs();
@@ -781,6 +804,15 @@ export function useUpdateCategory() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: Partial<CategoryInput> }) =>
       res.categories.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+/** Pone en cero lo acumulado (provisión) de una categoría. */
+export function useResetCategoryProvision() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.categories.resetProvision(id),
     onSuccess: invalidate,
   });
 }

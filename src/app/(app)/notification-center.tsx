@@ -212,7 +212,7 @@ export default function NotificationCenterScreen() {
                   {isExpanded ? (
                     <View className="gap-2 pb-3 pl-12">
                       <View className="flex-row flex-wrap gap-2">
-                        {actionsForNotification(n.data).map((action, idx) => {
+                        {actionsForNotification(n.data, n.created_at).map((action, idx) => {
                           const key = `${n.id}:${idx}`;
                           const primary = idx === 0 && n.status !== 'resolved';
                           const busy = runningAction === key;

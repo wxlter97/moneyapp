@@ -8,6 +8,23 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.8.0] - 2026-10-02
+
+Requiere el backend 1.8.0 (campos y endpoints nuevos de provisión acumulada).
+
+### Agregado
+- Provisión acumulada apagable: interruptor global en «Ajustar» presupuesto
+  (solo dueño) y, por categoría, en su ficha. Botones para poner en cero lo
+  acumulado, de una categoría o de todo el presupuesto (con confirmación).
+- Presupuesto: etiqueta «Te pasaste» / «Disponible» en la cabecera y en cada
+  grupo, con ícono, para que el estado no dependa sólo del color.
+
+### Corregido
+- El restante de un grupo o del total, ya pasado, se pintaba en verde: ahora
+  el color es explícito (rojo si te pasaste, verde si queda margen).
+- «Ver resumen» del resumen mensual abría el mes nuevo, vacío: ahora abre la
+  lista del mes del que habla («Ver movimientos del mes»).
+
 ## [1.7.1] - 2026-09-23
 
 ### Corregido

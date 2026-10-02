@@ -14,6 +14,7 @@ describe('routeForNotification', () => {
     [{ type: 'statement_closed', wallet: 'w1' }, '/statement/w1'],
     [{ type: 'subscription_expired' }, '/pro'],
     [{ type: 'insight' }, '/dashboard'],
+    [{ type: 'monthly_summary', month: '2026-03' }, '/dashboard?month=2026-03'],
   ])('%j -> %s', (data, expected) => {
     expect(routeForNotification(data)).toBe(expected);
   });
@@ -50,6 +51,19 @@ describe('actionsForNotification', () => {
       kind: 'record-recurring',
       recurringId: 'r1',
     });
+  });
+
+  it('resumen mensual: abre el mes que cerró, no el actual', () => {
+    const [first, second] = actionsForNotification({ type: 'monthly_summary', month: '2026-03' });
+    expect(first).toMatchObject({ kind: 'route', href: '/dashboard?month=2026-03' });
+    expect(second).toMatchObject({ kind: 'route', href: '/budgets' });
+  });
+
+  it('resumen mensual viejo (sin month): usa el mes anterior al de la notificación', () => {
+    const [first] = actionsForNotification({ type: 'monthly_summary' }, '2026-04-01T12:00:00');
+    expect(first).toMatchObject({ href: '/dashboard?month=2026-03' });
+    const [jan] = actionsForNotification({ type: 'monthly_summary' }, '2026-01-01T12:00:00');
+    expect(jan).toMatchObject({ href: '/dashboard?month=2025-12' });
   });
 
   it('nunca vacía', () => {

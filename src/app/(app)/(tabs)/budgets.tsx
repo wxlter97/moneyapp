@@ -11,16 +11,21 @@ import { BudgetMeter } from '@/components/ui/BudgetMeter';
 import { Card } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
+import { Icon } from '@/components/ui/Icon';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { remainingTone } from '@/lib/budgetState';
 import { todayISO } from '@/lib/date';
 import { periodStart } from '@/lib/periods';
 import { toNumber } from '@/lib/money';
 import { useDesktopContentWidth } from '@/lib/responsive';
 import { useWorkspaceStore } from '@/store/workspace';
+import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 
 const DESKTOP_MAX_WIDTH = 900;
 
 export default function BudgetScreen() {
+  const colors = useColors();
   // Ancho responsivo, no un booleano desktop/mobile: a un ancho de escritorio
   // "justo" (~900-1000px) todavía no sobra espacio de verdad para 2 columnas
   // -- `useDesktopContentWidth` ya lo deja en 560 (como mobile) en ese caso,
@@ -67,22 +72,44 @@ export default function BudgetScreen() {
           </Pressable>
         }
         subtitle={
-          <View>
+          <View className="gap-1">
             {/* Cifra protagonista de esta pantalla (Archivo Black, vía
                 `hero`) -- ya no se repite dentro del medidor de abajo: el
                 medidor no es un anillo con un centro que pedía duplicarla,
-                así que este número no compite con nada. */}
+                así que este número no compite con nada. Verde si queda
+                margen, rojo si se pasó -- y además una etiqueta con ícono,
+                para que el estado no dependa sólo del color. */}
+            <View className="flex-row items-center gap-2">
+              <View
+                testID="budget-status-pill"
+                className={`flex-row items-center gap-1 rounded-full px-2 py-0.5 ${
+                  over ? 'bg-expense/15' : 'bg-income/15'
+                }`}
+              >
+                <Icon
+                  name={over ? 'alert' : 'check'}
+                  size={11}
+                  color={over ? colors.expense : colors.income}
+                />
+                <Text
+                  className={`text-[11px] uppercase tracking-wide ${over ? 'text-expense' : 'text-income'}`}
+                  style={{ fontFamily: fonts.bold }}
+                >
+                  {over ? 'Te pasaste' : 'Disponible'}
+                </Text>
+              </View>
+            </View>
             <Money
               hero
               animate
               value={Math.abs(remaining)}
               currency={currency}
-              tone={over ? 'expense' : 'default'}
+              tone={remainingTone(remaining)}
               className="text-[34px] leading-[38px]"
             />
             <Text className="text-text-muted text-sm">
-              {over ? 'te pasaste' : 'te queda'} de{' '}
-              <Money animate value={budgeted} currency={currency} tone="muted" />
+              {over ? 'por encima de' : 'de'}{' '}
+              <Money animate value={budgeted} currency={currency} tone="muted" /> presupuestados
             </Text>
           </View>
         }
@@ -119,7 +146,7 @@ export default function BudgetScreen() {
                   <Money animate value={spent} currency={currency} tone="expense" />
                 </Labeled>
                 <Labeled label="Disponible">
-                  <Money animate value={remaining} currency={currency} signed />
+                  <Money animate value={remaining} currency={currency} signed tone={remainingTone(remaining)} />
                 </Labeled>
               </View>
             </Card>
@@ -164,16 +191,39 @@ function GroupCard({
   // Antes entraba con un fundido escalonado (`Card animated index={i}`) --
   // Presupuesto es una pestaña, se revisita todo el tiempo, así que el goteo
   // se repetía en cada visita en vez de verse una sola vez.
+  const colors = useColors();
+  const over = remaining < 0;
   return (
     <Card title={group.group_name}>
-      <Text className="text-text-muted mb-3 text-xs">
-        <Money value={spent} currency={currency} tone="muted" />
-        <Text> / </Text>
-        <Money value={budgeted} currency={currency} tone="muted" />
-        <Text> (</Text>
-        <Money value={remaining} currency={currency} signed className="text-xs" />
-        <Text>)</Text>
-      </Text>
+      <View className="mb-3 gap-1">
+        <Text className="text-text-muted text-xs">
+          <Money value={spent} currency={currency} tone="muted" />
+          <Text> / </Text>
+          <Money value={budgeted} currency={currency} tone="muted" />
+        </Text>
+        {/* Rojo + ícono si el grupo se pasó, verde si queda margen: el
+            estado se lee en el texto ("Te pasaste"/"Disponible"), no sólo
+            en el color del número. */}
+        <View className="flex-row items-center gap-1" testID="group-remaining">
+          <Icon
+            name={over ? 'alert' : 'check'}
+            size={12}
+            color={over ? colors.expense : colors.income}
+          />
+          <Text
+            className={`text-xs ${over ? 'text-expense' : 'text-income'}`}
+            style={{ fontFamily: fonts.semibold }}
+          >
+            {over ? 'Te pasaste ' : 'Disponible '}
+            <Money
+              value={Math.abs(remaining)}
+              currency={currency}
+              tone={remainingTone(remaining)}
+              className="text-xs"
+            />
+          </Text>
+        </View>
+      </View>
       {group.rows.map((row, i) => (
         <View key={row.category}>
           {i > 0 ? <View className="h-px bg-border/30" /> : null}

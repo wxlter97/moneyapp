@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FadeInView } from '@/components/ui/FadeInView';
@@ -60,6 +60,18 @@ export default function OverviewScreen() {
   const tab = useUIStore((s) => s.overviewTab);
   const setTab = useUIStore((s) => s.setOverviewTab);
   const [month, setMonth] = useState(currentYearMonth);
+
+  // `?month=YYYY-MM` (p. ej. "Ver movimientos del mes" del resumen mensual,
+  // que habla del mes ya cerrado): abre la lista de ese mes en vez del
+  // actual. Se aplica cuando cambia el parámetro, no en cada render, para no
+  // pelearse con el MonthSwitcher.
+  const { month: monthParam } = useLocalSearchParams<{ month?: string }>();
+  useEffect(() => {
+    const m = /^(\d{4})-(\d{2})$/.exec(monthParam ?? '');
+    if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return;
+    setMonth({ year: Number(m[1]), month: Number(m[2]) });
+    setTab('lista');
+  }, [monthParam, setTab]);
 
   const canSeeNetWorth = useHasFeature('net_worth');
   const canSeeCalendar = useHasFeature('calendar');

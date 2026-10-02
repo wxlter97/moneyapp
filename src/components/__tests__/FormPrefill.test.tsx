@@ -110,6 +110,7 @@ Object.assign(jest.requireMock('@/api/queries'), mockCategoryQueries, {
   useCreateCategory: () => mockNone,
   useUpdateCategory: () => mockNone,
   useDeleteCategory: () => mockNone,
+  useResetCategoryProvision: () => mockNone,
   useLoyaltyCategoryTypes: () => ({ data: [] }),
 });
 
@@ -119,7 +120,7 @@ describe('CategoryForm: precarga', () => {
   } as Category;
   const hija = {
     id: 'c9', name: 'Freelance', type: 'income', icon: '💼', color: '#22C55E', parent: 'g1',
-    is_group: false, category_type: null,
+    is_group: false, category_type: null, rollover_surplus: true,
   } as unknown as Category;
 
   it('al editar, precarga el nombre guardado', async () => {

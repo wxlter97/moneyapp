@@ -38,9 +38,23 @@ function withQuery(path: string, params: Record<string, string>): Href {
   return (qs ? `${path}?${qs}` : path) as Href;
 }
 
+/** `YYYY-MM` del mes anterior a `createdAt` -- respaldo para resúmenes
+ * mensuales viejos, de antes de que el aviso trajera su `month` (se mandan el
+ * día 1 y hablan del mes que acaba de cerrar). */
+function previousMonth(createdAt: string | undefined): string | null {
+  const d = createdAt ? new Date(createdAt) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  const prev = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+}
+
 /** Acciones de una notificación, la principal primero. Nunca vacía: sin
- * nada específico, al menos "Ir al resumen". */
-export function actionsForNotification(data: Record<string, unknown>): NotificationAction[] {
+ * nada específico, al menos "Ir al resumen". `createdAt` sólo se usa para
+ * resolver el mes de un resumen mensual viejo. */
+export function actionsForNotification(
+  data: Record<string, unknown>,
+  createdAt?: string,
+): NotificationAction[] {
   const actions: NotificationAction[] = [];
   const wallet = str(data.wallet);
 
@@ -128,8 +142,19 @@ export function actionsForNotification(data: Record<string, unknown>): Notificat
     case 'subscription_expired':
       actions.push({ kind: 'route', label: 'Ver mi plan', href: '/pro' });
       break;
+    case 'monthly_summary': {
+      // Se manda el día 1 y habla del mes que CERRÓ: abrir el dashboard sin
+      // más mostraba el mes nuevo, vacío. Se abre la lista de ese mes.
+      const month = str(data.month) ?? previousMonth(createdAt);
+      actions.push({
+        kind: 'route',
+        label: 'Ver movimientos del mes',
+        href: month ? withQuery('/dashboard', { month }) : '/dashboard',
+      });
+      actions.push({ kind: 'route', label: 'Ver presupuesto', href: '/budgets' });
+      break;
+    }
     case 'insight':
-    case 'monthly_summary':
       // Sin pantalla propia todavía (ver `apps.reports.services.
       // behavior_insights` en el backend) -- el dashboard ya muestra el
       // resumen de gasto que le da contexto al patrón detectado.
@@ -144,7 +169,7 @@ export function actionsForNotification(data: Record<string, unknown>): Notificat
 /** A dónde navegar al tocar un push: la primera acción que sea sólo
  * navegar -- abrir un formulario precargado desde un push, sin haber visto
  * el aviso completo, sería sorprendente. */
-export function routeForNotification(data: Record<string, unknown>): Href {
-  const route = actionsForNotification(data).find((a) => a.kind === 'route');
+export function routeForNotification(data: Record<string, unknown>, createdAt?: string): Href {
+  const route = actionsForNotification(data, createdAt).find((a) => a.kind === 'route');
   return route && route.kind === 'route' ? route.href : '/dashboard';
 }
