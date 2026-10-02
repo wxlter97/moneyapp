@@ -1,4 +1,4 @@
-import { budgetState } from '../budgetState';
+import { budgetState, remainingTone } from '../budgetState';
 
 // Misma lógica que probaba antes `BudgetProgressRow.test.tsx` (auditoría de
 // producto §3.2 / P0-3), ahora extraída a una única fuente compartida con
@@ -28,5 +28,13 @@ describe('budgetState', () => {
 
   it('sin gasto ni presupuesto es "ok" (nada que avisar)', () => {
     expect(budgetState(0, 0)).toEqual({ state: 'ok', ratio: 0, noBudget: false });
+  });
+});
+
+describe('remainingTone', () => {
+  it('pasado = rojo, con margen = verde, en cero = neutro', () => {
+    expect(remainingTone(-20)).toBe('expense');
+    expect(remainingTone(30)).toBe('income');
+    expect(remainingTone(0)).toBe('default');
   });
 });

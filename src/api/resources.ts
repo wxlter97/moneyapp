@@ -136,6 +136,16 @@ export const workspaces = {
     api
       .patch<Workspace>(`/workspaces/${id}/`, { budget_period }, { skipWorkspace: true })
       .then((r) => r.data),
+  /** Interruptor global de la provisión acumulada. Solo owner. */
+  setRolloverSurplus: (id: string, rollover_surplus: boolean) =>
+    api
+      .patch<Workspace>(`/workspaces/${id}/`, { rollover_surplus }, { skipWorkspace: true })
+      .then((r) => r.data),
+  /** Pone en cero lo acumulado de TODAS las categorías. Solo owner. */
+  resetProvisions: (id: string) =>
+    api
+      .post<{ reset: number }>(`/workspaces/${id}/reset-provisions/`, {}, { skipWorkspace: true })
+      .then((r) => r.data),
   /** Renombra el presupuesto. Solo owner. */
   rename: (id: string, name: string) =>
     api.patch<Workspace>(`/workspaces/${id}/`, { name }, { skipWorkspace: true }).then((r) => r.data),
@@ -444,6 +454,9 @@ export const categories = {
   /** Borrado definitivo de una categoría ya eliminada (soft-delete) --
    * sólo para vaciar "Eliminadas". */
   purge: (id: string) => api.delete(`/categories/${id}/purge/`).then(() => undefined),
+  /** Pone en cero lo acumulado (provisión) de una categoría. */
+  resetProvision: (id: string) =>
+    api.post<{ category: string; accumulated_amount: string }>(`/categories/${id}/reset-provision/`).then((r) => r.data),
   /** Fija `sort_order` según el orden de `ids`. */
   reorder: (ids: string[]) =>
     api.post<{ reordered: number }>('/categories/reorder/', { ids }).then((r) => r.data),

@@ -30,3 +30,16 @@ export function budgetState(spent: number, budgeted: number): BudgetState {
   const warning = !over && ratio >= BUDGET_WARNING_THRESHOLD;
   return { state: over ? 'over' : warning ? 'warning' : 'ok', ratio, noBudget };
 }
+
+/**
+ * Tono de un "disponible" (presupuesto - gastado): rojo si se pasó, verde si
+ * queda margen, neutro justo en cero. Se pasa SIEMPRE como `tone` explícito a
+ * `Money` -- no se confía en `signed`, que colorea por el signo del número
+ * que muestra: un "disponible" ya pasado tiene que verse rojo sin depender de
+ * eso (reportado: el negativo de un grupo pasado salía verde).
+ */
+export function remainingTone(remaining: number): 'income' | 'expense' | 'default' {
+  if (remaining < 0) return 'expense';
+  if (remaining > 0) return 'income';
+  return 'default';
+}

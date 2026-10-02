@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import {
@@ -7,7 +7,9 @@ import {
   useCategories,
   useCategoryBudgets,
   useDeleteCategoryBudget,
+  useResetProvisions,
   useSetBudgetPeriod,
+  useSetRolloverSurplus,
   useSetForwardCategoryBudget,
 } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
@@ -178,7 +180,13 @@ export default function BudgetEditScreen() {
     <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title={`Presupuesto · ${periodLabel(start, budgetPeriod)}`} />
       {isOwner ? (
-        <BudgetPeriodRow workspaceId={activeWorkspace!.id} current={budgetPeriod} />
+        <>
+          <BudgetPeriodRow workspaceId={activeWorkspace!.id} current={budgetPeriod} />
+          <RolloverRow
+            workspaceId={activeWorkspace!.id}
+            enabled={activeWorkspace!.rollover_surplus ?? true}
+          />
+        </>
       ) : null}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -415,6 +423,102 @@ function BudgetPeriodRow({ workspaceId, current }: { workspaceId: string; curren
   return (
     <View className="gap-1.5 pb-2">
       <Select label="Período" value={current} onChange={onChange} options={BUDGET_PERIOD_OPTIONS} />
+      {error ? <Text className="text-expense text-xs">{error}</Text> : null}
+    </View>
+  );
+}
+
+/** Provisión acumulada, global al workspace: apagarla manda sobre el ajuste
+ * de cada categoría (ver `CategoryForm`). Lo ya acumulado se conserva, pero
+ * no cuenta mientras esté apagada; "Poner en cero" lo borra de verdad. Solo
+ * el dueño. */
+function RolloverRow({ workspaceId, enabled }: { workspaceId: string; enabled: boolean }) {
+  const colors = useColors();
+  const setRollover = useSetRolloverSurplus();
+  const resetAll = useResetProvisions();
+  const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function onToggle(next: boolean) {
+    setError(null);
+    try {
+      await setRollover.mutateAsync({ id: workspaceId, value: next });
+      haptics.success();
+    } catch (err) {
+      haptics.error();
+      setError(errorMessage(err, 'No se pudo cambiar.'));
+    }
+  }
+
+  async function onReset() {
+    setError(null);
+    try {
+      await resetAll.mutateAsync(workspaceId);
+      haptics.success();
+      setConfirming(false);
+      setDone(true);
+    } catch (err) {
+      haptics.error();
+      setError(errorMessage(err, 'No se pudo poner en cero.'));
+    }
+  }
+
+  return (
+    <View className="gap-2 pb-2">
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="min-w-0 flex-1">
+          <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+            Acumular sobrante
+          </Text>
+          <Text className="text-text-muted text-xs">
+            {enabled
+              ? 'Lo que no gastes se suma al período siguiente. Cada categoría se puede excluir desde su ficha.'
+              : 'Apagado para todas las categorías: lo que sobra se pierde. Lo ya acumulado se conserva, pero no cuenta.'}
+          </Text>
+        </View>
+        <Switch
+          value={enabled}
+          disabled={setRollover.isPending}
+          onValueChange={(v) => {
+            haptics.selection();
+            void onToggle(v);
+          }}
+          accessibilityLabel="Acumular sobrante de presupuesto en todas las categorías"
+          trackColor={{ true: colors.primary, false: colors.surface2 }}
+          thumbColor="#FFFFFF"
+        />
+      </View>
+      {confirming ? (
+        <View className="gap-2 rounded-2xl bg-expense/10 p-3">
+          <Text className="text-text text-sm">
+            ¿Poner en cero lo acumulado de todas las categorías? No se puede deshacer.
+          </Text>
+          <View className="flex-row gap-2">
+            <View className="flex-1">
+              <Button label="Cancelar" variant="ghost" onPress={() => setConfirming(false)} />
+            </View>
+            <View className="flex-1">
+              <Button label="Poner en cero" loading={resetAll.isPending} onPress={onReset} />
+            </View>
+          </View>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => {
+            haptics.tap();
+            setDone(false);
+            setConfirming(true);
+          }}
+          accessibilityRole="button"
+          className="self-start py-1 active:opacity-60"
+        >
+          <Text className="text-expense text-xs" style={{ fontFamily: fonts.semibold }}>
+            Poner en cero lo acumulado
+          </Text>
+        </Pressable>
+      )}
+      {done ? <Text className="text-income text-xs">Listo: lo acumulado quedó en cero.</Text> : null}
       {error ? <Text className="text-expense text-xs">{error}</Text> : null}
     </View>
   );

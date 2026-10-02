@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import {
   useCategories,
   useCreateCategory,
   useDeleteCategory,
   useLoyaltyCategoryTypes,
+  useResetCategoryProvision,
   useUpdateCategory,
 } from '@/api/queries';
 import { errorMessage, fieldErrors } from '@/api/errors';
@@ -17,6 +18,7 @@ import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { useColors } from '@/theme';
 import { muteColor } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 
@@ -44,11 +46,15 @@ export function CategoryForm({
   initialType = 'expense',
   initialParent,
 }: CategoryFormProps) {
+  const colors = useColors();
   const editing = !!categoryId;
   const categoriesQ = useCategories();
   const create = useCreateCategory();
   const update = useUpdateCategory();
   const remove = useDeleteCategory();
+  const resetProvision = useResetCategoryProvision();
+  const [provisionReset, setProvisionReset] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const existing = useMemo(
     () => categoriesQ.data?.find((c) => c.id === categoryId),
@@ -68,6 +74,7 @@ export function CategoryForm({
   const [color, setColor] = useState<string | null>(null);
   const [parentId, setParentId] = useState<string | null>(initialParent ?? null);
   const [categoryTypeId, setCategoryTypeId] = useState<string | null>(null);
+  const [rolloverSurplus, setRolloverSurplus] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [prefilled, setPrefilled] = useState(false);
@@ -89,6 +96,7 @@ export function CategoryForm({
     setColor(existing.color || null);
     setParentId(existing.parent);
     setCategoryTypeId(existing.category_type);
+    setRolloverSurplus(existing.rollover_surplus ?? true);
     setPrefilled(true);
   }
 
@@ -126,6 +134,7 @@ export function CategoryForm({
       color: color ?? '',
       parent: parentId || null,
       category_type: categoryTypeId || null,
+      rollover_surplus: rolloverSurplus,
     };
     try {
       if (editing) await update.mutateAsync({ id: categoryId!, input: payload });
@@ -237,6 +246,69 @@ export function CategoryForm({
           options={[{ value: '', label: 'Sin especificar' }, ...categoryTypeOptions]}
           placeholder="Sin especificar"
         />
+
+        {type === 'expense' ? (
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="min-w-0 flex-1">
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                Acumular sobrante
+              </Text>
+              <Text className="text-text-muted text-xs">
+                {rolloverSurplus
+                  ? 'Lo que no gastes del presupuesto se suma al período siguiente.'
+                  : 'Lo que no gastes se pierde al cerrar el período. Lo ya acumulado se conserva, pero no cuenta mientras esté apagado.'}
+              </Text>
+            </View>
+            <Switch
+              value={rolloverSurplus}
+              onValueChange={(v) => {
+                haptics.selection();
+                setRolloverSurplus(v);
+              }}
+              accessibilityLabel="Acumular sobrante de presupuesto"
+              trackColor={{ true: colors.primary, false: colors.surface2 }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        ) : null}
+
+        {editing && type === 'expense' ? (
+          <View className="items-start gap-1">
+            <Pressable
+              onPress={async () => {
+                haptics.tap();
+                setFormError(null);
+                // Irreversible: se pide un segundo toque en vez de borrar de una.
+                if (!confirmingReset) {
+                  setProvisionReset(false);
+                  setConfirmingReset(true);
+                  return;
+                }
+                try {
+                  await resetProvision.mutateAsync(categoryId!);
+                  haptics.success();
+                  setConfirmingReset(false);
+                  setProvisionReset(true);
+                } catch (err) {
+                  haptics.error();
+                  setFormError(errorMessage(err, 'No se pudo poner en cero.'));
+                }
+              }}
+              disabled={resetProvision.isPending || busy}
+              accessibilityRole="button"
+              className="py-1 active:opacity-60"
+            >
+              <Text className="text-expense text-sm" style={{ fontFamily: fonts.semibold }}>
+                {confirmingReset
+                  ? 'Toca de nuevo para confirmar (no se puede deshacer)'
+                  : 'Poner en cero lo acumulado de esta categoría'}
+              </Text>
+            </Pressable>
+            {provisionReset ? (
+              <Text className="text-income text-xs">Listo: lo acumulado quedó en cero.</Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {formError ? <Text className="text-expense text-sm">{formError}</Text> : null}
 

@@ -125,6 +125,9 @@ export interface Workspace {
   base_currency: string;
   /** Cadencia del presupuesto (diario/semanal/quincenal/mensual/anual). */
   budget_period: BudgetPeriod;
+  /** Interruptor global de la provisión acumulada: apagado, ninguna categoría
+   * acumula sobrante (manda sobre `Category.rollover_surplus`). */
+  rollover_surplus: boolean;
   inbound_token: string;
   inbound_email: string;
   created_at: ISODateTime;
@@ -415,6 +418,9 @@ export interface Category {
   /** Rubro estándar del catálogo de lealtad (opcional) -- ver `LoyaltyCategoryType`.
    * Mapea esta categoría propia a un rubro global para heredar sus tasas. */
   category_type: UUID | null;
+  /** Si el sobrante de presupuesto rueda al período siguiente (provisión
+   * acumulada). Apagado = lo que sobra se pierde al cerrar el período. */
+  rollover_surplus: boolean;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 }
@@ -428,6 +434,7 @@ export interface CategoryInput {
   parent?: UUID | null;
   sort_order?: number;
   category_type?: UUID | null;
+  rollover_surplus?: boolean;
 }
 
 export type TransactionSource =
