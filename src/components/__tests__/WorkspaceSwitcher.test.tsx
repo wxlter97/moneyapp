@@ -14,6 +14,8 @@ jest.mock('@/store/workspace', () => ({
     selector({ workspaces: mockWorkspaces, activeId: 'w1', setActiveId: mockSetActiveId }),
 }));
 
+jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+
 jest.mock('@/api/queries', () => ({
   useCreateWorkspace: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));

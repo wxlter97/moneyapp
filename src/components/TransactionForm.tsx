@@ -123,6 +123,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   // el plan (mismo fail-open que el resto de la app).
   const canDuplicate = useHasFeature('transaction_duplicate');
   const canRefund = useHasFeature('refunds');
+  const canInstallments = useHasFeature('installments');
   const canSplitCategories = useHasFeature('split_categories');
   const canSplitPeople = useHasFeature('split_people');
   const create = useCreateTransaction();
