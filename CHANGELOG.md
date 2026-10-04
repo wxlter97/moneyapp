@@ -8,6 +8,25 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.8.1] - 2026-10-03
+
+No requiere cambios de backend.
+
+### Agregado
+- Acceso directo a «Compras a plazo» arriba de Herramientas y desde «Agregar
+  transacción» (gasto): ya no hay que entrar a Organización.
+- Selector de presupuesto: «Renombrar o administrar» abre la pantalla de
+  Presupuestos.
+
+### Cambiado
+- Cerrar sesión desde la cabecera pide confirmación.
+- Cartera: «Cuenta bancaria» pasa a «Cuenta / débito» (con nota de que la
+  débito usa el saldo de la cuenta); «Cartera padre» pasa a «Dentro de otra
+  cartera», con explicación; los selectores de banco aclaran de qué catálogo
+  salen y «Sin especificar» pasa a nombres más claros.
+- Tarjetas de crédito ya no piden «fecha de vencimiento» (ya está el día de
+  pago mensual); en préstamos se llama «Fecha final de la deuda».
+
 ## [1.8.0] - 2026-10-02
 
 Requiere el backend 1.8.0 (campos y endpoints nuevos de provisión acumulada).

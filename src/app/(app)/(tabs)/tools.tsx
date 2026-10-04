@@ -9,6 +9,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
+import { useHasFeature } from '@/api/queries';
 import { haptics } from '@/lib/haptics';
 import { TOOL_GROUPS } from '@/lib/toolGroups';
 import { useColors } from '@/theme';
@@ -68,6 +69,7 @@ function AccentOption({
  */
 export default function ToolsScreen() {
   const colors = useColors();
+  const canInstallments = useHasFeature('installments');
   const version = Constants.expoConfig?.version ?? '—';
   const themePref = useThemeStore((s) => s.pref);
   const setThemePref = useThemeStore((s) => s.setPref);
@@ -85,6 +87,27 @@ export default function ToolsScreen() {
         <ScreenHeader title="Herramientas" />
 
         <InstallAppCard />
+
+        {/* Se usa seguido y estaba a 3 toques (Organización → Compras a plazo). */}
+        {canInstallments !== false ? (
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              router.push('/installments');
+            }}
+            accessibilityRole="button"
+            className="flex-row items-center gap-3 rounded-3xl bg-surface-2 p-3 active:opacity-60"
+          >
+            <Icon name="receipt" size={20} color={colors.text} />
+            <View className="flex-1">
+              <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                Compras a plazo
+              </Text>
+              <Text className="text-text-muted text-xs">Tus pagos en cuotas</Text>
+            </View>
+            <Icon name="chevron-right" size={16} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
 
         <Card title="Gestión">
           {/* Antes cada tile entraba con un fundido escalonado (`FadeInView

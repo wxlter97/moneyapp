@@ -80,7 +80,7 @@ interface WalletPreset {
 // pudiendo cambiar después vía "Subtipo" (ver más abajo, sin tocar) --
 // `purpose` nunca se cambia post-creación, igual que antes.
 const WALLET_PRESETS: WalletPreset[] = [
-  { key: 'bank', label: 'Cuenta bancaria', purpose: 'spending', kind: 'bank', icon: 'bank' },
+  { key: 'bank', label: 'Cuenta / débito', purpose: 'spending', kind: 'bank', icon: 'bank' },
   { key: 'cash', label: 'Efectivo', purpose: 'spending', kind: 'cash', icon: 'cash' },
   { key: 'credit', label: 'Tarjeta de crédito', purpose: 'debt', kind: 'credit', icon: 'card' },
   { key: 'savings', label: 'Ahorro', purpose: 'savings', kind: 'bank', icon: 'star' },
@@ -368,7 +368,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
       // con ella se estima el interés de no pagar el contado (estado de cuenta).
       interest_rate:
         (isDebt || cardStatementEligible) && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
-      due_date: isDebt && dueDate ? dueDate : null,
+      due_date: isDebt && kind !== 'credit' && dueDate ? dueDate : null,
       card_last4: cardNumberEligible && cardLast4.trim() ? cardLast4.trim() : null,
       extra_cards: cardNumberEligible ? extraCards : [],
       bank_schema: cardNumberEligible ? bankSchemaId || null : null,
@@ -551,21 +551,33 @@ export function WalletForm({ walletId }: WalletFormProps) {
         {kind === 'credit' ? (
           <>
             <Select
-              label="Banco (para recompensas, opcional)"
+              label="Banco emisor (opcional)"
               value={loyaltyBankId}
               onChange={onChangeLoyaltyBank}
-              options={[{ value: '', label: 'Sin especificar' }, ...loyaltyBankOptions]}
-              placeholder="Sin especificar"
+              options={[{ value: '', label: 'Otro banco / ninguno' }, ...loyaltyBankOptions]}
+              placeholder="Otro banco / ninguno"
             />
             {loyaltyBankId ? (
-              <Select
-                label="Producto de ese banco"
-                value={cardProductId}
-                onChange={setCardProductId}
-                options={[{ value: '', label: 'Sin especificar' }, ...cardProductOptions]}
-                placeholder="Sin especificar"
-              />
-            ) : null}
+              <>
+                <Select
+                  label="Producto de ese banco"
+                  value={cardProductId}
+                  onChange={setCardProductId}
+                  options={[{ value: '', label: 'Tarjeta genérica (sin recompensas)' }, ...cardProductOptions]}
+                  placeholder="Tarjeta genérica (sin recompensas)"
+                />
+                {cardProductOptions.length === 0 ? (
+                  <Text className="text-text-muted text-xs">
+                    Este banco aún no tiene productos con recompensas en el catálogo; se guarda como
+                    tarjeta genérica.
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              <Text className="text-text-muted text-xs">
+                Elegir banco y producto activa el cálculo de recompensas (puntos, cashback).
+              </Text>
+            )}
           </>
         ) : null}
 
@@ -643,13 +655,19 @@ export function WalletForm({ walletId }: WalletFormProps) {
         )}
 
         {parentOptions.length > 0 ? (
-          <Select
-            label="Cartera padre (opcional)"
-            value={parentId}
-            onChange={setParentId}
-            options={[{ value: '', label: 'Ninguna' }, ...parentOptions]}
-            placeholder="Ninguna"
-          />
+          <View className="gap-1.5">
+            <Select
+              label="Dentro de otra cartera (opcional)"
+              value={parentId}
+              onChange={setParentId}
+              options={[{ value: '', label: 'Ninguna (cartera independiente)' }, ...parentOptions]}
+              placeholder="Ninguna (cartera independiente)"
+            />
+            <Text className="text-text-muted text-xs">
+              Para agrupar: esta cartera pasa a ser un “bolsillo” de la elegida (p. ej. un ahorro dentro de
+              tu cuenta) y el saldo de la cartera principal suma el de sus bolsillos.
+            </Text>
+          </View>
         ) : null}
 
         {isSavings ? (
@@ -715,11 +733,17 @@ export function WalletForm({ walletId }: WalletFormProps) {
               keyboardType="decimal-pad"
               placeholder="12.5"
             />
-            <DateField
-              label="Fecha de vencimiento (opcional)"
-              value={dueDate || '2026-12-31'}
-              onChange={setDueDate}
-            />
+            {/* En tarjetas de crédito el vencimiento ya lo cubre el "Día de
+                pago" mensual (más abajo): una fecha única no tiene sentido
+                para algo que se paga todos los meses. Sólo préstamos/deudas
+                con una fecha final real. */}
+            {kind !== 'credit' ? (
+              <DateField
+                label="Fecha final de la deuda (opcional)"
+                value={dueDate || '2026-12-31'}
+                onChange={setDueDate}
+              />
+            ) : null}
             <TextField
               label="Persona / entidad (opcional)"
               value={counterparty}
@@ -742,7 +766,11 @@ export function WalletForm({ walletId }: WalletFormProps) {
         {cardNumberEligible ? (
           <>
             <TextField
-              label="Últimos 4 dígitos (tarjeta, opcional)"
+              label={
+                kind === 'credit'
+                  ? 'Últimos 4 dígitos de la tarjeta (opcional)'
+                  : 'Últimos 4 dígitos de tu tarjeta de débito (opcional)'
+              }
               value={cardLast4}
               onChangeText={(t) => setCardLast4(t.replace(/\D/g, '').slice(0, 4))}
               keyboardType="number-pad"
@@ -756,12 +784,22 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 sigue siendo el único lugar para elegirlo. */}
             {bankOptions.length > 0 && !(kind === 'credit' && loyaltyBankId) ? (
               <Select
-                label="Banco (opcional)"
+                label={
+                  kind === 'credit'
+                    ? 'Banco para importar correos (opcional)'
+                    : 'Banco para importar correos de notificación (opcional)'
+                }
                 value={bankSchemaId}
                 onChange={setBankSchemaId}
-                options={[{ value: '', label: 'Sin especificar' }, ...bankOptions]}
-                placeholder="Sin especificar"
+                options={[{ value: '', label: 'Ninguno / otro banco' }, ...bankOptions]}
+                placeholder="Ninguno / otro banco"
               />
+            ) : null}
+            {kind === 'bank' ? (
+              <Text className="text-text-muted text-xs">
+                La tarjeta de débito usa el saldo de esta cuenta: registra tus gastos con ella como
+                transacciones de esta cartera. Aquí solo aparecen los bancos cuyos correos la app sabe leer.
+              </Text>
             ) : null}
           </>
         ) : null}
