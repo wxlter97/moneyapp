@@ -738,6 +738,12 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
                 bottom: 0,
                 color: 'transparent',
                 textAlign: 'center',
+                // Web (y PWA en iOS): sin el anillo de foco del navegador, que
+                // al ser un campo de ancho completo se veía como dos barras
+                // azules alrededor del monto.
+                ...(Platform.OS === 'web'
+                  ? ({ outlineStyle: 'none', outlineWidth: 0 } as object)
+                  : null),
               }}
             />
           </View>
