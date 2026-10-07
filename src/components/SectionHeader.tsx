@@ -4,6 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassSurface } from './ui/GlassSurface';
 import { ScreenHeader } from './ScreenHeader';
+import { IconButton } from './ui/IconButton';
+import { haptics } from '@/lib/haptics';
+import { useUIStore } from '@/store/ui';
+import { useColors } from '@/theme';
 
 interface SectionHeaderProps {
   /** Etiqueta pequeña sobre el contenido principal ("Inicio", "Carteras"…). */
@@ -18,6 +22,9 @@ interface SectionHeaderProps {
    * que la cabecera no quede más angosta que el cuerpo de la pantalla
    * cuando ese cuerpo se ensancha en desktop (ver `budgets.tsx`/`wallets.tsx`). */
   maxWidth?: number;
+  /** Muestra el "ojito" junto al título para ocultar/mostrar la cifra grande
+   * (preferencia compartida entre pantallas: `useUIStore.hideAmounts`). */
+  hideToggle?: boolean;
 }
 
 /**
@@ -32,8 +39,18 @@ interface SectionHeaderProps {
  * (p. ej. Carteras, Herramientas) la fila de título quedaba pegada a esa
  * línea, sin aire.
  */
-export function SectionHeader({ title, subtitle, right, children, maxWidth = 560 }: SectionHeaderProps) {
+export function SectionHeader({
+  title,
+  subtitle,
+  right,
+  children,
+  maxWidth = 560,
+  hideToggle = false,
+}: SectionHeaderProps) {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
+  const hidden = useUIStore((s) => s.hideAmounts);
+  const toggleHidden = useUIStore((s) => s.toggleHideAmounts);
 
   return (
     <GlassSurface radius={0} border={false} className="border-b border-border/50">
@@ -47,13 +64,26 @@ export function SectionHeader({ title, subtitle, right, children, maxWidth = 560
             (cambiar de pestaña, abrir un modal) en vez de verse una sola
             vez: más titileo que pulido. Se muestra directo. */}
         <View className="flex-row items-center justify-between pt-1">
-          {title ? (
-            <Text className="text-text-muted text-[13px] font-semibold uppercase tracking-wide">
-              {title}
-            </Text>
-          ) : (
-            <View />
-          )}
+          <View className="flex-row items-center gap-2">
+            {title ? (
+              <Text className="text-text-muted text-[13px] font-semibold uppercase tracking-wide">
+                {title}
+              </Text>
+            ) : null}
+            {hideToggle ? (
+              <IconButton
+                icon={hidden ? 'eye-off' : 'eye'}
+                size={24}
+                iconSize={16}
+                color={colors.textMuted}
+                onPress={() => {
+                  haptics.tap();
+                  toggleHidden();
+                }}
+                accessibilityLabel={hidden ? 'Mostrar montos' : 'Ocultar montos'}
+              />
+            ) : null}
+          </View>
           {right}
         </View>
         {subtitle ? <View className="mt-1">{subtitle}</View> : null}

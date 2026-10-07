@@ -65,6 +65,10 @@ function useInvalidateWorkspace() {
 
 /** `budget_period` del workspace activo (default 'monthly' mientras no cargó
  * la lista de workspaces todavía). */
+function useActiveWeekStart(): number {
+  return useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId)?.week_start_day ?? 0);
+}
+
 function useActiveBudgetPeriod(): BudgetPeriod {
   return useWorkspaceStore(
     (s) => s.workspaces.find((w) => w.id === s.activeId)?.budget_period ?? 'monthly',
@@ -75,7 +79,8 @@ function useActiveBudgetPeriod(): BudgetPeriod {
  * `useCategoryBudgets`/`useBudgetReport` cuando no se pasa uno explícito. */
 function useCurrentBudgetPeriodStart(): ISODate {
   const budgetPeriod = useActiveBudgetPeriod();
-  return periodStart(todayISO(), budgetPeriod);
+  const weekStart = useActiveWeekStart();
+  return periodStart(todayISO(), budgetPeriod, weekStart);
 }
 
 function useActiveWs() {
@@ -187,6 +192,19 @@ export function useSetBudgetPeriod() {
       res.workspaces.setBudgetPeriod(id, period),
     onSuccess: async () => {
       invalidate(); // el reporte/lista de presupuesto cacheados quedan con la cadencia vieja
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+/** Día de inicio de la semana del presupuesto semanal. Solo owner. */
+export function useSetWeekStartDay() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, day }: { id: string; day: number }) => res.workspaces.setWeekStartDay(id, day),
+    onSuccess: async () => {
+      invalidate(); // los períodos cacheados quedan con la grilla de semanas vieja
       await qc.invalidateQueries({ queryKey: qk.workspaces() });
     },
   });

@@ -29,6 +29,9 @@ interface MoneyProps extends TextProps {
    * filas y bloques densos donde la moneda ya es la del workspace. El
    * lector de pantalla igual recibe el monto con su moneda. */
   hideCurrency?: boolean;
+  /** Oculta la cifra ("••••") -- el "ojito" de los headers. El lector de
+   * pantalla tampoco la lee. */
+  masked?: boolean;
   className?: string;
 }
 
@@ -41,6 +44,7 @@ export function Money({
   hero = false,
   animate = false,
   hideCurrency = false,
+  masked = false,
   className = '',
   style,
   ...rest
@@ -52,7 +56,9 @@ export function Money({
   // una lista larga arrastraría su propio loop de animación cada vez que
   // llega un refetch, sin que nadie lo vea.
   const n = useCountingNumber(rawN, undefined, animate);
-  const text = parens
+  const text = masked
+    ? '••••••'
+    : parens
     ? formatParens(n, currency, hideCurrency)
     : signed
       ? formatSigned(n, currency, hideCurrency)
@@ -87,7 +93,7 @@ export function Money({
     <Text
       className={`${color} ${className}`}
       style={[fontFamily ? { fontFamily } : null, hero ? { letterSpacing: -1.2 } : null, style]}
-      accessibilityLabel={hideCurrency ? formatSigned(rawN, currency) : undefined}
+      accessibilityLabel={masked ? 'Monto oculto' : hideCurrency ? formatSigned(rawN, currency) : undefined}
       {...rest}
     >
       {text}

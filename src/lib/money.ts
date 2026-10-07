@@ -41,6 +41,26 @@ export function formatMoney(
   }
 }
 
+const symbols = new Map<string, string>();
+
+/** Símbolo corto de la moneda ("$" para USD, "€", "Q"…). Si el runtime no lo
+ * conoce, cae al código. */
+export function currencySymbol(currency = 'USD'): string {
+  let sym = symbols.get(currency);
+  if (!sym) {
+    try {
+      sym =
+        new Intl.NumberFormat('es-MX', { style: 'currency', currency, currencyDisplay: 'narrowSymbol' })
+          .formatToParts(0)
+          .find((p) => p.type === 'currency')?.value ?? currency;
+    } catch {
+      sym = currency;
+    }
+    symbols.set(currency, sym);
+  }
+  return sym;
+}
+
 const numberFormatter = new Intl.NumberFormat('es-MX', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,

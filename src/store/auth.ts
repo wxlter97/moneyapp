@@ -51,7 +51,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
   pendingMfaToken: null,
 
   bootstrap: async () => {
-    const tokens = await loadTokens();
+    let tokens = null;
+    try {
+      tokens = await loadTokens();
+    } catch {
+      // Keychain/Keystore no disponible por un momento: sin esto la promesa
+      // rechazaba y el arranque se quedaba en "loading" para siempre.
+    }
     if (!tokens) {
       set({ status: 'anonymous', user: null });
       return;
@@ -71,14 +77,20 @@ export const useAuthStore = create<AuthState>()((set) => ({
       // pasar el error si el refresh también falló -- ahí sí es sesión
       // muerta. Un solo reintento corto alcanza para el caso común de "la
       // red todavía no está lista".
-      if (isAxiosError(err) && !err.response) {
-        try {
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          const user = await authApi.me();
-          set({ status: 'authenticated', user });
-          return;
-        } catch {
-          // sigue sin poder confirmar sesión -- ver nota abajo.
+      // Lo mismo vale para un 5xx (el servidor despertando de un arranque en
+      // frío): tampoco dice nada del token. Se reintenta con espera creciente.
+      const transient = (e: unknown) =>
+        isAxiosError(e) && (!e.response || e.response.status >= 500);
+      if (transient(err)) {
+        for (const wait of [1500, 4000]) {
+          try {
+            await new Promise((resolve) => setTimeout(resolve, wait));
+            const user = await authApi.me();
+            set({ status: 'authenticated', user });
+            return;
+          } catch (retryErr) {
+            if (!transient(retryErr)) break;
+          }
         }
       }
       set({ status: 'anonymous', user: null });

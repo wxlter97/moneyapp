@@ -42,6 +42,7 @@ import {
 import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
+import { WalletColorPicker } from '@/components/WalletColorPicker';
 import { DateField } from '@/components/ui/DateField';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
@@ -50,13 +51,11 @@ import { TextField } from '@/components/ui/TextField';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
-import { muteColor } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 import { CURRENCIES } from '@/lib/currency';
 import { formatYearMonth } from '@/lib/date';
 import { formatMoney, toNumber } from '@/lib/money';
 import { moneyCalcUrl, type MoneyCalcSlug } from '@/lib/moneyCalc';
-import { WALLET_COLORS } from '@/lib/wallets';
 
 interface WalletFormProps {
   walletId?: string;
@@ -512,33 +511,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
           </View>
         )}
 
-        <View className="gap-1.5">
-          <Text className="text-text-muted text-sm">Color</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerClassName="gap-2 py-1"
-            keyboardShouldPersistTaps="handled"
-          >
-            {WALLET_COLORS.map((c) => (
-              <Pressable
-                key={c}
-                onPress={() => {
-                  haptics.selection();
-                  setColor(color === c ? '' : c);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Color ${c}`}
-                className={`h-9 w-9 items-center justify-center rounded-full ${
-                  color === c ? 'border-2 border-text' : ''
-                }`}
-                style={{ backgroundColor: muteColor(c) ?? c }}
-              >
-                {color === c ? <Icon name="check" size={14} color="#FFFFFF" /> : null}
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
+        <WalletColorPicker value={color} onChange={setColor} />
 
         {kind === 'credit' ? (
           <AmountInput

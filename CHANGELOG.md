@@ -8,6 +8,34 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.9.0] - 2026-10-06
+
+Requiere el backend 1.9.0 (`week_start_day`).
+
+### Agregado
+- Presupuesto semanal: se elige y se puede cambiar el día en que arranca la
+  semana (lunes … domingo) desde «Ajustar».
+- «Ojito» en los headers de Inicio y Presupuesto para ocultar la cifra grande
+  (se recuerda entre sesiones).
+- Colores de cartera: 16 colores bien distintos con su nombre, más
+  «Personalizado» (matiz + hex).
+- «Más usadas» arriba en el selector de categoría de una transacción, por
+  orden de uso; los grupos también se ordenan por el uso de lo que contienen.
+
+### Cambiado
+- Monto en «Agregar transacción»: mucho más grande, se achica solo cuando la
+  cifra crece, y muestra «$» en vez de «USD».
+- El selector Claro/Oscuro/Sistema (y todo `Segmented`) se desliza como la
+  barra inferior, sin rebote.
+- Los colores de cartera ya no se desaturan casi a gris.
+
+### Corregido
+- Sesión que «no se guardaba»: un fallo pasajero al refrescar el token (sin
+  red, timeout, 5xx) cerraba la sesión; ahora sólo se cierra si el servidor
+  rechaza el token. El arranque reintenta ante 5xx/arranque en frío y no se
+  queda cargando si el Keychain no responde; en iOS los tokens se leen
+  también con el teléfono bloqueado tras el primer desbloqueo.
+
 ## [1.8.1] - 2026-10-03
 
 No requiere cambios de backend.

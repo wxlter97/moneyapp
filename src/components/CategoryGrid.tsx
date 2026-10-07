@@ -35,10 +35,25 @@ function buildTrees(
   }
   const trees = groups.map((group) => ({ group, children: byParent.get(group.id) ?? [] }));
   if (!sortByUsage) return trees;
-  // Ordena las subcategorías de cada grupo por uso, y los grupos mismos
-  // (sólo importa para los que son elegibles sin hijas, ver `selfCell`).
+  // Ordena las subcategorías de cada grupo por uso, y los grupos por el uso
+  // total de lo que contienen (el grupo en sí casi nunca tiene transacciones
+  // directas: antes todos empataban en 0 y quedaban en orden manual).
   for (const t of trees) t.children = [...t.children].sort(byUsageDesc);
-  return [...trees].sort((a, b) => byUsageDesc(a.group, b.group));
+  const total = (t: GroupTree) =>
+    (t.group.usage_count ?? 0) + t.children.reduce((n, c) => n + (c.usage_count ?? 0), 0);
+  return [...trees].sort((a, b) => total(b) - total(a));
+}
+
+const TOP_USED = 8;
+
+/** Las categorías elegibles (subcategorías, o grupos sin hijas) más usadas, en
+ * orden de uso. Sólo las que ya se usaron alguna vez. */
+function topUsed(trees: GroupTree[]): Category[] {
+  const selectable = trees.flatMap((t) => (t.children.length === 0 ? [t.group] : t.children));
+  return selectable
+    .filter((c) => (c.usage_count ?? 0) > 0)
+    .sort(byUsageDesc)
+    .slice(0, TOP_USED);
 }
 
 function Tile({
@@ -115,8 +130,27 @@ export function CategoryGrid({
     );
   }
 
+  const frequent = sortByUsage && onSelect ? topUsed(trees) : [];
+
   return (
     <View className="gap-3">
+      {frequent.length > 0 ? (
+        <View>
+          <Text className="text-text-muted px-1 pb-1 text-xs font-semibold uppercase tracking-wide">
+            Más usadas
+          </Text>
+          <View className="flex-row flex-wrap">
+            {frequent.map((c) => (
+              <Tile
+                key={`top-${c.id}`}
+                category={c}
+                selected={selectedId === c.id}
+                onPress={() => onSelect?.(c.id)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
       {trees.map(({ group, children }) => {
         // En modo selección un grupo sin hijas es elegible él mismo.
         const selfCell = onSelect && children.length === 0;

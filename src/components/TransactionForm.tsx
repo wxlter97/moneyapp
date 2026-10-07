@@ -50,7 +50,7 @@ import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
 import { autopayRate, matchMerchant, merchantOptions, pickRate, qualifies } from '@/lib/loyaltyRate';
-import { formatMoney, toNumber } from '@/lib/money';
+import { currencySymbol, formatMoney, formatNumber, toNumber } from '@/lib/money';
 import { useSnackbarStore } from '@/store/snackbar';
 
 /** Precarga sin depender de una Transaction existente -- viene de un ítem
@@ -604,6 +604,12 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
 
   if ((editing || duplicateFromId) && existing.isLoading) return <LoadingState />;
 
+  // Monto grande y llamativo; se achica solo a medida que crece la cifra para
+  // que nunca se corte ni salte de línea (56px hasta 8 caracteres, luego
+  // proporcional, con piso de 26px).
+  const amountText = `${currencySymbol(currency)}${formatNumber(amountNum || 0)}`;
+  const amountFontSize = Math.max(26, Math.min(56, Math.floor((56 * 8) / amountText.length)));
+
   const amountColor =
     type === 'income' ? colors.income : type === 'expense' ? colors.expense : colors.text;
 
@@ -684,19 +690,21 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
 
         <View className="items-center py-2">
           <TextInput
-            value={formatMoney(amountNum || 0, currency)}
+            value={amountText}
             onChangeText={onAmountKeyPress}
             keyboardType="decimal-pad"
             selectTextOnFocus
             autoFocus={!editing}
             accessibilityLabel="Monto"
-            className="text-[40px] leading-[44px]"
+            numberOfLines={1}
             style={{
               color: amountColor,
               fontFamily: fonts.extrabold,
-              letterSpacing: -0.8,
+              fontSize: amountFontSize,
+              lineHeight: Math.round(amountFontSize * 1.1),
+              letterSpacing: -1,
               textAlign: 'center',
-              minWidth: 120,
+              width: '100%',
             }}
           />
           {fields.amount ? (

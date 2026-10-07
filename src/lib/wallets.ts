@@ -2,13 +2,40 @@ import type { Wallet, WalletPurpose } from '@/api/types';
 import { WALLET_PURPOSES } from '@/api/types';
 import { muteColor } from '@/theme/accents';
 
-/** Paleta de acentos para carteras (estilo Buddy). Se muestran y se pintan
- * atenuadas (ver `walletColor`) para que sean un dato de identificación
- * discreto, no un bloque de color vivo. */
-export const WALLET_COLORS = [
-  '#4F8CFF', '#3ECF8E', '#F0568F', '#F5A623', '#7C5CFC',
-  '#22C1C3', '#FF6B6B', '#A3E635', '#E879F9', '#94A3B8',
+/** Paleta de colores para carteras: amplia y con matices claramente
+ * distintos entre sí (antes eran 10 tonos que, ya atenuados, se confundían).
+ * Cada color lleva nombre para poder distinguirlo y mencionarlo. Un color
+ * que no está acá (guardado antes, o uno personalizado) se muestra como
+ * "Personalizado". */
+export const WALLET_COLOR_OPTIONS: { hex: string; name: string }[] = [
+  { hex: '#EF4444', name: 'Rojo' },
+  { hex: '#F97316', name: 'Naranja' },
+  { hex: '#F5B700', name: 'Amarillo' },
+  { hex: '#84CC16', name: 'Lima' },
+  { hex: '#22C55E', name: 'Verde' },
+  { hex: '#14B8A6', name: 'Turquesa' },
+  { hex: '#06B6D4', name: 'Cian' },
+  { hex: '#38BDF8', name: 'Celeste' },
+  { hex: '#3B82F6', name: 'Azul' },
+  { hex: '#4F46E5', name: 'Índigo' },
+  { hex: '#8B5CF6', name: 'Violeta' },
+  { hex: '#D946EF', name: 'Fucsia' },
+  { hex: '#EC4899', name: 'Rosa' },
+  { hex: '#92400E', name: 'Marrón' },
+  { hex: '#94A3B8', name: 'Gris' },
+  { hex: '#334155', name: 'Grafito' },
 ];
+
+/** Nombre del color de la paleta, o `null` si es personalizado / no hay. */
+export function walletColorName(hex: string | null | undefined): string | null {
+  if (!hex) return null;
+  return WALLET_COLOR_OPTIONS.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name ?? null;
+}
+
+/** Cuánto se atenúa la saturación al pintar una cartera: poco, para que los
+ * colores sigan siendo bien distintos entre sí (el 0.3 de `muteColor` por
+ * defecto los dejaba casi grises). */
+export const WALLET_MUTE = 0.85;
 
 const PURPOSE_FALLBACK: Record<WalletPurpose, string> = {
   spending: '#4F8CFF',
@@ -18,11 +45,10 @@ const PURPOSE_FALLBACK: Record<WalletPurpose, string> = {
 };
 
 /** Color de acento de una cartera: el propio, o el de su `purpose` —
- * siempre atenuado (ver `muteColor`), para que se lea como un detalle
- * discreto en vez de un bloque de color vivo. */
+ * apenas atenuado (ver `WALLET_MUTE`). */
 export function walletColor(wallet: Wallet): string {
   const raw = wallet.color || PURPOSE_FALLBACK[wallet.purpose] || '#94A3B8';
-  return muteColor(raw) ?? raw;
+  return muteColor(raw, WALLET_MUTE) ?? raw;
 }
 
 export interface WalletNode {

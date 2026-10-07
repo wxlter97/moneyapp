@@ -125,6 +125,8 @@ export interface Workspace {
   base_currency: string;
   /** Cadencia del presupuesto (diario/semanal/quincenal/mensual/anual). */
   budget_period: BudgetPeriod;
+  /** Día en que arranca la semana del presupuesto semanal: 0 = lunes … 6 = domingo. */
+  week_start_day: number;
   /** Interruptor global de la provisión acumulada: apagado, ninguna categoría
    * acumula sobrante (manda sobre `Category.rollover_surplus`). */
   rollover_surplus: boolean;

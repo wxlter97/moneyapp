@@ -136,6 +136,11 @@ export const workspaces = {
     api
       .patch<Workspace>(`/workspaces/${id}/`, { budget_period }, { skipWorkspace: true })
       .then((r) => r.data),
+  /** Día de inicio de la semana (0 = lunes … 6 = domingo). Solo owner. */
+  setWeekStartDay: (id: string, week_start_day: number) =>
+    api
+      .patch<Workspace>(`/workspaces/${id}/`, { week_start_day }, { skipWorkspace: true })
+      .then((r) => r.data),
   /** Interruptor global de la provisión acumulada. Solo owner. */
   setRolloverSurplus: (id: string, rollover_surplus: boolean) =>
     api
