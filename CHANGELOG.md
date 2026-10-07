@@ -8,6 +8,12 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.9.3] - 2026-10-07
+
+### Corregido
+- Monto de «Agregar transacción»: se quita el anillo de foco del navegador
+  (en iOS se veía como dos barras azules alrededor de la cifra grande).
+
 ## [1.9.2] - 2026-10-07
 
 ### Corregido
