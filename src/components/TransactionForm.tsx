@@ -701,23 +701,46 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
         ) : null}
 
         <View className="items-center py-2">
-          <TextInput
-            value={amountText}
-            onChangeText={onAmountKeyPress}
-            keyboardType="decimal-pad"
-            selectTextOnFocus
-            autoFocus={!editing}
-            accessibilityLabel="Monto"
-            numberOfLines={1}
-            className={amountSizeClass}
-            style={{
-              color: amountColor,
-              fontFamily: fonts.extrabold,
-              letterSpacing: -1,
-              textAlign: 'center',
-              width: '100%',
-            }}
-          />
+          {/* Lo que se VE es un Text (mismo mecanismo que la cifra grande del
+              dashboard, que sí respeta el tamaño); el TextInput va encima,
+              transparente, sólo para capturar el teclado. Dos intentos de
+              agrandar el TextInput mismo (className y style) no cambiaron
+              nada en iOS. */}
+          <View className="w-full justify-center" style={{ minHeight: 72 }}>
+            <Text
+              className={amountSizeClass}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
+              style={{
+                color: amountColor,
+                fontFamily: fonts.extrabold,
+                letterSpacing: -1,
+                textAlign: 'center',
+              }}
+            >
+              {amountText}
+            </Text>
+            <TextInput
+              value={amountText}
+              onChangeText={onAmountKeyPress}
+              keyboardType="decimal-pad"
+              autoFocus={!editing}
+              accessibilityLabel="Monto"
+              caretHidden
+              contextMenuHidden
+              selectionColor="transparent"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                color: 'transparent',
+                textAlign: 'center',
+              }}
+            />
+          </View>
           {fields.amount ? (
             <Text className="text-expense mt-1 text-xs">{fields.amount}</Text>
           ) : null}
