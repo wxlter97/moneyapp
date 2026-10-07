@@ -79,6 +79,18 @@ interface TransactionFormProps {
   prefill?: TransactionPrefill;
 }
 
+/** Tamaño del monto según cuántos caracteres tiene. Clases completas y
+ * estáticas (no `text-[${n}px]`): Tailwind sólo genera lo que ve escrito. El
+ * tamaño va por `className`, como antes (un `fontSize` calculado en `style`
+ * no se veía aplicado en iOS: el monto quedaba chico). */
+function amountTextClass(len: number): string {
+  if (len <= 8) return 'text-[56px] leading-[64px]';
+  if (len <= 10) return 'text-[48px] leading-[56px]';
+  if (len <= 12) return 'text-[40px] leading-[48px]';
+  if (len <= 14) return 'text-[34px] leading-[42px]';
+  return 'text-[28px] leading-[36px]';
+}
+
 type OpenRow = 'category' | 'from' | 'to' | 'refundWallet' | null;
 
 /** Resumen de lo que llenó la IA, ya independiente de por dónde entró. */
@@ -608,7 +620,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   // que nunca se corte ni salte de línea (56px hasta 8 caracteres, luego
   // proporcional, con piso de 26px).
   const amountText = `${currencySymbol(currency)}${formatNumber(amountNum || 0)}`;
-  const amountFontSize = Math.max(26, Math.min(56, Math.floor((56 * 8) / amountText.length)));
+  const amountSizeClass = amountTextClass(amountText.length);
 
   const amountColor =
     type === 'income' ? colors.income : type === 'expense' ? colors.expense : colors.text;
@@ -697,11 +709,10 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
             autoFocus={!editing}
             accessibilityLabel="Monto"
             numberOfLines={1}
+            className={amountSizeClass}
             style={{
               color: amountColor,
               fontFamily: fonts.extrabold,
-              fontSize: amountFontSize,
-              lineHeight: Math.round(amountFontSize * 1.1),
               letterSpacing: -1,
               textAlign: 'center',
               width: '100%',

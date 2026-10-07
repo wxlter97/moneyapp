@@ -8,6 +8,15 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.9.1] - 2026-10-06
+
+No requiere cambios de backend.
+
+### Corregido
+- El monto de «Agregar transacción» seguía chico en iOS: el tamaño calculado
+  por `style` no se aplicaba. Ahora va por `className` (56 → 28 px según la
+  cifra), como cuando sí se aplicaba.
+
 ## [1.9.0] - 2026-10-06
 
 Requiere el backend 1.9.0 (`week_start_day`).
