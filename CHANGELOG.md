@@ -8,6 +8,14 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.9.2] - 2026-10-07
+
+### Corregido
+- El monto de «Agregar transacción» seguía chico en iOS aunque se le subiera
+  el tamaño al campo. Ahora la cifra que se ve es un texto grande (56 → 28 px
+  según la longitud) y el campo de entrada va transparente encima, sólo para
+  recibir el teclado.
+
 ## [1.9.1] - 2026-10-06
 
 No requiere cambios de backend.
