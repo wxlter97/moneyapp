@@ -137,6 +137,13 @@ async function refreshAccessToken(): Promise<string> {
   return accessToken;
 }
 
+/** El servidor respondió y dijo que el refresh token no sirve. */
+function isRefreshRejected(err: unknown): boolean {
+  if (err instanceof Error && err.message === 'no refresh token') return true;
+  const status = (err as { response?: { status?: number } } | null)?.response?.status;
+  return status === 400 || status === 401 || status === 403;
+}
+
 interface RetriableConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
@@ -160,9 +167,18 @@ api.interceptors.response.use(
         headers.set('Authorization', `Bearer ${fresh}`);
         original.headers = headers;
         return api.request(original);
-      } catch {
-        await clearTokens();
-        onAuthFailure?.();
+      } catch (refreshErr) {
+        // Sólo se pierde la sesión si el servidor RECHAZÓ el refresh token
+        // (400/401/403: vencido, revocado o ya rotado). Un fallo transitorio
+        // -- sin red, timeout, 5xx, el servidor despertando -- no dice nada del
+        // token: antes también borraba los tokens y deslogueaba a quien
+        // simplemente estaba en un túnel o con mala señal ("la sesión no se
+        // guarda"). Se rechaza la request original y el siguiente intento
+        // vuelve a refrescar.
+        if (isRefreshRejected(refreshErr)) {
+          await clearTokens();
+          onAuthFailure?.();
+        }
         return Promise.reject(error);
       }
     }

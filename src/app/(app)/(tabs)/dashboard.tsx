@@ -59,6 +59,7 @@ export default function OverviewScreen() {
   const colors = useColors();
   const tab = useUIStore((s) => s.overviewTab);
   const setTab = useUIStore((s) => s.setOverviewTab);
+  const hideAmounts = useUIStore((s) => s.hideAmounts);
   const [month, setMonth] = useState(currentYearMonth);
 
   // `?month=YYYY-MM` (p. ej. "Ver movimientos del mes" del resumen mensual,
@@ -97,6 +98,7 @@ export default function OverviewScreen() {
     <View className="flex-1 bg-bg">
       <SectionHeader
         title="Inicio"
+        hideToggle
         right={
           // Historial (Pro) no tiene mucho sentido ofrecerlo si ni el
           // patrimonio de hoy está disponible (gratis, ver `canSeeNetWorth`
@@ -140,6 +142,7 @@ export default function OverviewScreen() {
               <Money
                 value={netWorth.data?.net}
                 currency={currency}
+                masked={hideAmounts}
                 hero
                 className="text-center text-[52px] leading-[56px]"
               />

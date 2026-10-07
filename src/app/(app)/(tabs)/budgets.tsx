@@ -18,6 +18,7 @@ import { todayISO } from '@/lib/date';
 import { periodStart } from '@/lib/periods';
 import { toNumber } from '@/lib/money';
 import { useDesktopContentWidth } from '@/lib/responsive';
+import { useUIStore } from '@/store/ui';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -37,6 +38,8 @@ export default function BudgetScreen() {
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
   const budgetPeriod = activeWorkspace?.budget_period ?? 'monthly';
+  const weekStart = activeWorkspace?.week_start_day ?? 0;
+  const hideAmounts = useUIStore((s) => s.hideAmounts);
 
   // `override`: el período al que el usuario navegó a mano con el switcher.
   // `null` mientras tanto -- así, si `budgetPeriod` todavía no cargó del
@@ -44,7 +47,7 @@ export default function BudgetScreen() {
   // que sea real, `start` lo sigue en vez de quedar congelado en un límite
   // de período que ya no corresponde.
   const [override, setOverride] = useState<ISODate | null>(null);
-  const start = override ?? periodStart(todayISO(), budgetPeriod);
+  const start = override ?? periodStart(todayISO(), budgetPeriod, weekStart);
   const budget = useBudgetReport(start);
 
   const totals = budget.data?.totals;
@@ -61,6 +64,7 @@ export default function BudgetScreen() {
     <View className="flex-1 bg-bg">
       <SectionHeader
         title="Presupuesto"
+        hideToggle
         maxWidth={contentWidth}
         right={
           <Pressable
@@ -104,12 +108,13 @@ export default function BudgetScreen() {
               animate
               value={Math.abs(remaining)}
               currency={currency}
+              masked={hideAmounts}
               tone={remainingTone(remaining)}
               className="text-[34px] leading-[38px]"
             />
             <Text className="text-text-muted text-sm">
               {over ? 'por encima de' : 'de'}{' '}
-              <Money animate value={budgeted} currency={currency} tone="muted" /> presupuestados
+              <Money animate value={budgeted} currency={currency} masked={hideAmounts} tone="muted" /> presupuestados
             </Text>
           </View>
         }
@@ -120,7 +125,7 @@ export default function BudgetScreen() {
         contentContainerStyle={{ maxWidth: contentWidth }}
         refreshControl={refresh}
       >
-        <PeriodSwitcher value={start} period={budgetPeriod} onChange={setOverride} />
+        <PeriodSwitcher value={start} period={budgetPeriod} weekStart={weekStart} onChange={setOverride} />
 
         {budget.isLoading ? (
           <LoadingState />

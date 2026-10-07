@@ -1,6 +1,6 @@
 import type { AxiosAdapter } from 'axios';
 
-import { api, clearTokens, setTokens } from '../client';
+import { api, clearTokens, getAccessToken, registerAuthFailureHandler, setTokens } from '../client';
 import { tokenStorage } from '../tokenStorage';
 import { useWorkspaceStore } from '@/store/workspace';
 
@@ -126,5 +126,40 @@ describe('refresh automático ante 401', () => {
     expect(res.data).toEqual({ ok: true });
     const retry = calls.find((c, i) => i > 0 && c.url === '/wallets/');
     expect(retry.headers.Authorization).toBe('Bearer ACCESS3');
+  });
+});
+
+// "La sesión no se guarda": un fallo transitorio del refresh (sin red,
+// timeout, 5xx) borraba los tokens y deslogueaba. Sólo un rechazo real del
+// servidor (400/401/403) debe cerrar la sesión.
+describe('refresh que falla', () => {
+  function run(refreshStatus: number | 'network') {
+    const failure = jest.fn();
+    registerAuthFailureHandler(failure);
+    const { adapter } = mockAdapter((url) => {
+      if (url.includes('/auth/token/refresh/')) {
+        if (refreshStatus === 'network') throw Object.assign(new Error('Network Error'), { config: {} });
+        return { status: refreshStatus };
+      }
+      return { status: 401 };
+    });
+    api.defaults.adapter = adapter;
+    return { failure, request: api.get('/wallets/') };
+  }
+
+  afterEach(() => registerAuthFailureHandler(null));
+
+  it.each([500, 503, 'network'] as const)('con %s NO cierra la sesión ni borra los tokens', async (status) => {
+    const { failure, request } = run(status);
+    await expect(request).rejects.toBeTruthy();
+    expect(failure).not.toHaveBeenCalled();
+    expect(getAccessToken()).toBe('ACCESS1');
+  });
+
+  it.each([400, 401])('con %s (token rechazado) sí cierra la sesión', async (status) => {
+    const { failure, request } = run(status);
+    await expect(request).rejects.toBeTruthy();
+    expect(failure).toHaveBeenCalledTimes(1);
+    expect(getAccessToken()).toBeNull();
   });
 });

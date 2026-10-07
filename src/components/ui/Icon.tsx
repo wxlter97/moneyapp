@@ -48,7 +48,9 @@ export type IconName =
   | 'alert'
   | 'bank'
   | 'cash'
-  | 'mic';
+  | 'mic'
+  | 'eye'
+  | 'eye-off';
 
 interface IconProps {
   name: IconName;
@@ -204,6 +206,19 @@ export function Icon({ name, size = 20, color = '#9AA4B2', strokeWidth = 2 }: Ic
         <>
           <Path d="M3 17l6-6 4 4 8-8" {...p} />
           <Path d="M15 7h6v6" {...p} />
+        </>
+      )}
+      {name === 'eye' && (
+        <>
+          <Path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" {...p} />
+          <Circle cx={12} cy={12} r={3} {...p} />
+        </>
+      )}
+      {name === 'eye-off' && (
+        <>
+          <Path d="M9.9 5.2A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.1 6.1C3.5 7.8 2 12 2 12s3.6 7 10 7a9.9 9.9 0 0 0 4.3-1" {...p} />
+          <Path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" {...p} />
+          <Line x1={3} y1={3} x2={21} y2={21} {...p} />
         </>
       )}
       {name === 'search' && (

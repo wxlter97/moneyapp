@@ -9,6 +9,7 @@ import {
   useDeleteCategoryBudget,
   useResetProvisions,
   useSetBudgetPeriod,
+  useSetWeekStartDay,
   useSetRolloverSurplus,
   useSetForwardCategoryBudget,
 } from '@/api/queries';
@@ -26,7 +27,7 @@ import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
-import { BUDGET_PERIOD_OPTIONS, periodLabel, periodStart } from '@/lib/periods';
+import { BUDGET_PERIOD_OPTIONS, WEEK_START_OPTIONS, periodLabel, periodStart } from '@/lib/periods';
 import { toNumber } from '@/lib/money';
 import { useWorkspaceStore } from '@/store/workspace';
 
@@ -39,9 +40,10 @@ export default function BudgetEditScreen() {
   const params = useLocalSearchParams<{ period_start?: string }>();
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const budgetPeriod = activeWorkspace?.budget_period ?? 'monthly';
+  const weekStart = activeWorkspace?.week_start_day ?? 0;
   const start: ISODate = useMemo(
-    () => params.period_start || periodStart(todayISO(), budgetPeriod),
-    [params.period_start, budgetPeriod],
+    () => params.period_start || periodStart(todayISO(), budgetPeriod, weekStart),
+    [params.period_start, budgetPeriod, weekStart],
   );
 
   const categoriesQ = useCategories();
@@ -181,7 +183,11 @@ export default function BudgetEditScreen() {
       <ModalHeader title={`Presupuesto · ${periodLabel(start, budgetPeriod)}`} />
       {isOwner ? (
         <>
-          <BudgetPeriodRow workspaceId={activeWorkspace!.id} current={budgetPeriod} />
+          <BudgetPeriodRow
+            workspaceId={activeWorkspace!.id}
+            current={budgetPeriod}
+            weekStart={weekStart}
+          />
           <RolloverRow
             workspaceId={activeWorkspace!.id}
             enabled={activeWorkspace!.rollover_surplus ?? true}
@@ -404,8 +410,17 @@ function AddSubcategoryRow({
 /** Cadencia del presupuesto (diario/semanal/quincenal/mensual/anual) --
  * global al workspace, no por categoría. Solo el dueño la puede cambiar
  * (ver `WorkspaceSerializer` en el backend). */
-function BudgetPeriodRow({ workspaceId, current }: { workspaceId: string; current: BudgetPeriod }) {
+function BudgetPeriodRow({
+  workspaceId,
+  current,
+  weekStart,
+}: {
+  workspaceId: string;
+  current: BudgetPeriod;
+  weekStart: number;
+}) {
   const setBudgetPeriod = useSetBudgetPeriod();
+  const setWeekStart = useSetWeekStartDay();
   const [error, setError] = useState<string | null>(null);
 
   async function onChange(next: string) {
@@ -420,9 +435,29 @@ function BudgetPeriodRow({ workspaceId, current }: { workspaceId: string; curren
     }
   }
 
+  async function onChangeWeekStart(next: string) {
+    if (Number(next) === weekStart) return;
+    setError(null);
+    try {
+      await setWeekStart.mutateAsync({ id: workspaceId, day: Number(next) });
+      haptics.success();
+    } catch (err) {
+      haptics.error();
+      setError(errorMessage(err, 'No se pudo cambiar el día de inicio.'));
+    }
+  }
+
   return (
     <View className="gap-1.5 pb-2">
       <Select label="Período" value={current} onChange={onChange} options={BUDGET_PERIOD_OPTIONS} />
+      {current === 'weekly' ? (
+        <Select
+          label="La semana empieza el"
+          value={String(weekStart)}
+          onChange={onChangeWeekStart}
+          options={WEEK_START_OPTIONS}
+        />
+      ) : null}
       {error ? <Text className="text-expense text-xs">{error}</Text> : null}
     </View>
   );

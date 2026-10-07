@@ -63,3 +63,25 @@ describe('periodLabel', () => {
     expect(periodLabel('2026-01-01', 'yearly')).toBe('2026');
   });
 });
+
+describe('día de inicio de semana (weekStart)', () => {
+  // 2026-10-07 es miércoles.
+  it('lunes por defecto, domingo o miércoles si se pide', () => {
+    expect(periodStart('2026-10-07', 'weekly')).toBe('2026-10-05');
+    expect(periodStart('2026-10-07', 'weekly', 6)).toBe('2026-10-04');
+    expect(periodStart('2026-10-07', 'weekly', 2)).toBe('2026-10-07');
+  });
+
+  it('el sábado sigue en la semana que arrancó el domingo anterior', () => {
+    expect(periodStart('2026-10-10', 'weekly', 6)).toBe('2026-10-04');
+    expect(periodStart('2026-10-04', 'weekly', 6)).toBe('2026-10-04');
+  });
+
+  it('previousPeriodStart respeta el día de inicio', () => {
+    expect(previousPeriodStart('2026-10-04', 'weekly', 6)).toBe('2026-09-27');
+  });
+
+  it('no afecta a otras cadencias', () => {
+    expect(periodStart('2026-10-07', 'monthly', 3)).toBe('2026-10-01');
+  });
+});

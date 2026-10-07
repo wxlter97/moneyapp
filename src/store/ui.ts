@@ -16,6 +16,9 @@ interface UIState {
    * muestra sólo la primera vez que alguien busca, no en cada búsqueda. */
   hasSeenSearchAllHint: boolean;
   dismissSearchAllHint: () => void;
+  /** Oculta las cifras grandes de los headers de Inicio y Presupuesto (el "ojito"). */
+  hideAmounts: boolean;
+  toggleHideAmounts: () => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -25,6 +28,8 @@ export const useUIStore = create<UIState>()(
       setOverviewTab: (overviewTab) => set({ overviewTab }),
       hasSeenSearchAllHint: false,
       dismissSearchAllHint: () => set({ hasSeenSearchAllHint: true }),
+      hideAmounts: false,
+      toggleHideAmounts: () => set((s) => ({ hideAmounts: !s.hideAmounts })),
     }),
     {
       name: 'budget.ui',

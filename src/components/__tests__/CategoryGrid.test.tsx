@@ -74,3 +74,33 @@ describe('CategoryPickerField — accesibilidad', () => {
     expect(screen.getByLabelText('Categoría: sin elegir')).toBeTruthy();
   });
 });
+
+describe('CategoryGrid — más usadas primero', () => {
+  const used = (c: Category, n: number): Category => ({ ...c, usage_count: n });
+  const comida = group('g2', 'Comida');
+  const cafe = used(sub('c2', 'Café', 'g2'), 40);
+  const super_ = used(sub('c3', 'Súper', 'g2'), 10);
+  const renta = used(alquiler, 25);
+
+  it('muestra "Más usadas" arriba, ordenadas por uso descendente', async () => {
+    await render(
+      <CategoryGrid
+        categories={[vivienda, renta, comida, super_, cafe]}
+        type="expense"
+        onSelect={jest.fn()}
+        sortByUsage
+      />,
+    );
+    expect(screen.getByText('Más usadas')).toBeTruthy();
+    // Café (40) > Alquiler (25) > Súper (10), sin importar a qué grupo pertenecen.
+    const labels = screen.getAllByLabelText(/^(Café|Alquiler|Súper)$/).map((n) => n.props.accessibilityLabel);
+    expect(labels.slice(0, 3)).toEqual(['Café', 'Alquiler', 'Súper']);
+  });
+
+  it('sin uso previo no muestra la sección', async () => {
+    await render(
+      <CategoryGrid categories={[vivienda, alquiler]} type="expense" onSelect={jest.fn()} sortByUsage />,
+    );
+    expect(screen.queryByText('Más usadas')).toBeNull();
+  });
+});

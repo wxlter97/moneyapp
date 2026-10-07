@@ -28,6 +28,7 @@ function ws(overrides: Partial<Workspace>): Workspace {
     member_count: 1,
     base_currency: 'USD',
     budget_period: 'monthly',
+    week_start_day: 0,
     rollover_surplus: true,
     inbound_token: 'tok',
     inbound_email: 'import+tok@example.com',
