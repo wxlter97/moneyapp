@@ -1555,6 +1555,51 @@ export function useScanReceipt() {
   });
 }
 
+/** Lee un estado de cuenta. No crea nada; gasta de la misma cuota que los recibos. */
+export function useScanStatement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      wallet,
+    }: {
+      file: { uri: string; name: string; type: string };
+      wallet?: string | null;
+    }) => res.ai.scanStatement(file, wallet),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
+  });
+}
+
+/** Crea de una vez lo que el usuario confirmó de un estado de cuenta: la
+ * cartera (si es nueva) y sus movimientos. Invalida una sola vez al final. */
+export function useImportStatement() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: async ({
+      wallet,
+      transactions,
+      onProgress,
+    }: {
+      wallet: WalletInput | string;
+      transactions: TransactionInput[];
+      onProgress?: (done: number, total: number) => void;
+    }) => {
+      const walletId = typeof wallet === 'string' ? wallet : (await res.wallets.create(wallet)).id;
+      const failed: { index: number; message: string }[] = [];
+      for (let i = 0; i < transactions.length; i++) {
+        try {
+          await res.transactions.create({ ...transactions[i], wallet: walletId });
+        } catch (err) {
+          failed.push({ index: i, message: err instanceof Error ? err.message : 'Error' });
+        }
+        onProgress?.(i + 1, transactions.length);
+      }
+      return { walletId, created: transactions.length - failed.length, failed };
+    },
+    onSettled: invalidate,
+  });
+}
+
 /** Manda una frase a parsear. Igual que `useScanReceipt`: no crea nada, y
  * invalida `aiStatus` porque gasta una unidad de la cuota de parseos. */
 export function useParseText() {

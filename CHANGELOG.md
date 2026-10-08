@@ -8,6 +8,20 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.10.0] - 2026-10-08
+
+Requiere el backend 1.10.0 (`POST /ai/statement/`).
+
+### Agregado
+- «Leer estado de cuenta» (Herramientas → Análisis, y desde «Nueva cartera»):
+  sube el PDF o una foto del banco, revisa lo leído (lo dudoso sale marcado
+  «revisar») y crea la cartera con banco, últimos 4, límite, día de corte y de
+  pago y tasa ya llenos, junto con sus movimientos. También sirve para
+  importar los movimientos a una cartera que ya existe; los que parecen
+  duplicados arrancan sin marcar. El saldo inicial se calcula para que el saldo
+  final coincida con el del estado de cuenta. Comparte la cuota mensual de IA
+  con los recibos.
+
 ## [1.9.3] - 2026-10-07
 
 ### Corregido

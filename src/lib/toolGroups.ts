@@ -156,6 +156,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
         feature: 'statements',
       },
       {
+        icon: 'camera',
+        label: 'Leer estado de cuenta',
+        hint: 'Sube el PDF del banco: crea la cartera y sus movimientos',
+        onPress: () => router.push('/statement-scan'),
+      },
+      {
         icon: 'calculator',
         label: 'Calculadoras',
         hint: 'Préstamo, ahorro, interés compuesto y más (money-calc)',

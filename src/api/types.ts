@@ -1412,7 +1412,7 @@ export type DRFErrorBody =
 // ---------------------------------------------------------------------------
 /** Operaciones de IA que gastan cuota. El resumen mensual lo dispara el
  * servidor y no consume la del usuario, así que no aparece acá. */
-export type AIOperation = 'receipt' | 'parse' | 'chat';
+export type AIOperation = 'receipt' | 'parse' | 'chat' | 'statement';
 
 export interface AIQuota {
   /** Tope del mes; `null` = sin tope. */
@@ -1480,6 +1480,47 @@ export interface ReceiptCandidate {
    * usuario lo revise antes de guardar. */
   confidence: Record<string, ConfidenceLevel>;
   possible_duplicates: PossibleDuplicate[];
+}
+
+/**
+ * `POST ai/statement/` -- un estado de cuenta leído. Igual que `ReceiptCandidate`:
+ * nada está guardado, todo es editable y lo que no se leyó viene vacío con
+ * confianza `low`. Ver `apps/ai/statements.py`.
+ */
+export interface StatementWalletCandidate {
+  kind: 'credit' | 'bank';
+  purpose: 'debt' | 'spending';
+  name: string;
+  /** Nombre leído; hay que cruzarlo con el catálogo de bancos. */
+  bank: string | null;
+  card_last4: string | null;
+  currency: string;
+  credit_limit: Money | null;
+  billing_cycle_day: number | null;
+  payment_due_day: number | null;
+  minimum_payment: Money | null;
+  interest_rate: string | null;
+  /** Lo que se debe al corte (tarjeta) o lo que hay (cuenta). */
+  closing_balance: Money | null;
+}
+
+export interface StatementTransactionCandidate {
+  date: ISODate;
+  description: string;
+  amount: Money;
+  type: 'income' | 'expense';
+  category: UUID | null;
+  possible_duplicates: PossibleDuplicate[];
+}
+
+export interface StatementCandidate {
+  statement_kind: 'credit_card' | 'bank_account' | 'other';
+  period_start: ISODate | null;
+  period_end: ISODate | null;
+  payment_due_date: ISODate | null;
+  wallet: StatementWalletCandidate;
+  transactions: StatementTransactionCandidate[];
+  confidence: Record<string, ConfidenceLevel>;
 }
 
 /**

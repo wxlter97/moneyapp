@@ -57,6 +57,7 @@ import type {
   Plan,
   ParseCandidate,
   ReceiptCandidate,
+  StatementCandidate,
   RecurringExpense,
   RecurringExpenseInput,
   RecurringSuggestion,
@@ -769,6 +770,21 @@ export const ai = {
     return api
       .post<ReceiptCandidate>('/ai/receipt/', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
+
+  /** Lee un estado de cuenta (PDF o foto). Devuelve candidata, no crea nada.
+   * Con `wallet`, cada movimiento trae sus posibles duplicados en esa cartera. */
+  scanStatement: async (file: { uri: string; name: string; type: string }, wallet?: string | null) => {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    const form = new FormData();
+    form.append('file', blob, file.name);
+    if (wallet) form.append('wallet', wallet);
+    return api
+      .post<StatementCandidate>('/ai/statement/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 90_000, // un PDF de varias páginas tarda bastante más que un recibo
       })
       .then((r) => r.data);
   },
