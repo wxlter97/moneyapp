@@ -8,6 +8,15 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.10.1] - 2026-10-08
+
+No requiere cambios de backend (ya permitía presupuestar un grupo sin subcategorías).
+
+### Corregido
+- «Ajustar» presupuesto: un grupo de categorías que no tiene subcategorías ahora
+  se puede presupuestar directamente (antes salía de solo lectura). Los grupos
+  con subcategorías siguen mostrando la suma de las suyas.
+
 ## [1.10.0] - 2026-10-08
 
 Requiere el backend 1.10.0 (`POST /ai/statement/`).
