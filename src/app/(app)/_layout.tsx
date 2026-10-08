@@ -369,6 +369,10 @@ export default function AppLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="statement-scan"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="import-excel"
           options={{ presentation: 'modal', headerShown: false }}
         />

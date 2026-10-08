@@ -474,6 +474,27 @@ export function WalletForm({ walletId }: WalletFormProps) {
         )}
 
         {!editing ? (
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              router.replace('/statement-scan');
+            }}
+            accessibilityRole="button"
+            className="flex-row items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-3 active:opacity-70"
+          >
+            <Icon name="camera" size={16} color={colors.primary} />
+            <View className="flex-1">
+              <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                Crear desde un estado de cuenta
+              </Text>
+              <Text className="text-text-muted text-xs">
+                Sube el PDF o una foto y llenamos los datos por ti.
+              </Text>
+            </View>
+          </Pressable>
+        ) : null}
+
+        {!editing ? (
           <View className="gap-1.5">
             <Text className="text-text-muted text-sm">Tipo de cartera</Text>
             <View className="-m-1 flex-row flex-wrap">
