@@ -42,7 +42,7 @@ import { NumPad } from '@/components/ui/NumPad';
 import { PickerRow } from '@/components/ui/PickerRow';
 import { Segmented } from '@/components/ui/Segmented';
 import { TextField } from '@/components/ui/TextField';
-import { LoadingState } from '@/components/ui/states';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
 import type { PickedFile } from '@/lib/receipt';
@@ -615,6 +615,11 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   }
 
   if ((editing || duplicateFromId) && existing.isLoading) return <LoadingState />;
+  if ((editing || duplicateFromId) && existing.isError) {
+    // Sin esto quedaba el formulario vacío, y "Guardar" pisaba la transacción con
+    // campos en blanco.
+    return <ErrorState error={existing.error} onRetry={existing.refetch} />;
+  }
 
   // Monto grande y llamativo; se achica solo a medida que crece la cifra para
   // que nunca se corte ni salte de línea (56px hasta 8 caracteres, luego

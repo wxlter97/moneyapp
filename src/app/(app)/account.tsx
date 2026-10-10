@@ -1,13 +1,17 @@
-import { Image, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useMyPlan } from '@/api/queries';
+import { errorMessage } from '@/api/errors';
 import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Screen } from '@/components/ui/Screen';
+import { TextField } from '@/components/ui/TextField';
+import { haptics } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -21,7 +25,28 @@ import { fonts } from '@/theme/typography';
 export default function AccountScreen() {
   const colors = useColors();
   const user = useAuthStore((s) => s.user);
+  const updateName = useAuthStore((s) => s.updateName);
   const myPlan = useMyPlan();
+  const [editingName, setEditingName] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  async function onSaveName() {
+    setSavingName(true);
+    setNameError(null);
+    try {
+      await updateName(firstName.trim(), lastName.trim());
+      haptics.success();
+      setEditingName(false);
+    } catch (err) {
+      haptics.error();
+      setNameError(errorMessage(err, 'No se pudo guardar el nombre.'));
+    } finally {
+      setSavingName(false);
+    }
+  }
   // Cualquier plan que no sea el default (gratis) es pago -- hay más de uno
   // (Plus, Pro), así que no alcanza con mirar si el code es 'pro'.
   const currentPlan = myPlan.data?.plan;
@@ -60,7 +85,42 @@ export default function AccountScreen() {
               </Text>
               <Text className="text-text-muted text-xs">{user.email}</Text>
             </View>
+            {!editingName ? (
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  setFirstName(user.first_name ?? '');
+                  setLastName(user.last_name ?? '');
+                  setNameError(null);
+                  setEditingName(true);
+                }}
+                accessibilityRole="button"
+                className="active:opacity-60"
+              >
+                <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                  {fullName ? 'Cambiar nombre' : 'Agregar tu nombre'}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
+          {editingName ? (
+            <View className="gap-3 pt-2">
+              <Text className="text-text-muted text-xs">
+                Es el nombre que ven los demás en un presupuesto compartido.
+              </Text>
+              <TextField label="Nombre" value={firstName} onChangeText={setFirstName} maxLength={150} autoFocus />
+              <TextField label="Apellido" value={lastName} onChangeText={setLastName} maxLength={150} />
+              {nameError ? <Text className="text-expense text-xs">{nameError}</Text> : null}
+              <View className="flex-row gap-2">
+                <View className="flex-1">
+                  <Button label="Cancelar" variant="ghost" onPress={() => setEditingName(false)} />
+                </View>
+                <View className="flex-1">
+                  <Button label="Guardar" loading={savingName} onPress={onSaveName} />
+                </View>
+              </View>
+            </View>
+          ) : null}
         </Card>
 
         <Card title="Plan">

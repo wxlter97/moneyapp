@@ -1,8 +1,9 @@
 # Backlog — funciones nuevas (18 sep 2026)
 
 > **Estado (22 sep 2026): implementados el 1 (base de IA), el 2 (recibos), el 3 completo (texto
-> libre y voz/dictado), el 5 (chat) y el 6 (resumen mensual). Telegram (3.1), el 4 (analítica),
-> el 7 (DTE/QR) y el 8 quedaron diferidos por decisión, no por bloqueo técnico.** Este archivo existe
+> libre y voz/dictado), el 5 (chat) y el 6 (resumen mensual). El 4 (analítica) y el 8 quedaron
+> diferidos por decisión, no por bloqueo técnico. Telegram (3.1) y el 7 (DTE/QR) se descartaron
+> el 23 sep 2026.** Este archivo existe
 > para tener el diseño mapeado en el repo y poder retomarlo sin volver a discutirlo. Formato:
 > `[ ]` pendiente, `[x]` hecho. Las referencias entre backticks son archivos reales, leídos
 > del repo.
@@ -160,7 +161,8 @@ habla con Gemini. Todo lo demás la usa por dentro.
       que es sólo gasto.
 
 ### 3.1 Telegram
-> **Diferido por decisión (22-sep-2026).** No es prioridad ahora; queda diseñado para retomar.
+> **Descartado (23-sep-2026).** Casi nadie usa Telegram acá: no vale la pena el canal.
+> Lo de abajo queda sólo como registro de lo que se había diseñado.
 
 - [ ] Bot con token de @BotFather (gratis), webhook a `POST /api/v1/channels/telegram/`,
       verificado con el `secret_token` del propio webhook de Telegram (mismo criterio que
@@ -301,6 +303,9 @@ decisión de ir sin cookies esto no aplica salvo que se reconsidere para nativo 
 ---
 
 ## 7. Escaneo de QR de facturas (DTE de Hacienda, El Salvador)
+
+> **Descartado (23-sep-2026).** No aporta lo suficiente frente a recibos por foto, texto y voz,
+> que ya están. Lo de abajo queda sólo como registro de la investigación.
 
 Investigado el 18 sep 2026. **El QR solo no alcanza para llenar una transacción**, y conviene
 saberlo antes de invertir en esto:
@@ -466,5 +471,5 @@ así que el tope y el registro de consumo van en código desde el día uno, no e
 4. **Decisión de analítica** (punto 4) — sigue pendiente de una decisión tuya; es la que menos
    código lleva.
 5. ~~**Resumen mensual** (punto 6) y **chat** (punto 5)~~ — hechos, sin esperar al DTE.
-6. **JSON de DTE por correo y QR** (punto 7) — diferido por decisión. Reusa toda la importación
-   por correo y sigue siendo el que daría los datos más ricos cuando se retome.
+6. ~~**JSON de DTE por correo y QR** (punto 7)~~ — descartado (23-sep-2026), no aporta.
+7. ~~**Telegram** (punto 3.1)~~ — descartado (23-sep-2026), casi nadie lo usa acá.

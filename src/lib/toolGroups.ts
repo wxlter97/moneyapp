@@ -131,6 +131,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
     hint: 'Patrimonio, tendencias, tarjetas',
     tools: [
       {
+        icon: 'calculator',
+        label: '¿Me alcanza?',
+        hint: 'Cómo queda tu presupuesto si hacés esta compra',
+        onPress: () => router.push('/can-afford'),
+      },
+      {
         icon: 'trending',
         label: 'Patrimonio',
         hint: 'Evolución mes a mes',

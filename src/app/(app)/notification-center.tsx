@@ -32,6 +32,8 @@ const KIND_ICON: Record<NotificationKind, IconName> = {
   statement_due: 'card',
   statement_closed: 'receipt',
   statement_overdue: 'alert',
+  statement_cutoff: 'calendar',
+  weekly_summary: 'calendar',
   insight: 'trending',
   monthly_summary: 'trending',
   subscription_renewal_due: 'gift',

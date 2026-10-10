@@ -5,6 +5,7 @@ import { useReceiptImage, useRemoveReceipt, useUploadReceipt } from '@/api/queri
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { haptics } from '@/lib/haptics';
+import { notifyError } from '@/lib/notifyError';
 import {
   isPdfType,
   pickReceiptDocument,
@@ -63,8 +64,8 @@ export function ReceiptField({
     try {
       await upload.mutateAsync({ id: transactionId, file });
       haptics.success();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo subir el comprobante.');
     }
   }
 
@@ -100,8 +101,8 @@ export function ReceiptField({
     try {
       await remove.mutateAsync(transactionId);
       haptics.selection();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo quitar el comprobante.');
     }
   }
 

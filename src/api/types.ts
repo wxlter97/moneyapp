@@ -148,6 +148,8 @@ export interface Membership {
   id: UUID;
   user: number;
   username: string;
+  /** Nombre y apellido si los cargó; si no, el usuario. */
+  display_name: string;
   user_email: string;
   role: Exclude<WorkspaceRole, ''>;
   joined_at: ISODateTime;
@@ -211,9 +213,16 @@ export interface NotificationPreferences {
    * que conecta los mismos patrones de arriba -- toggle propio, independiente
    * de `warn_insights` (ver `apps.ai.summary` en el backend). */
   warn_monthly_summary: boolean;
+  /** Corte de la tarjeta a 2 días: lo que se compre después entra al estado
+   * siguiente. */
+  warn_statement_cutoff: boolean;
+  /** Resumen de la semana anterior, los lunes. */
+  warn_weekly_summary: boolean;
 }
 
 export type NotificationKind =
+  | 'statement_cutoff'
+  | 'weekly_summary'
   | 'invitation'
   | 'email_import_pending'
   | 'recurring_due'
@@ -1118,10 +1127,71 @@ export interface RecurringSuggestion {
   category_name: string;
   wallet: UUID;
   wallet_name: string;
+  /** Comercio o descripción que se repite ("Netflix"); vacío si el patrón
+   * sólo se ve por categoría + cartera. */
+  name: string;
   suggested_amount: Money;
   occurrences: number;
   last_date: ISODate;
   suggested_next_due_date: ISODate;
+}
+
+/** Gasto del mes por miembro -- `reports/members/`. `user` null = "Sin asignar". */
+export interface MemberSpendingRow {
+  user: number | null;
+  name: string;
+  spent: Money;
+  count: number;
+  share_pct: number;
+}
+
+export interface MemberSpending {
+  year: number;
+  month: number;
+  base_currency: string;
+  total: Money;
+  members: MemberSpendingRow[];
+}
+
+/** "¿Me alcanza?" -- `reports/can-afford/`. */
+export interface CanAfford {
+  amount: Money;
+  base_currency: string;
+  period_start: ISODate;
+  period_end: ISODate;
+  days_left: number;
+  /** "budget": contra el presupuesto del período; "cashflow": sin presupuesto,
+   * contra ingresos menos gastos del mes. */
+  basis: 'budget' | 'cashflow';
+  /** Recurrentes y cuotas que faltan hasta fin de período. */
+  committed: Money;
+  available_before: Money;
+  available_after: Money;
+  category: {
+    category: UUID;
+    category_name: string;
+    budgeted: Money;
+    spent: Money;
+    remaining_before: Money;
+    remaining_after: Money;
+    has_budget: boolean;
+  } | null;
+  verdict: 'ok' | 'tight' | 'over';
+}
+
+/** Aportes por miembro a una cartera de ahorro -- `wallets/{id}/contributions/`. */
+export interface GoalContributions {
+  opening_balance: Money;
+  total_contributed: Money;
+  goal_amount: Money | null;
+  members: {
+    user: number | null;
+    name: string;
+    contributed: Money;
+    withdrawn: Money;
+    net: Money;
+    share_pct: number;
+  }[];
 }
 
 /** Proyección de una meta de ahorro -- ver `wallets/{id}/projection/`. */

@@ -18,7 +18,7 @@ import { DateField } from '@/components/ui/DateField';
 import { Money } from '@/components/ui/Money';
 import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
-import { LoadingState } from '@/components/ui/states';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { fonts } from '@/theme/typography';
 import { formatShortDate, todayISO } from '@/lib/date';
@@ -122,6 +122,11 @@ export function InstallmentForm({ installmentId }: { installmentId?: string }) {
   }
 
   if (editing && existing.isLoading) return <LoadingState />;
+  if (editing && existing.isError) {
+    // Sin esto quedaba el formulario vacío, y "Guardar" pisaba la compra con
+    // campos en blanco.
+    return <ErrorState error={existing.error} onRetry={existing.refetch} />;
+  }
 
   const currency = eligibleCards.find((w) => w.id === walletId)?.currency ?? 'USD';
 

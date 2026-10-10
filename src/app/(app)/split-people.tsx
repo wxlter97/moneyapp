@@ -18,9 +18,10 @@ import { IconButton } from '@/components/ui/IconButton';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import { Money } from '@/components/ui/Money';
 import { Screen } from '@/components/ui/Screen';
-import { LoadingState } from '@/components/ui/states';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { toNumber } from '@/lib/money';
+import { notifyError } from '@/lib/notifyError';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -67,6 +68,8 @@ function PersonChips({
     try {
       const created = await createPerson.mutateAsync(name);
       onChange(created.id);
+    } catch (err) {
+      notifyError(err, 'No se pudo agregar a la persona.');
     } finally {
       setNewName('');
       setAdding(false);
@@ -225,6 +228,21 @@ export default function SplitPeopleScreen() {
       haptics.error();
       setError(errorMessage(err, 'No se pudo dividir la transacción entre personas.'));
     }
+  }
+
+  if (txnQ.isError || peopleQ.isError) {
+    return (
+      <Screen edges={['top', 'bottom']} variant="drawer">
+        <ModalHeader title="Dividir entre personas" />
+        <ErrorState
+          error={txnQ.error ?? peopleQ.error}
+          onRetry={() => {
+            txnQ.refetch();
+            peopleQ.refetch();
+          }}
+        />
+      </Screen>
+    );
   }
 
   if (txnQ.isLoading || peopleQ.isLoading) {

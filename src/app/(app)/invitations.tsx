@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { useAcceptInvitation, useDeclineInvitation, useMyInvitations } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
@@ -12,6 +13,8 @@ import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { useSnackbarStore } from '@/store/snackbar';
+import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -42,6 +45,12 @@ export default function InvitationsScreen() {
     try {
       await accept.mutateAsync(inv.token);
       haptics.success();
+      // Antes quedaba adentro pero seguía viendo el presupuesto anterior, sin
+      // pista de dónde estaba el nuevo. La lista de presupuestos ya se
+      // refrescó en el `onSuccess` de la mutación.
+      useWorkspaceStore.getState().setActiveId(inv.workspace);
+      useSnackbarStore.getState().show({ message: `Ya estás en «${inv.workspace_name}»` });
+      router.replace('/dashboard');
     } catch (err) {
       haptics.error();
       setError(errorMessage(err, 'No se pudo aceptar la invitación.'));

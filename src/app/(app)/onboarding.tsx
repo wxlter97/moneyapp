@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useWallets } from '@/api/queries';
+import { QuickWalletSetup } from '@/components/QuickWalletSetup';
 import { Button } from '@/components/ui/Button';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Screen } from '@/components/ui/Screen';
 import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
+import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -22,53 +24,36 @@ const STEPS: Step[] = [
   {
     icon: 'gift',
     title: 'Bienvenido a porksupuesto',
-    // Antes era genérico ("presupuesto personal, sin hojas de cálculo") --
-    // no decía en qué se diferencia de cualquier otra app. Estos 3 ganchos
-    // (cuotas/recurrentes, varias carteras y monedas, presupuesto por
-    // categoría) son justamente lo que pedía la auditoría de producto §1.1
-    // que apareciera explícito desde el primer paso, no enterrado al final.
-    body: 'Un presupuesto que te va a ayudar a ahorrar de verdad: efectivo, varias tarjetas y cuotas a la vez, en más de una cartera y moneda si hace falta — con presupuesto por categoría, no una hoja de cálculo genérica. Este tour rápido te muestra lo esencial — lo podés saltar cuando quieras.',
-  },
-  {
-    icon: 'users',
-    title: 'Presupuestos',
-    body: 'Cada "presupuesto" es un espacio con sus propias carteras y movimientos. Puede ser solo tuyo, o compartido invitando gente (Herramientas → Miembros) — y podés tener más de uno (Casa, Viaje, Negocio).',
+    // Los 3 ganchos (cuotas/recurrentes, varias carteras y monedas,
+    // presupuesto por categoría) explícitos desde el primer paso, como pedía
+    // la auditoría de producto §1.1.
+    body: 'Un presupuesto que te va a ayudar a ahorrar de verdad: efectivo, varias tarjetas y cuotas a la vez, en más de una cartera y moneda si hace falta — con presupuesto por categoría, no una hoja de cálculo genérica.',
   },
   {
     icon: 'card',
-    title: 'Carteras',
-    body: 'Una cartera es cada cuenta, tarjeta, efectivo o meta de ahorro que tenés -- cada una en su propia moneda si hace falta. Todo lo que registrás pertenece a una.',
-  },
-  {
-    icon: 'card',
-    title: 'Creá tu primera cartera',
-    body: 'Sin al menos una, no hay dónde registrar nada. Podés agregar más después, y editar cualquiera cuando quieras.',
+    title: 'Tus cuentas, de una vez',
+    body: 'Cada cuenta, tarjeta o efectivo es una cartera. Poné cuánto tenés hoy en cada una y listo: los detalles (día de corte, límite, meta) se agregan después.',
   },
   {
     icon: 'tag',
     title: 'Las categorías ya están listas',
-    body: 'Arrancás con un set armado (Vivienda, Comida, Transporte...) para no empezar de cero. Se pueden editar o agregar las tuyas en Herramientas → Categorías.',
+    body: 'Arrancás con un set armado (Vivienda, Comida, Transporte...). Se editan en Herramientas → Categorías.',
   },
   {
     icon: 'plus',
     title: 'Cómo cargar un movimiento',
-    body: 'Con el botón "+" lo cargás a mano. O reenviá el aviso de compra de tu banco a tu dirección de Importaciones y la app lo detecta sola — vos solo confirmás.',
-  },
-  {
-    icon: 'trending',
-    title: 'Y hay más',
-    body: 'Gastos recurrentes, compras a plazo, presupuesto por categoría, respaldo de todo... vive en Herramientas. No hace falta memorizarlo ahora: la sección de Ayuda lo explica cuando lo necesites.',
+    body: 'Con el botón "+" lo cargás a mano, con una foto del recibo o dictándolo. También podés reenviar el aviso de compra de tu banco a tu dirección de Importaciones.',
   },
   {
     icon: 'check',
     title: 'Listo',
-    body: 'Ya podés empezar. Si en algún momento querés repasar esto, lo encontrás en Herramientas → Ayuda.',
+    body: 'Recurrentes, compras a plazo, presupuestos compartidos y más viven en Herramientas. Si querés repasar esto, está en Herramientas → Ayuda.',
   },
 ];
 
-// Único paso con una acción real (el resto es sólo explicación) -- entra al
-// mismo formulario de siempre (`wallet/new`), no una versión simulada.
-const CREATE_WALLET_STEP = 3;
+// Paso con la acción real: cargar las carteras con su saldo (ver
+// `QuickWalletSetup`). El resto es sólo explicación.
+const WALLETS_STEP = 1;
 
 /**
  * Tour de bienvenida, una sola vez por cuenta (ver `User.onboarding_completed`
@@ -82,6 +67,10 @@ export default function OnboardingScreen() {
   const walletsQ = useWallets();
   const [step, setStep] = useState(0);
   const [finishing, setFinishing] = useState(false);
+  const [createdCount, setCreatedCount] = useState(0);
+  const currency = useWorkspaceStore(
+    (s) => s.workspaces.find((w) => w.id === s.activeId)?.base_currency ?? 'USD',
+  );
 
   const hasWallet = (walletsQ.data?.length ?? 0) > 0;
   const isLast = step === STEPS.length - 1;
@@ -146,7 +135,10 @@ export default function OnboardingScreen() {
         </Pressable>
       </View>
 
-      <View className="flex-1 items-center justify-center gap-4 px-4">
+      <ScrollView
+        contentContainerClassName="flex-grow items-center justify-center gap-4 px-4 py-4"
+        keyboardShouldPersistTaps="handled"
+      >
         <View
           className="h-16 w-16 items-center justify-center rounded-2xl"
           style={{ backgroundColor: colors.primary }}
@@ -158,19 +150,28 @@ export default function OnboardingScreen() {
         </Text>
         <Text className="text-text-muted text-center text-sm leading-5">{current.body}</Text>
 
-        {step === CREATE_WALLET_STEP ? (
-          <View className="mt-2 w-full max-w-[280px]">
-            <Button
-              label={hasWallet ? 'Agregar otra cartera' : 'Crear mi primera cartera'}
-              variant="ghost"
-              onPress={() => {
-                haptics.tap();
-                router.push('/wallet/new');
-              }}
+        {step === WALLETS_STEP ? (
+          <View className="mt-2 w-full max-w-[420px] gap-3">
+            {createdCount > 0 || hasWallet ? (
+              <View className="rounded-2xl bg-income/10 px-4 py-3">
+                <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+                  {createdCount > 0
+                    ? `Listo: ${createdCount} ${createdCount === 1 ? 'cartera creada' : 'carteras creadas'}.`
+                    : `Ya tenés ${walletsQ.data?.length} ${walletsQ.data?.length === 1 ? 'cartera' : 'carteras'}.`}
+                </Text>
+                <Text className="text-text-muted text-xs">
+                  Podés agregar más abajo, o seguir.
+                </Text>
+              </View>
+            ) : null}
+            <QuickWalletSetup
+              currency={currency}
+              hasWallets={hasWallet}
+              onDone={(n) => setCreatedCount((c) => c + n)}
             />
           </View>
         ) : null}
-      </View>
+      </ScrollView>
 
       <View className="flex-row gap-3 px-1 pb-2">
         {step > 0 ? (

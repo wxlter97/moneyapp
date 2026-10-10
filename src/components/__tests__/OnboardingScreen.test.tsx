@@ -10,8 +10,10 @@ jest.mock('expo-router', () => ({
   router: { push: (...args: unknown[]) => mockPush(...args), replace: (...args: unknown[]) => mockReplace(...args) },
 }));
 
+const mockCreateWallet = jest.fn();
 jest.mock('@/api/queries', () => ({
   useWallets: () => ({ data: [], isLoading: false }),
+  useCreateWallet: () => ({ mutateAsync: (...args: unknown[]) => mockCreateWallet(...args) }),
 }));
 
 const mockMarkOnboardingCompleted = jest.fn();
@@ -25,6 +27,7 @@ describe('OnboardingScreen', () => {
     mockPush.mockReset();
     mockReplace.mockReset();
     mockMarkOnboardingCompleted.mockReset().mockResolvedValue(undefined);
+    mockCreateWallet.mockReset().mockResolvedValue({});
   });
 
   it('arranca en el primer paso, sin botón de "Atrás"', async () => {
@@ -40,23 +43,29 @@ describe('OnboardingScreen', () => {
     expect(mockReplace).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('"Siguiente" avanza de paso, y el paso de cartera abre wallet/new', async () => {
+  it('el paso de carteras crea todas de una vez, con su saldo', async () => {
     await render(<OnboardingScreen />);
-    await fireEvent.press(screen.getByText('Siguiente')); // -> Presupuestos
-    await fireEvent.press(screen.getByText('Siguiente')); // -> Carteras
-    await fireEvent.press(screen.getByText('Siguiente')); // -> Creá tu primera cartera
-    expect(screen.getByText('Creá tu primera cartera')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Siguiente'));
+    expect(screen.getByText('Tus cuentas, de una vez')).toBeTruthy();
 
-    await fireEvent.press(screen.getByText('Crear mi primera cartera'));
-    expect(mockPush).toHaveBeenCalledWith('/wallet/new');
+    // Arranca con Efectivo y una cuenta bancaria; se agrega una tarjeta.
+    await fireEvent.press(screen.getByText('Tarjeta'));
+    await fireEvent.press(screen.getByText('Guardar 3 carteras'));
+
+    expect(mockCreateWallet).toHaveBeenCalledTimes(3);
+    const [cash, bank, card] = mockCreateWallet.mock.calls.map((c) => c[0]);
+    expect(cash).toMatchObject({ name: 'Efectivo', kind: 'cash', purpose: 'spending', is_default: true });
+    expect(bank).toMatchObject({ kind: 'bank', is_default: false });
+    expect(card).toMatchObject({ kind: 'credit', purpose: 'debt' });
+    expect(await screen.findByText('Listo: 3 carteras creadas.')).toBeTruthy();
   });
 
   it('llegar al último paso cambia el botón a "Empezar" y también marca completado', async () => {
     await render(<OnboardingScreen />);
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 4; i++) {
       await fireEvent.press(screen.getByText('Siguiente'));
     }
-    // 7 pasos después del primero (8 en total, índice 0-7): el último.
+    // 5 pasos en total (índice 0-4): el último.
     expect(screen.getByText('Listo')).toBeTruthy();
 
     await fireEvent.press(screen.getByText('Empezar'));

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { useCreateTag, useDeleteTag, useTagSummary } from '@/api/queries';
+import { useCreateTag, useDeleteTag, useTagSummary, useUpdateTag } from '@/api/queries';
 import type { TagSummary } from '@/api/types';
 import { errorMessage } from '@/api/errors';
 import { Card } from '@/components/ui/Card';
@@ -13,6 +13,7 @@ import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { notifyError } from '@/lib/notifyError';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -28,6 +29,8 @@ export default function TagsScreen() {
   const q = useTagSummary();
   const createTag = useCreateTag();
   const deleteTag = useDeleteTag();
+  const updateTag = useUpdateTag();
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
 
@@ -57,10 +60,27 @@ export default function TagsScreen() {
     }
   }
 
+  async function onRename(tag: TagSummary, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === tag.name) {
+      setRenamingId(null);
+      return;
+    }
+    try {
+      await updateTag.mutateAsync({ id: tag.id, name: trimmed });
+      haptics.success();
+      setRenamingId(null);
+    } catch (err) {
+      notifyError(err, 'No se pudo renombrar la etiqueta.');
+    }
+  }
+
   async function onDelete(tag: TagSummary) {
     haptics.impact();
     try {
       await deleteTag.mutateAsync(tag.id);
+    } catch (err) {
+      notifyError(err, 'No se pudo borrar la etiqueta.');
     } finally {
       setConfirmingId(null);
     }
@@ -133,6 +153,9 @@ export default function TagsScreen() {
                 currency={currency}
                 first={i === 0}
                 confirming={confirmingId === tag.id}
+                renaming={renamingId === tag.id}
+                onAskRename={() => setRenamingId(tag.id)}
+                onRename={(name) => onRename(tag, name)}
                 onPress={() => router.push(`/tag-transactions?tag=${tag.id}`)}
                 onAskDelete={() => setConfirmingId(tag.id)}
                 onCancelDelete={() => setConfirmingId(null)}
@@ -151,6 +174,9 @@ function TagRow({
   currency,
   first,
   confirming,
+  renaming,
+  onAskRename,
+  onRename,
   onPress,
   onAskDelete,
   onCancelDelete,
@@ -160,12 +186,41 @@ function TagRow({
   currency: string;
   first: boolean;
   confirming: boolean;
+  renaming: boolean;
+  onAskRename: () => void;
+  onRename: (name: string) => void;
   onPress: () => void;
   onAskDelete: () => void;
   onCancelDelete: () => void;
   onConfirmDelete: () => void;
 }) {
   const colors = useColors();
+  const [draft, setDraft] = useState(tag.name);
+
+  if (renaming) {
+    return (
+      <View className={`flex-row items-center gap-2 py-3 ${first ? '' : 'border-t border-border/30'}`}>
+        <TextInput
+          autoFocus
+          value={draft}
+          onChangeText={setDraft}
+          onSubmitEditing={() => onRename(draft)}
+          maxLength={40}
+          accessibilityLabel="Nuevo nombre"
+          className="h-10 flex-1 rounded-xl border border-border bg-surface px-3 text-text"
+        />
+        <Pressable
+          onPress={() => onRename(draft)}
+          className="bg-primary rounded-full px-3 py-2 active:opacity-70"
+          accessibilityRole="button"
+        >
+          <Text className="text-primary-fg text-xs" style={{ fontFamily: fonts.semibold }}>
+            Guardar
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (confirming) {
     return (
@@ -215,6 +270,19 @@ function TagRow({
       {tag.count > 0 ? (
         <Money value={tag.expense} currency={currency} tone="expense" className="text-sm font-semibold" />
       ) : null}
+      <Pressable
+        onPress={(e) => {
+          e.stopPropagation();
+          haptics.tap();
+          setDraft(tag.name);
+          onAskRename();
+        }}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={`Renombrar etiqueta ${tag.name}`}
+      >
+        <Icon name="pencil" size={16} color={colors.textMuted} />
+      </Pressable>
       <Pressable
         onPress={(e) => {
           e.stopPropagation();

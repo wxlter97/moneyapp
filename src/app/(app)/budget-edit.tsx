@@ -22,7 +22,7 @@ import { dismissModal, ModalHeader } from '@/components/ui/ModalHeader';
 import { Money } from '@/components/ui/Money';
 import { Screen } from '@/components/ui/Screen';
 import { Select } from '@/components/ui/Select';
-import { LoadingState } from '@/components/ui/states';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -200,6 +200,16 @@ export default function BudgetEditScreen() {
       >
         {loading ? (
           <LoadingState />
+        ) : categoriesQ.isError || budgetsQ.isError ? (
+          // Sin esto, un error de carga mostraba el editor vacío: guardar ahí
+          // dejaba todos los montos en cero.
+          <ErrorState
+            error={categoriesQ.error ?? budgetsQ.error}
+            onRetry={() => {
+              categoriesQ.refetch();
+              budgetsQ.refetch();
+            }}
+          />
         ) : groups.length === 0 ? (
           <Text className="text-text-muted py-6 text-center text-sm">
             Primero crea grupos de gasto en Herramientas → Categorías.

@@ -10,6 +10,7 @@ import { FadeInView } from '@/components/ui/FadeInView';
 import { Screen } from '@/components/ui/Screen';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useAuthStore } from '@/store/auth';
+import { useWorkspaceStore } from '@/store/workspace';
 import { fonts } from '@/theme/typography';
 
 /**
@@ -38,8 +39,10 @@ export default function InvitePreviewScreen() {
     if (!token) return;
     setError(null);
     try {
-      await accept.mutateAsync(token);
+      const accepted = await accept.mutateAsync(token);
       setDone('accepted');
+      // Entrar directo al presupuesto nuevo, no al que estaba activo antes.
+      useWorkspaceStore.getState().setActiveId(accepted.workspace);
       setTimeout(() => router.replace('/dashboard'), 900);
     } catch (err) {
       setError(errorMessage(err, 'No se pudo aceptar la invitación.'));

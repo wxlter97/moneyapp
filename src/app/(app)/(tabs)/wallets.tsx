@@ -14,6 +14,7 @@ import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Segmented } from '@/components/ui/Segmented';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
+import { notifyError } from '@/lib/notifyError';
 import { useColors } from '@/theme';
 import { flattenTree } from '@/lib/wallets';
 import { useDesktopContentWidth } from '@/lib/responsive';
@@ -44,6 +45,10 @@ export default function WalletsScreen() {
   const canSeeNetWorth = useHasFeature('net_worth');
   const netWorth = useNetWorth({ enabled: canSeeNetWorth !== false });
   const wallets = useWallets();
+  // Sólo para saber si mostrar el acceso a las ocultas (antes únicamente en
+  // Herramientas → Datos, lejos de donde uno las busca).
+  const archived = useWallets({ is_archived: true });
+  const archivedCount = archived.data?.length ?? 0;
   const reorder = useReorderWallets();
   const [reordering, setReordering] = useState(false);
   const [netFilter, setNetFilter] = useState<NetFilter>('all');
@@ -151,7 +156,11 @@ export default function WalletsScreen() {
                   data={allNodes}
                   keyExtractor={(node) => node.wallet.id}
                   itemHeight={44}
-                  onReorder={(keys) => reorder.mutate(keys)}
+                  onReorder={(keys) =>
+                    reorder.mutate(keys, {
+                      onError: (err) => notifyError(err, 'No se pudo guardar el orden.'),
+                    })
+                  }
                   renderItem={(node) => (
                     <Text className="text-text py-3 text-base" numberOfLines={1}>
                       {node.wallet.name}
@@ -187,6 +196,18 @@ export default function WalletsScreen() {
                 ))}
               </View>
             )}
+
+            {!reordering && archivedCount > 0 ? (
+              <Pressable
+                onPress={() => router.push('/hidden-wallets')}
+                className="items-center py-2 active:opacity-60"
+                accessibilityRole="button"
+              >
+                <Text className="text-text-muted text-sm">
+                  {archivedCount === 1 ? '1 cartera oculta' : `${archivedCount} carteras ocultas`} · Ver
+                </Text>
+              </Pressable>
+            ) : null}
           </>
         )}
       </ScrollView>

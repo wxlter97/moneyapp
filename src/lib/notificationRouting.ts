@@ -126,6 +126,16 @@ export function actionsForNotification(
         actions.push({ kind: 'route', label: 'Ver estado de cuenta', href: `/statement/${wallet}` as Href });
       }
       break;
+    case 'statement_cutoff':
+      actions.push(
+        wallet
+          ? { kind: 'route', label: 'Ver estado de cuenta', href: `/statement/${wallet}` as Href }
+          : { kind: 'route', label: 'Ver estados de cuenta', href: '/statements' },
+      );
+      break;
+    case 'weekly_summary':
+      actions.push({ kind: 'route', label: 'Ver resumen', href: '/dashboard' });
+      break;
     case 'invitation':
       actions.push({ kind: 'route', label: 'Ver invitación', href: '/invitations' });
       break;

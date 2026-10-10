@@ -21,6 +21,7 @@ import { ErrorState, LoadingState } from '@/components/ui/states';
 import { CURRENCIES, currencyLabel } from '@/lib/currency';
 import { haptics } from '@/lib/haptics';
 import { toNumber } from '@/lib/money';
+import { notifyError } from '@/lib/notifyError';
 import { fonts } from '@/theme/typography';
 import { useWorkspaceStore } from '@/store/workspace';
 
@@ -230,8 +231,8 @@ function UnusedRateRow({ rate }: { rate: ExchangeRate }) {
     try {
       await remove.mutateAsync(rate.id);
       haptics.selection();
-    } catch {
-      haptics.error();
+    } catch (err) {
+      notifyError(err, 'No se pudo quitar la tasa.');
     }
   }
 
