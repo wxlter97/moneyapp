@@ -125,6 +125,11 @@ export interface Workspace {
   base_currency: string;
   /** Cadencia del presupuesto (diario/semanal/quincenal/mensual/anual). */
   budget_period: BudgetPeriod;
+  /** Día en que arranca la semana del presupuesto semanal: 0 = lunes … 6 = domingo. */
+  week_start_day: number;
+  /** Interruptor global de la provisión acumulada: apagado, ninguna categoría
+   * acumula sobrante (manda sobre `Category.rollover_surplus`). */
+  rollover_surplus: boolean;
   inbound_token: string;
   inbound_email: string;
   created_at: ISODateTime;
@@ -225,6 +230,8 @@ export type NotificationKind =
   | 'budget_threshold'
   | 'low_balance'
   | 'statement_due'
+  | 'statement_closed'
+  | 'statement_overdue'
   | 'insight'
   | 'monthly_summary'
   | 'subscription_renewal_due'
@@ -333,6 +340,9 @@ export interface Wallet {
   billing_cycle_day: number | null;
   payment_due_day: number | null;
   interest_rate: string | null;
+  /** Pago mínimo = max(piso, % del saldo al corte). Ambos null = sin mínimo. */
+  min_payment_pct: string | null;
+  min_payment_floor: string | null;
   due_date: ISODate | null;
   counterparty: string;
   /** Banco emisor (opcional), para detectar sola esta cartera al llegar un correo bancario. */
@@ -384,6 +394,8 @@ export interface WalletInput {
   billing_cycle_day?: number | null;
   payment_due_day?: number | null;
   interest_rate?: string | null;
+  min_payment_pct?: string | null;
+  min_payment_floor?: string | null;
   due_date?: ISODate | null;
   counterparty?: string;
   bank_schema?: UUID | null;
@@ -417,6 +429,9 @@ export interface Category {
   /** Rubro estándar del catálogo de lealtad (opcional) -- ver `LoyaltyCategoryType`.
    * Mapea esta categoría propia a un rubro global para heredar sus tasas. */
   category_type: UUID | null;
+  /** Si el sobrante de presupuesto rueda al período siguiente (provisión
+   * acumulada). Apagado = lo que sobra se pierde al cerrar el período. */
+  rollover_surplus: boolean;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 }
@@ -430,6 +445,7 @@ export interface CategoryInput {
   parent?: UUID | null;
   sort_order?: number;
   category_type?: UUID | null;
+  rollover_surplus?: boolean;
 }
 
 export type TransactionSource =
@@ -1214,8 +1230,85 @@ export interface CreditCardStatement {
   installment_lines: StatementInstallmentLine[];
 }
 
+export type StatementCycleStatus = 'paid' | 'minimum_paid' | 'pending' | 'overdue' | 'nothing_due';
+
+/** Un estado de cuenta por corte, como lo imprime el banco -- ver
+ * `wallets/{id}/statement-cycles/` y `apps.accounts.services.statement_cycle`:
+ * saldo anterior + compras + cuotas del ciclo - pagos (+ ajustes) = saldo al corte. */
+export interface StatementCycle {
+  period_start: ISODate;
+  cutoff_date: ISODate;
+  payment_due_date: ISODate | null;
+  previous_balance: Money;
+  /** Compras y cargos del ciclo, sin el total de las compras a plazo. */
+  purchases: Money;
+  installments_charged: Money;
+  /** Pagos DENTRO del ciclo (los del ciclo anterior). */
+  payments: Money;
+  /** 0 salvo casos raros -- lo que hace cuadrar con el saldo real. */
+  adjustments: Money;
+  /** Pago de contado: pagándolo antes de la fecha límite no hay intereses. */
+  statement_balance: Money;
+  minimum_payment: Money | null;
+  /** Pagos DESPUÉS del corte (hasta hoy o la fecha límite). */
+  paid_since_cutoff: Money;
+  remaining: Money;
+  minimum_remaining: Money | null;
+  status: StatementCycleStatus;
+  /** Interés de un mes pagando sólo el mínimo (null sin tasa o sin mínimo). */
+  interest_if_minimum: Money | null;
+  /** Interés de un mes sobre lo que falta hoy (null sin tasa). */
+  interest_if_unpaid: Money | null;
+}
+
+/** Lo que ya va al próximo estado (compras desde el último corte). */
+export interface UnbilledActivity {
+  since: ISODate;
+  next_cutoff_date: ISODate;
+  purchases: Money;
+  installments_next: Money;
+  total: Money;
+}
+
+export interface StatementCycles {
+  cycles: StatementCycle[];
+  unbilled: UnbilledActivity;
+}
+
+/** Extracto de una cartera entre dos fechas -- `wallets/{id}/period-summary/`. */
+export interface WalletPeriodSummary {
+  date_after: ISODate;
+  date_before: ISODate;
+  opening_balance: Money;
+  /** Ingresos + transferencias entrantes. */
+  inflows: Money;
+  /** Gastos + transferencias salientes. */
+  outflows: Money;
+  closing_balance: Money;
+  count: number;
+  previous: { date_after: ISODate; date_before: ISODate; inflows: Money; outflows: Money };
+}
+
+/** `transactions/breakdown/`: cantidad + ingresos/gastos por categoría de lo
+ * que cumple los filtros de la lista. */
+export interface TransactionBreakdown {
+  count: number;
+  categories: {
+    category: UUID | null;
+    currency: string;
+    income: Money;
+    expenses: Money;
+    count: number;
+  }[];
+}
+
 /** Fila del resumen `wallets/statements/` (todas las tarjetas del workspace). */
 export interface CreditCardStatementSummary extends CreditCardStatement {
+  /** Del ÚLTIMO corte (ver `StatementCycle`): lo que de verdad hay que pagar ahora. */
+  statement_balance: Money;
+  remaining: Money;
+  minimum_remaining: Money | null;
+  status: StatementCycleStatus;
   wallet_id: UUID;
   wallet_name: string;
   currency: string;
@@ -1389,7 +1482,7 @@ export type DRFErrorBody =
 // ---------------------------------------------------------------------------
 /** Operaciones de IA que gastan cuota. El resumen mensual lo dispara el
  * servidor y no consume la del usuario, así que no aparece acá. */
-export type AIOperation = 'receipt' | 'parse' | 'chat';
+export type AIOperation = 'receipt' | 'parse' | 'chat' | 'statement';
 
 export interface AIQuota {
   /** Tope del mes; `null` = sin tope. */
@@ -1457,6 +1550,47 @@ export interface ReceiptCandidate {
    * usuario lo revise antes de guardar. */
   confidence: Record<string, ConfidenceLevel>;
   possible_duplicates: PossibleDuplicate[];
+}
+
+/**
+ * `POST ai/statement/` -- un estado de cuenta leído. Igual que `ReceiptCandidate`:
+ * nada está guardado, todo es editable y lo que no se leyó viene vacío con
+ * confianza `low`. Ver `apps/ai/statements.py`.
+ */
+export interface StatementWalletCandidate {
+  kind: 'credit' | 'bank';
+  purpose: 'debt' | 'spending';
+  name: string;
+  /** Nombre leído; hay que cruzarlo con el catálogo de bancos. */
+  bank: string | null;
+  card_last4: string | null;
+  currency: string;
+  credit_limit: Money | null;
+  billing_cycle_day: number | null;
+  payment_due_day: number | null;
+  minimum_payment: Money | null;
+  interest_rate: string | null;
+  /** Lo que se debe al corte (tarjeta) o lo que hay (cuenta). */
+  closing_balance: Money | null;
+}
+
+export interface StatementTransactionCandidate {
+  date: ISODate;
+  description: string;
+  amount: Money;
+  type: 'income' | 'expense';
+  category: UUID | null;
+  possible_duplicates: PossibleDuplicate[];
+}
+
+export interface StatementCandidate {
+  statement_kind: 'credit_card' | 'bank_account' | 'other';
+  period_start: ISODate | null;
+  period_end: ISODate | null;
+  payment_due_date: ISODate | null;
+  wallet: StatementWalletCandidate;
+  transactions: StatementTransactionCandidate[];
+  confidence: Record<string, ConfidenceLevel>;
 }
 
 /**

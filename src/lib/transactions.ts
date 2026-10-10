@@ -27,6 +27,35 @@ export function summarizeByType(transactions: Transaction[]): TypeTotals {
   return { income, expenses, net: income - expenses };
 }
 
+export interface CategoryBreakdownRow {
+  category: string | null;
+  income: number;
+  expenses: number;
+  count: number;
+}
+
+/** Ingresos/gastos por categoría (sólo `currency`; sin transferencias), de
+ * mayor a menor -- la misma forma que `transactions/breakdown/` del servidor,
+ * para la lista del mes, que ya está entera en el cliente. */
+export function breakdownByCategory(
+  transactions: Transaction[],
+  currency: string,
+): CategoryBreakdownRow[] {
+  const rows = new Map<string | null, CategoryBreakdownRow>();
+  for (const t of transactions) {
+    if (t.currency !== currency || (t.type !== 'income' && t.type !== 'expense')) continue;
+    let row = rows.get(t.category);
+    if (!row) {
+      row = { category: t.category, income: 0, expenses: 0, count: 0 };
+      rows.set(t.category, row);
+    }
+    if (t.type === 'income') row.income += toNumber(t.amount);
+    else row.expenses += toNumber(t.amount);
+    row.count += 1;
+  }
+  return [...rows.values()].sort((a, b) => b.income + b.expenses - (a.income + a.expenses));
+}
+
 /**
  * Totales de la moneda base a partir de los que calculó el servidor (todo lo
  * que cumple el filtro, no sólo lo cargado), restando las filas que se acaban

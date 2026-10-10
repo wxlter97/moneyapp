@@ -50,14 +50,15 @@ import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
 import { autopayRate, matchMerchant, merchantOptions, pickRate, qualifies } from '@/lib/loyaltyRate';
-import { formatMoney, toNumber } from '@/lib/money';
+import { currencySymbol, formatMoney, formatNumber, toNumber } from '@/lib/money';
 import { useSnackbarStore } from '@/store/snackbar';
 
 /** Precarga sin depender de una Transaction existente -- viene de un ítem
  * "Programado" (recurrente o cuota) que todavía no se registró. */
 export interface TransactionPrefill {
   type: TransactionType;
-  amount: string;
+  /** Opcional: un aviso de saldo bajo no sabe cuánto conviene transferir. */
+  amount?: string;
   categoryId?: string | null;
   walletId: string;
   toWalletId?: string | null;
@@ -76,6 +77,18 @@ interface TransactionFormProps {
   duplicateFromId?: string;
   /** Precarga desde un ítem "Programado" (ver `TransactionPrefill`). */
   prefill?: TransactionPrefill;
+}
+
+/** Tamaño del monto según cuántos caracteres tiene. Clases completas y
+ * estáticas (no `text-[${n}px]`): Tailwind sólo genera lo que ve escrito. El
+ * tamaño va por `className`, como antes (un `fontSize` calculado en `style`
+ * no se veía aplicado en iOS: el monto quedaba chico). */
+function amountTextClass(len: number): string {
+  if (len <= 8) return 'text-[56px] leading-[64px]';
+  if (len <= 10) return 'text-[48px] leading-[56px]';
+  if (len <= 12) return 'text-[40px] leading-[48px]';
+  if (len <= 14) return 'text-[34px] leading-[42px]';
+  return 'text-[28px] leading-[36px]';
 }
 
 type OpenRow = 'category' | 'from' | 'to' | 'refundWallet' | null;
@@ -122,6 +135,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   // el plan (mismo fail-open que el resto de la app).
   const canDuplicate = useHasFeature('transaction_duplicate');
   const canRefund = useHasFeature('refunds');
+  const canInstallments = useHasFeature('installments');
   const canSplitCategories = useHasFeature('split_categories');
   const canSplitPeople = useHasFeature('split_people');
   const create = useCreateTransaction();
@@ -241,7 +255,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
   // para que solo haga falta confirmar y guardar.
   if (!(editing || duplicateFromId || !prefill || prefilled)) {
     setType(prefill.type);
-    setAmount(String(Number(prefill.amount).toFixed(2)));
+    if (prefill.amount) setAmount(String(Number(prefill.amount).toFixed(2)));
     setCategoryId(prefill.categoryId ?? null);
     setWalletId(prefill.walletId);
     setToWalletId(prefill.toWalletId ?? null);
@@ -607,6 +621,12 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
     return <ErrorState error={existing.error} onRetry={existing.refetch} />;
   }
 
+  // Monto grande y llamativo; se achica solo a medida que crece la cifra para
+  // que nunca se corte ni salte de línea (56px hasta 8 caracteres, luego
+  // proporcional, con piso de 26px).
+  const amountText = `${currencySymbol(currency)}${formatNumber(amountNum || 0)}`;
+  const amountSizeClass = amountTextClass(amountText.length);
+
   const amountColor =
     type === 'income' ? colors.income : type === 'expense' ? colors.expense : colors.text;
 
@@ -686,22 +706,52 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
         ) : null}
 
         <View className="items-center py-2">
-          <TextInput
-            value={formatMoney(amountNum || 0, currency)}
-            onChangeText={onAmountKeyPress}
-            keyboardType="decimal-pad"
-            selectTextOnFocus
-            autoFocus={!editing}
-            accessibilityLabel="Monto"
-            className="text-[40px] leading-[44px]"
-            style={{
-              color: amountColor,
-              fontFamily: fonts.extrabold,
-              letterSpacing: -0.8,
-              textAlign: 'center',
-              minWidth: 120,
-            }}
-          />
+          {/* Lo que se VE es un Text (mismo mecanismo que la cifra grande del
+              dashboard, que sí respeta el tamaño); el TextInput va encima,
+              transparente, sólo para capturar el teclado. Dos intentos de
+              agrandar el TextInput mismo (className y style) no cambiaron
+              nada en iOS. */}
+          <View className="w-full justify-center" style={{ minHeight: 72 }}>
+            <Text
+              className={amountSizeClass}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
+              style={{
+                color: amountColor,
+                fontFamily: fonts.extrabold,
+                letterSpacing: -1,
+                textAlign: 'center',
+              }}
+            >
+              {amountText}
+            </Text>
+            <TextInput
+              value={amountText}
+              onChangeText={onAmountKeyPress}
+              keyboardType="decimal-pad"
+              autoFocus={!editing}
+              accessibilityLabel="Monto"
+              caretHidden
+              contextMenuHidden
+              selectionColor="transparent"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                color: 'transparent',
+                textAlign: 'center',
+                // Web (y PWA en iOS): sin el anillo de foco del navegador, que
+                // al ser un campo de ancho completo se veía como dos barras
+                // azules alrededor del monto.
+                ...(Platform.OS === 'web'
+                  ? ({ outlineStyle: 'none', outlineWidth: 0 } as object)
+                  : null),
+              }}
+            />
+          </View>
           {fields.amount ? (
             <Text className="text-expense mt-1 text-xs">{fields.amount}</Text>
           ) : null}

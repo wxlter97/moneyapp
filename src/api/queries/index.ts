@@ -3,6 +3,7 @@
  * y se deshabilitan si aún no hay uno seleccionado.
  */
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -64,6 +65,10 @@ function useInvalidateWorkspace() {
 
 /** `budget_period` del workspace activo (default 'monthly' mientras no cargó
  * la lista de workspaces todavía). */
+function useActiveWeekStart(): number {
+  return useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId)?.week_start_day ?? 0);
+}
+
 function useActiveBudgetPeriod(): BudgetPeriod {
   return useWorkspaceStore(
     (s) => s.workspaces.find((w) => w.id === s.activeId)?.budget_period ?? 'monthly',
@@ -74,7 +79,8 @@ function useActiveBudgetPeriod(): BudgetPeriod {
  * `useCategoryBudgets`/`useBudgetReport` cuando no se pasa uno explícito. */
 function useCurrentBudgetPeriodStart(): ISODate {
   const budgetPeriod = useActiveBudgetPeriod();
-  return periodStart(todayISO(), budgetPeriod);
+  const weekStart = useActiveWeekStart();
+  return periodStart(todayISO(), budgetPeriod, weekStart);
 }
 
 function useActiveWs() {
@@ -188,6 +194,42 @@ export function useSetBudgetPeriod() {
       invalidate(); // el reporte/lista de presupuesto cacheados quedan con la cadencia vieja
       await qc.invalidateQueries({ queryKey: qk.workspaces() });
     },
+  });
+}
+
+/** Día de inicio de la semana del presupuesto semanal. Solo owner. */
+export function useSetWeekStartDay() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, day }: { id: string; day: number }) => res.workspaces.setWeekStartDay(id, day),
+    onSuccess: async () => {
+      invalidate(); // los períodos cacheados quedan con la grilla de semanas vieja
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+/** Interruptor global de la provisión acumulada. Solo owner. */
+export function useSetRolloverSurplus() {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, value }: { id: string; value: boolean }) =>
+      res.workspaces.setRolloverSurplus(id, value),
+    onSuccess: async () => {
+      invalidate(); // el reporte de presupuesto cambia (provisión visible o no)
+      await qc.invalidateQueries({ queryKey: qk.workspaces() });
+    },
+  });
+}
+
+/** Pone en cero lo acumulado de todas las categorías. Solo owner. */
+export function useResetProvisions() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.workspaces.resetProvisions(id),
+    onSuccess: invalidate,
   });
 }
 
@@ -726,6 +768,27 @@ export function useCreditCardStatement(id: string | undefined, asOf?: string) {
   });
 }
 
+/** Últimos estados por corte de una tarjeta + lo que ya va al próximo. */
+export function useStatementCycles(id: string | undefined, count = 6) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletStatementCycles(id ?? '', count),
+    queryFn: () => res.wallets.statementCycles(id!, count),
+    enabled: !!ws && !!id,
+  });
+}
+
+/** Extracto de una cartera entre dos fechas (+ el período anterior). */
+export function useWalletPeriodSummary(id: string | undefined, from: string, to: string) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).walletPeriodSummary(id ?? '', from, to),
+    queryFn: () => res.wallets.periodSummary(id!, from, to),
+    enabled: !!ws && !!id,
+    placeholderData: keepPreviousData,
+  });
+}
+
 /** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
 export function useCreditCardStatements() {
   const ws = useActiveWs();
@@ -802,6 +865,15 @@ export function useUpdateCategory() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: Partial<CategoryInput> }) =>
       res.categories.update(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+/** Pone en cero lo acumulado (provisión) de una categoría. */
+export function useResetCategoryProvision() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: (id: string) => res.categories.resetProvision(id),
     onSuccess: invalidate,
   });
 }
@@ -949,6 +1021,19 @@ export function useTransactionTotals(
   return useQuery({
     queryKey: qk.ws(ws).transactionTotals(params),
     queryFn: () => res.transactions.totals(params),
+    enabled: !!ws && enabled,
+  });
+}
+
+/** Cantidad + desglose por categoría de lo que cumple el filtro (servidor). */
+export function useTransactionBreakdown(
+  params: res.TransactionListParams = {},
+  { enabled = true }: ListOptions = {},
+) {
+  const ws = useActiveWs();
+  return useQuery({
+    queryKey: qk.ws(ws).transactionBreakdown(params),
+    queryFn: () => res.transactions.breakdown(params),
     enabled: !!ws && enabled,
   });
 }
@@ -1542,6 +1627,51 @@ export function useScanReceipt() {
       wallet?: string | null;
     }) => res.ai.scanReceipt(file, wallet),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
+  });
+}
+
+/** Lee un estado de cuenta. No crea nada; gasta de la misma cuota que los recibos. */
+export function useScanStatement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      wallet,
+    }: {
+      file: { uri: string; name: string; type: string };
+      wallet?: string | null;
+    }) => res.ai.scanStatement(file, wallet),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.aiStatus() }),
+  });
+}
+
+/** Crea de una vez lo que el usuario confirmó de un estado de cuenta: la
+ * cartera (si es nueva) y sus movimientos. Invalida una sola vez al final. */
+export function useImportStatement() {
+  const invalidate = useInvalidateWorkspace();
+  return useMutation({
+    mutationFn: async ({
+      wallet,
+      transactions,
+      onProgress,
+    }: {
+      wallet: WalletInput | string;
+      transactions: TransactionInput[];
+      onProgress?: (done: number, total: number) => void;
+    }) => {
+      const walletId = typeof wallet === 'string' ? wallet : (await res.wallets.create(wallet)).id;
+      const failed: { index: number; message: string }[] = [];
+      for (let i = 0; i < transactions.length; i++) {
+        try {
+          await res.transactions.create({ ...transactions[i], wallet: walletId });
+        } catch (err) {
+          failed.push({ index: i, message: err instanceof Error ? err.message : 'Error' });
+        }
+        onProgress?.(i + 1, transactions.length);
+      }
+      return { walletId, created: transactions.length - failed.length, failed };
+    },
+    onSettled: invalidate,
   });
 }
 

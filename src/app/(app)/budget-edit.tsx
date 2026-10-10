@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import {
@@ -7,7 +7,10 @@ import {
   useCategories,
   useCategoryBudgets,
   useDeleteCategoryBudget,
+  useResetProvisions,
   useSetBudgetPeriod,
+  useSetWeekStartDay,
+  useSetRolloverSurplus,
   useSetForwardCategoryBudget,
 } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
@@ -24,7 +27,7 @@ import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 import { todayISO } from '@/lib/date';
-import { BUDGET_PERIOD_OPTIONS, periodLabel, periodStart } from '@/lib/periods';
+import { BUDGET_PERIOD_OPTIONS, WEEK_START_OPTIONS, periodLabel, periodStart } from '@/lib/periods';
 import { toNumber } from '@/lib/money';
 import { useWorkspaceStore } from '@/store/workspace';
 
@@ -37,9 +40,10 @@ export default function BudgetEditScreen() {
   const params = useLocalSearchParams<{ period_start?: string }>();
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const budgetPeriod = activeWorkspace?.budget_period ?? 'monthly';
+  const weekStart = activeWorkspace?.week_start_day ?? 0;
   const start: ISODate = useMemo(
-    () => params.period_start || periodStart(todayISO(), budgetPeriod),
-    [params.period_start, budgetPeriod],
+    () => params.period_start || periodStart(todayISO(), budgetPeriod, weekStart),
+    [params.period_start, budgetPeriod, weekStart],
   );
 
   const categoriesQ = useCategories();
@@ -121,8 +125,8 @@ export default function BudgetEditScreen() {
     return cur ? toNumber(cur.amount).toFixed(2) : '';
   }
 
-  // El grupo no tiene presupuesto propio (ver `CategoryBudgetSerializer`):
-  // su monto es siempre la suma de lo que llevan cargado sus subcategorías
+  // Un grupo CON subcategorías no tiene presupuesto propio (ver
+  // `CategoryBudgetSerializer`): su monto es siempre la suma de lo que llevan cargado sus subcategorías
   // visibles, en vivo (incluye lo que se está tipeando sin guardar todavía).
   function groupSumFor(groupId: string): number {
     const subcats = shownSubcatsByGroup.get(groupId) ?? [];
@@ -178,7 +182,17 @@ export default function BudgetEditScreen() {
     <Screen edges={['top', 'bottom']} variant="drawer">
       <ModalHeader title={`Presupuesto · ${periodLabel(start, budgetPeriod)}`} />
       {isOwner ? (
-        <BudgetPeriodRow workspaceId={activeWorkspace!.id} current={budgetPeriod} />
+        <>
+          <BudgetPeriodRow
+            workspaceId={activeWorkspace!.id}
+            current={budgetPeriod}
+            weekStart={weekStart}
+          />
+          <RolloverRow
+            workspaceId={activeWorkspace!.id}
+            enabled={activeWorkspace!.rollover_surplus ?? true}
+          />
+        </>
       ) : null}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -208,8 +222,8 @@ export default function BudgetEditScreen() {
               keyboardShouldPersistTaps="handled"
             >
               <Text className="text-text-muted px-1 pb-2 text-xs">
-                Monto por subcategoría (el grupo muestra la suma de las suyas, no se presupuesta
-                aparte). Se aplica también a los próximos períodos, hasta que edites uno distinto.
+                Monto por subcategoría (un grupo con subcategorías muestra la suma de las suyas;
+                uno sin subcategorías se presupuesta directo). Se aplica también a los próximos períodos, hasta que edites uno distinto.
                 Deja en blanco (o 0) para quitarlo de este período.
               </Text>
               {groups.map((g) => {
@@ -218,14 +232,27 @@ export default function BudgetEditScreen() {
                   (s) => !existingByCat.has(s.id) && !addedSubcats.has(s.id),
                 );
                 const groupSum = groupSumFor(g.id);
+                // Un grupo SIN subcategorías es su propia unidad: se presupuesta
+                // directo (el backend ya lo permite). Con subcategorías, su
+                // monto es la suma de las suyas.
+                const isLeafGroup = (subcatsByGroup.get(g.id) ?? []).length === 0;
                 return (
                   <View key={g.id}>
-                    <BudgetRow
-                      category={g}
-                      value={groupSum > 0 ? groupSum.toFixed(2) : ''}
-                      spent={spentByCat.get(g.id) ?? 0}
-                      readOnly
-                    />
+                    {isLeafGroup ? (
+                      <BudgetRow
+                        category={g}
+                        value={valueFor(g.id)}
+                        spent={spentByCat.get(g.id) ?? 0}
+                        onChange={(text) => setDraft((d) => ({ ...d, [g.id]: text }))}
+                      />
+                    ) : (
+                      <BudgetRow
+                        category={g}
+                        value={groupSum > 0 ? groupSum.toFixed(2) : ''}
+                        spent={spentByCat.get(g.id) ?? 0}
+                        readOnly
+                      />
+                    )}
                     {shownSubcats.map((s) => (
                       <BudgetRow
                         key={s.id}
@@ -406,8 +433,17 @@ function AddSubcategoryRow({
 /** Cadencia del presupuesto (diario/semanal/quincenal/mensual/anual) --
  * global al workspace, no por categoría. Solo el dueño la puede cambiar
  * (ver `WorkspaceSerializer` en el backend). */
-function BudgetPeriodRow({ workspaceId, current }: { workspaceId: string; current: BudgetPeriod }) {
+function BudgetPeriodRow({
+  workspaceId,
+  current,
+  weekStart,
+}: {
+  workspaceId: string;
+  current: BudgetPeriod;
+  weekStart: number;
+}) {
   const setBudgetPeriod = useSetBudgetPeriod();
+  const setWeekStart = useSetWeekStartDay();
   const [error, setError] = useState<string | null>(null);
 
   async function onChange(next: string) {
@@ -422,9 +458,125 @@ function BudgetPeriodRow({ workspaceId, current }: { workspaceId: string; curren
     }
   }
 
+  async function onChangeWeekStart(next: string) {
+    if (Number(next) === weekStart) return;
+    setError(null);
+    try {
+      await setWeekStart.mutateAsync({ id: workspaceId, day: Number(next) });
+      haptics.success();
+    } catch (err) {
+      haptics.error();
+      setError(errorMessage(err, 'No se pudo cambiar el día de inicio.'));
+    }
+  }
+
   return (
     <View className="gap-1.5 pb-2">
       <Select label="Período" value={current} onChange={onChange} options={BUDGET_PERIOD_OPTIONS} />
+      {current === 'weekly' ? (
+        <Select
+          label="La semana empieza el"
+          value={String(weekStart)}
+          onChange={onChangeWeekStart}
+          options={WEEK_START_OPTIONS}
+        />
+      ) : null}
+      {error ? <Text className="text-expense text-xs">{error}</Text> : null}
+    </View>
+  );
+}
+
+/** Provisión acumulada, global al workspace: apagarla manda sobre el ajuste
+ * de cada categoría (ver `CategoryForm`). Lo ya acumulado se conserva, pero
+ * no cuenta mientras esté apagada; "Poner en cero" lo borra de verdad. Solo
+ * el dueño. */
+function RolloverRow({ workspaceId, enabled }: { workspaceId: string; enabled: boolean }) {
+  const colors = useColors();
+  const setRollover = useSetRolloverSurplus();
+  const resetAll = useResetProvisions();
+  const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function onToggle(next: boolean) {
+    setError(null);
+    try {
+      await setRollover.mutateAsync({ id: workspaceId, value: next });
+      haptics.success();
+    } catch (err) {
+      haptics.error();
+      setError(errorMessage(err, 'No se pudo cambiar.'));
+    }
+  }
+
+  async function onReset() {
+    setError(null);
+    try {
+      await resetAll.mutateAsync(workspaceId);
+      haptics.success();
+      setConfirming(false);
+      setDone(true);
+    } catch (err) {
+      haptics.error();
+      setError(errorMessage(err, 'No se pudo poner en cero.'));
+    }
+  }
+
+  return (
+    <View className="gap-2 pb-2">
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="min-w-0 flex-1">
+          <Text className="text-text text-sm" style={{ fontFamily: fonts.semibold }}>
+            Acumular sobrante
+          </Text>
+          <Text className="text-text-muted text-xs">
+            {enabled
+              ? 'Lo que no gastes se suma al período siguiente. Cada categoría se puede excluir desde su ficha.'
+              : 'Apagado para todas las categorías: lo que sobra se pierde. Lo ya acumulado se conserva, pero no cuenta.'}
+          </Text>
+        </View>
+        <Switch
+          value={enabled}
+          disabled={setRollover.isPending}
+          onValueChange={(v) => {
+            haptics.selection();
+            void onToggle(v);
+          }}
+          accessibilityLabel="Acumular sobrante de presupuesto en todas las categorías"
+          trackColor={{ true: colors.primary, false: colors.surface2 }}
+          thumbColor="#FFFFFF"
+        />
+      </View>
+      {confirming ? (
+        <View className="gap-2 rounded-2xl bg-expense/10 p-3">
+          <Text className="text-text text-sm">
+            ¿Poner en cero lo acumulado de todas las categorías? No se puede deshacer.
+          </Text>
+          <View className="flex-row gap-2">
+            <View className="flex-1">
+              <Button label="Cancelar" variant="ghost" onPress={() => setConfirming(false)} />
+            </View>
+            <View className="flex-1">
+              <Button label="Poner en cero" loading={resetAll.isPending} onPress={onReset} />
+            </View>
+          </View>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => {
+            haptics.tap();
+            setDone(false);
+            setConfirming(true);
+          }}
+          accessibilityRole="button"
+          className="self-start py-1 active:opacity-60"
+        >
+          <Text className="text-expense text-xs" style={{ fontFamily: fonts.semibold }}>
+            Poner en cero lo acumulado
+          </Text>
+        </Pressable>
+      )}
+      {done ? <Text className="text-income text-xs">Listo: lo acumulado quedó en cero.</Text> : null}
       {error ? <Text className="text-expense text-xs">{error}</Text> : null}
     </View>
   );

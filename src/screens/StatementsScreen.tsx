@@ -66,8 +66,11 @@ function StatementRow({
   first: boolean;
 }) {
   const colors = useColors();
-  const due = toNumber(s.total_due);
+  // Lo que falta del último corte (no el saldo de hoy: las compras
+  // posteriores al corte van al próximo estado).
+  const due = toNumber(s.remaining);
   const upToDate = due <= 0.005;
+  const overdue = s.status === 'overdue';
 
   return (
     <Pressable
@@ -99,7 +102,12 @@ function StatementRow({
             Al día
           </Text>
         ) : (
-          <Money value={due} currency={s.currency} tone="expense" className="text-sm font-semibold" />
+          <>
+            <Money value={due} currency={s.currency} tone="expense" className="text-sm font-semibold" />
+            {overdue ? (
+              <Text className="text-expense text-[10px] uppercase tracking-wide">Vencido</Text>
+            ) : null}
+          </>
         )}
         {s.available != null ? (
           <Text className="text-text-muted text-[11px]">

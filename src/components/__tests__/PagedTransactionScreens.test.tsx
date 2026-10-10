@@ -15,11 +15,13 @@ jest.mock('@/components/WalletRewardsCard', () => ({ WalletRewardsCard: () => nu
 const mockInfinite = jest.fn();
 const mockTotals = jest.fn();
 const mockFetchNext = jest.fn();
+const mockPeriod = jest.fn();
 
 jest.mock('@/api/queries', () => ({
   useInfiniteTransactions: (params: unknown) => mockInfinite(params),
   useTransactionTotals: (params: unknown) => mockTotals(params),
   useWallet: () => ({ data: { id: 'w1', name: 'Cuenta', current_balance: '500.00', currency: 'USD' } }),
+  useWalletPeriodSummary: (id: unknown, from: string, to: string) => mockPeriod(id, from, to),
   useTags: () => ({ data: [{ id: 'tag1', name: 'Viaje' }] }),
   useDeleteTransaction: () => ({ mutateAsync: jest.fn() }),
 }));
@@ -48,6 +50,14 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockParams = { wallet: 'w1', tag: 'tag1', category: 'c1', from: '2026-08-01', to: '2026-08-31' };
   mockTotals.mockReturnValue({ data: [{ currency: 'USD', income: '3000.00', expenses: '1234.50' }] });
+  mockPeriod.mockImplementation((_id: unknown, from: string, to: string) => ({
+    data: {
+      date_after: from, date_before: to,
+      opening_balance: '650.00', inflows: '0.00', outflows: '150.00', closing_balance: '500.00', count: 2,
+      previous: { date_after: '2026-01-01', date_before: '2026-01-31', inflows: '0.00', outflows: '100.00' },
+    },
+    refetch: jest.fn(),
+  }));
 });
 
 describe.each([
@@ -96,11 +106,27 @@ describe('totales del servidor', () => {
 });
 
 describe('cartera', () => {
-  it('cada fila cargada muestra su saldo, contado desde el saldo actual', async () => {
+  it('por mes: extracto del mes y saldo de cada fila contado desde el cierre del mes', async () => {
     mockInfinite.mockReturnValue(
       pages([txn('a', { amount: '100.00' }), txn('b', { amount: '50.00' })], true),
     );
     await render(<WalletTransactionsScreen />);
+    expect(await screen.findByText('Saldo inicial')).toBeTruthy();
+    expect(screen.getByText('Saldo final')).toBeTruthy();
+    // Salidas 150 vs. 100 el mes anterior.
+    expect(screen.getByText('+50%')).toBeTruthy();
+    const params = mockInfinite.mock.calls.at(-1)?.[0] as Record<string, string>;
+    expect(params.date_after).toBeTruthy();
+    expect(params.date_before).toBeTruthy();
+  });
+
+  it('«Todo»: cada fila muestra su saldo, contado desde el saldo actual', async () => {
+    mockInfinite.mockReturnValue(
+      pages([txn('a', { amount: '100.00' }), txn('b', { amount: '50.00' })], true),
+    );
+    await render(<WalletTransactionsScreen />);
+    await fireEvent.press(await screen.findByText('Todo'));
+    await waitFor(() => expect(mockInfinite).toHaveBeenLastCalledWith({ wallet: 'w1' }));
     // saldo tras la más reciente = 500; tras la siguiente = 500 + 100 (gasto) = 600
     expect(await screen.findByText(/500\.00/)).toBeTruthy();
     expect(screen.getByText(/600\.00/)).toBeTruthy();

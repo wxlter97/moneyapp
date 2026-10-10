@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
@@ -36,7 +41,8 @@ export function Segmented<T extends string>({ value, onChange, options }: Segmen
   const [containerWidth, setContainerWidth] = useState(0);
 
   useEffect(() => {
-    pos.value = withSpring(index, { damping: 18, stiffness: 220 });
+    // Misma curva que la píldora de la barra inferior (`TabBar`): sin rebote.
+    pos.value = withTiming(index, { duration: 320, easing: Easing.out(Easing.cubic) });
   }, [index, pos]);
 
   const segmentWidth = count > 0 ? Math.max(containerWidth - PADDING * 2, 0) / count : 0;

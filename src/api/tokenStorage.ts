@@ -16,6 +16,13 @@ const REFRESH_KEY = 'budget.jwt.refresh';
 
 const isWeb = Platform.OS === 'web';
 
+// iOS: por defecto el Keychain sólo se puede leer con el teléfono desbloqueado.
+// Si la app arranca en segundo plano con el teléfono bloqueado (un push, un
+// refresco) la lectura falla, parece "no hay sesión" y se pide login otra
+// vez. AFTER_FIRST_UNLOCK permite leerlo después del primer desbloqueo desde
+// el arranque. Se re-escribe en cada refresh, así que los tokens ya
+// guardados migran solos.
+
 async function setItem(key: string, value: string | null): Promise<void> {
   if (isWeb) {
     if (value == null) localStorage.removeItem(key);
@@ -27,7 +34,7 @@ async function setItem(key: string, value: string | null): Promise<void> {
     return;
   }
   if (value == null) await SecureStore.deleteItemAsync(key);
-  else await SecureStore.setItemAsync(key, value);
+  else await SecureStore.setItemAsync(key, value, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK });
 }
 
 async function getItem(key: string): Promise<string | null> {

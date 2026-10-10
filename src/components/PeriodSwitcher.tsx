@@ -12,6 +12,8 @@ interface PeriodSwitcherProps {
   value: ISODate;
   /** Cadencia del workspace activo (ver `Workspace.budget_period`). */
   period: BudgetPeriod;
+  /** Día de inicio de semana (0 = lunes) -- sólo cuenta en el semanal. */
+  weekStart?: number;
   onChange: (value: ISODate) => void;
   /** Impide navegar a un período futuro (default false: se permite planificar). */
   clampToCurrent?: boolean;
@@ -23,17 +25,23 @@ interface PeriodSwitcherProps {
  * meses" no tiene un equivalente igual de simple para diario/semanal, y el
  * uso real es sobre todo navegar de a uno hacia atrás/adelante.
  */
-export function PeriodSwitcher({ value, period, onChange, clampToCurrent = false }: PeriodSwitcherProps) {
+export function PeriodSwitcher({
+  value,
+  period,
+  weekStart = 0,
+  onChange,
+  clampToCurrent = false,
+}: PeriodSwitcherProps) {
   const colors = useColors();
   const next = nextPeriodStart(value, period);
-  const atCurrent = clampToCurrent && next > periodStart(todayISO(), period);
+  const atCurrent = clampToCurrent && next > periodStart(todayISO(), period, weekStart);
 
   return (
     <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-2 py-2">
       <Pressable
         onPress={() => {
           haptics.tap();
-          onChange(previousPeriodStart(value, period));
+          onChange(previousPeriodStart(value, period, weekStart));
         }}
         className="h-8 w-10 items-center justify-center rounded-lg active:bg-surface-2"
         accessibilityRole="button"

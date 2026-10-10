@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { useCreateWorkspace } from '@/api/queries';
 import { errorMessage } from '@/api/errors';
@@ -129,6 +130,19 @@ export function WorkspaceSwitcher() {
                 </View>
               </View>
             ) : (
+              <>
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  close();
+                  router.push('/workspaces');
+                }}
+                accessibilityRole="button"
+                className="flex-row items-center gap-1.5 rounded-xl px-3 py-2.5 active:bg-surface"
+              >
+                <Icon name="pencil" size={16} color={colors.textMuted} />
+                <Text className="text-text-muted text-base">Renombrar o administrar</Text>
+              </Pressable>
               <Pressable
                 onPress={() => setCreating(true)}
                 className="flex-row items-center gap-1.5 rounded-xl px-3 py-2.5 active:bg-surface"
@@ -136,6 +150,7 @@ export function WorkspaceSwitcher() {
                 <Icon name="plus" size={16} color={colors.primary} />
                 <Text className="text-primary text-base">Nuevo presupuesto</Text>
               </Pressable>
+              </>
             )}
           </View>
         </FadeInView>

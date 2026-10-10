@@ -43,6 +43,7 @@ import {
 import { dismissModal } from '@/components/ui/ModalHeader';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { Button } from '@/components/ui/Button';
+import { WalletColorPicker } from '@/components/WalletColorPicker';
 import { DateField } from '@/components/ui/DateField';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Segmented } from '@/components/ui/Segmented';
@@ -52,13 +53,11 @@ import { ErrorState, LoadingState } from '@/components/ui/states';
 import { haptics } from '@/lib/haptics';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
-import { muteColor } from '@/theme/accents';
 import { fonts } from '@/theme/typography';
 import { CURRENCIES } from '@/lib/currency';
 import { formatYearMonth } from '@/lib/date';
 import { formatMoney, toNumber } from '@/lib/money';
 import { moneyCalcUrl, type MoneyCalcSlug } from '@/lib/moneyCalc';
-import { WALLET_COLORS } from '@/lib/wallets';
 
 interface WalletFormProps {
   walletId?: string;
@@ -82,7 +81,7 @@ interface WalletPreset {
 // pudiendo cambiar después vía "Subtipo" (ver más abajo, sin tocar) --
 // `purpose` nunca se cambia post-creación, igual que antes.
 const WALLET_PRESETS: WalletPreset[] = [
-  { key: 'bank', label: 'Cuenta bancaria', purpose: 'spending', kind: 'bank', icon: 'bank' },
+  { key: 'bank', label: 'Cuenta / débito', purpose: 'spending', kind: 'bank', icon: 'bank' },
   { key: 'cash', label: 'Efectivo', purpose: 'spending', kind: 'cash', icon: 'cash' },
   { key: 'credit', label: 'Tarjeta de crédito', purpose: 'debt', kind: 'credit', icon: 'card' },
   { key: 'savings', label: 'Ahorro', purpose: 'savings', kind: 'bank', icon: 'star' },
@@ -150,6 +149,8 @@ export function WalletForm({ walletId }: WalletFormProps) {
   const [cardProductId, setCardProductId] = useState<string | null>(null);
   const [billingDay, setBillingDay] = useState('');
   const [paymentDueDay, setPaymentDueDay] = useState('');
+  const [minPaymentPct, setMinPaymentPct] = useState('');
+  const [minPaymentFloor, setMinPaymentFloor] = useState('');
   const [counterparty, setCounterparty] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -197,6 +198,8 @@ export function WalletForm({ walletId }: WalletFormProps) {
     setCardProductId(w.card_product);
     setBillingDay(w.billing_cycle_day ? String(w.billing_cycle_day) : '');
     setPaymentDueDay(w.payment_due_day ? String(w.payment_due_day) : '');
+    setMinPaymentPct(w.min_payment_pct ? toNumber(w.min_payment_pct).toString() : '');
+    setMinPaymentFloor(w.min_payment_floor ? toNumber(w.min_payment_floor).toString() : '');
     setCounterparty(w.counterparty ?? '');
     setPrefilled(true);
   }
@@ -362,14 +365,21 @@ export function WalletForm({ walletId }: WalletFormProps) {
         savings_interest_rate_period: savingsInterestRatePeriod,
         savings_interest_compounding: savingsInterestCompounding,
       }),
-      interest_rate: isDebt && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
-      due_date: isDebt && dueDate ? dueDate : null,
+      // Una tarjeta de crédito tiene tasa aunque no se lleve como "deuda":
+      // con ella se estima el interés de no pagar el contado (estado de cuenta).
+      interest_rate:
+        (isDebt || cardStatementEligible) && interestRate.trim() ? toNumber(interestRate).toFixed(2) : null,
+      due_date: isDebt && kind !== 'credit' && dueDate ? dueDate : null,
       card_last4: cardNumberEligible && cardLast4.trim() ? cardLast4.trim() : null,
       extra_cards: cardNumberEligible ? extraCards : [],
       bank_schema: cardNumberEligible ? bankSchemaId || null : null,
       card_product: kind === 'credit' ? cardProductId || null : null,
       billing_cycle_day: cardStatementEligible ? parseDay(billingDay) : null,
       payment_due_day: cardStatementEligible ? parseDay(paymentDueDay) : null,
+      min_payment_pct:
+        cardStatementEligible && toNumber(minPaymentPct) > 0 ? toNumber(minPaymentPct).toFixed(2) : null,
+      min_payment_floor:
+        cardStatementEligible && toNumber(minPaymentFloor) > 0 ? toNumber(minPaymentFloor).toFixed(2) : null,
       counterparty: isDebt ? counterparty.trim() : '',
     };
 
@@ -466,6 +476,27 @@ export function WalletForm({ walletId }: WalletFormProps) {
         )}
 
         {!editing ? (
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              router.replace('/statement-scan');
+            }}
+            accessibilityRole="button"
+            className="flex-row items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-3 active:opacity-70"
+          >
+            <Icon name="camera" size={16} color={colors.primary} />
+            <View className="flex-1">
+              <Text className="text-primary text-sm" style={{ fontFamily: fonts.semibold }}>
+                Crear desde un estado de cuenta
+              </Text>
+              <Text className="text-text-muted text-xs">
+                Sube el PDF o una foto y llenamos los datos por ti.
+              </Text>
+            </View>
+          </Pressable>
+        ) : null}
+
+        {!editing ? (
           <View className="gap-1.5">
             <Text className="text-text-muted text-sm">Tipo de cartera</Text>
             <View className="-m-1 flex-row flex-wrap">
@@ -503,33 +534,7 @@ export function WalletForm({ walletId }: WalletFormProps) {
           </View>
         )}
 
-        <View className="gap-1.5">
-          <Text className="text-text-muted text-sm">Color</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerClassName="gap-2 py-1"
-            keyboardShouldPersistTaps="handled"
-          >
-            {WALLET_COLORS.map((c) => (
-              <Pressable
-                key={c}
-                onPress={() => {
-                  haptics.selection();
-                  setColor(color === c ? '' : c);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Color ${c}`}
-                className={`h-9 w-9 items-center justify-center rounded-full ${
-                  color === c ? 'border-2 border-text' : ''
-                }`}
-                style={{ backgroundColor: muteColor(c) ?? c }}
-              >
-                {color === c ? <Icon name="check" size={14} color="#FFFFFF" /> : null}
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
+        <WalletColorPicker value={color} onChange={setColor} />
 
         {kind === 'credit' ? (
           <AmountInput
@@ -542,21 +547,33 @@ export function WalletForm({ walletId }: WalletFormProps) {
         {kind === 'credit' ? (
           <>
             <Select
-              label="Banco (para recompensas, opcional)"
+              label="Banco emisor (opcional)"
               value={loyaltyBankId}
               onChange={onChangeLoyaltyBank}
-              options={[{ value: '', label: 'Sin especificar' }, ...loyaltyBankOptions]}
-              placeholder="Sin especificar"
+              options={[{ value: '', label: 'Otro banco / ninguno' }, ...loyaltyBankOptions]}
+              placeholder="Otro banco / ninguno"
             />
             {loyaltyBankId ? (
-              <Select
-                label="Producto de ese banco"
-                value={cardProductId}
-                onChange={setCardProductId}
-                options={[{ value: '', label: 'Sin especificar' }, ...cardProductOptions]}
-                placeholder="Sin especificar"
-              />
-            ) : null}
+              <>
+                <Select
+                  label="Producto de ese banco"
+                  value={cardProductId}
+                  onChange={setCardProductId}
+                  options={[{ value: '', label: 'Tarjeta genérica (sin recompensas)' }, ...cardProductOptions]}
+                  placeholder="Tarjeta genérica (sin recompensas)"
+                />
+                {cardProductOptions.length === 0 ? (
+                  <Text className="text-text-muted text-xs">
+                    Este banco aún no tiene productos con recompensas en el catálogo; se guarda como
+                    tarjeta genérica.
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              <Text className="text-text-muted text-xs">
+                Elegir banco y producto activa el cálculo de recompensas (puntos, cashback).
+              </Text>
+            )}
           </>
         ) : null}
 
@@ -634,13 +651,19 @@ export function WalletForm({ walletId }: WalletFormProps) {
         )}
 
         {parentOptions.length > 0 ? (
-          <Select
-            label="Cartera padre (opcional)"
-            value={parentId}
-            onChange={setParentId}
-            options={[{ value: '', label: 'Ninguna' }, ...parentOptions]}
-            placeholder="Ninguna"
-          />
+          <View className="gap-1.5">
+            <Select
+              label="Dentro de otra cartera (opcional)"
+              value={parentId}
+              onChange={setParentId}
+              options={[{ value: '', label: 'Ninguna (cartera independiente)' }, ...parentOptions]}
+              placeholder="Ninguna (cartera independiente)"
+            />
+            <Text className="text-text-muted text-xs">
+              Para agrupar: esta cartera pasa a ser un “bolsillo” de la elegida (p. ej. un ahorro dentro de
+              tu cuenta) y el saldo de la cartera principal suma el de sus bolsillos.
+            </Text>
+          </View>
         ) : null}
 
         {isSavings ? (
@@ -709,11 +732,17 @@ export function WalletForm({ walletId }: WalletFormProps) {
               keyboardType="decimal-pad"
               placeholder="12.5"
             />
-            <DateField
-              label="Fecha de vencimiento (opcional)"
-              value={dueDate || '2026-12-31'}
-              onChange={setDueDate}
-            />
+            {/* En tarjetas de crédito el vencimiento ya lo cubre el "Día de
+                pago" mensual (más abajo): una fecha única no tiene sentido
+                para algo que se paga todos los meses. Sólo préstamos/deudas
+                con una fecha final real. */}
+            {kind !== 'credit' ? (
+              <DateField
+                label="Fecha final de la deuda (opcional)"
+                value={dueDate || '2026-12-31'}
+                onChange={setDueDate}
+              />
+            ) : null}
             <TextField
               label="Persona / entidad (opcional)"
               value={counterparty}
@@ -736,7 +765,11 @@ export function WalletForm({ walletId }: WalletFormProps) {
         {cardNumberEligible ? (
           <>
             <TextField
-              label="Últimos 4 dígitos (tarjeta, opcional)"
+              label={
+                kind === 'credit'
+                  ? 'Últimos 4 dígitos de la tarjeta (opcional)'
+                  : 'Últimos 4 dígitos de tu tarjeta de débito (opcional)'
+              }
               value={cardLast4}
               onChangeText={(t) => setCardLast4(t.replace(/\D/g, '').slice(0, 4))}
               keyboardType="number-pad"
@@ -750,12 +783,22 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 sigue siendo el único lugar para elegirlo. */}
             {bankOptions.length > 0 && !(kind === 'credit' && loyaltyBankId) ? (
               <Select
-                label="Banco (opcional)"
+                label={
+                  kind === 'credit'
+                    ? 'Banco para importar correos (opcional)'
+                    : 'Banco para importar correos de notificación (opcional)'
+                }
                 value={bankSchemaId}
                 onChange={setBankSchemaId}
-                options={[{ value: '', label: 'Sin especificar' }, ...bankOptions]}
-                placeholder="Sin especificar"
+                options={[{ value: '', label: 'Ninguno / otro banco' }, ...bankOptions]}
+                placeholder="Ninguno / otro banco"
               />
+            ) : null}
+            {kind === 'bank' ? (
+              <Text className="text-text-muted text-xs">
+                La tarjeta de débito usa el saldo de esta cuenta: registra tus gastos con ella como
+                transacciones de esta cartera. Aquí solo aparecen los bancos cuyos correos la app sabe leer.
+              </Text>
             ) : null}
           </>
         ) : null}
@@ -782,6 +825,38 @@ export function WalletForm({ walletId }: WalletFormProps) {
                 />
               </View>
             </View>
+            {/* Pago mínimo = max(piso, % del saldo al corte). Cada banco lo
+                calcula distinto: sin ninguno de los dos, el estado de cuenta
+                no inventa un mínimo. */}
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <TextField
+                  label="Pago mínimo % (opcional)"
+                  value={minPaymentPct}
+                  onChangeText={(t) => setMinPaymentPct(t.replace(/[^0-9.]/g, ''))}
+                  keyboardType="decimal-pad"
+                  placeholder="5"
+                />
+              </View>
+              <View className="flex-1">
+                <TextField
+                  label="Mínimo fijo (opcional)"
+                  value={minPaymentFloor}
+                  onChangeText={(t) => setMinPaymentFloor(t.replace(/[^0-9.]/g, ''))}
+                  keyboardType="decimal-pad"
+                  placeholder="25.00"
+                />
+              </View>
+            </View>
+            {!isDebt ? (
+              <TextField
+                label="Tasa de interés % anual (opcional)"
+                value={interestRate}
+                onChangeText={(t) => setInterestRate(t.replace(/[^0-9.]/g, ''))}
+                keyboardType="decimal-pad"
+                placeholder="36"
+              />
+            ) : null}
             {editing && existing.data?.billing_cycle_day && canSeeStatements !== false ? (
               <Pressable
                 onPress={() => {

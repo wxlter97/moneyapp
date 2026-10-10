@@ -33,8 +33,9 @@ function lastDayOfMonth(year: number, month0: number): number {
   return new Date(year, month0 + 1, 0).getDate();
 }
 
-/** Inicio del período de tipo `period` que contiene a `iso`. */
-export function periodStart(iso: ISODate, period: BudgetPeriod): ISODate {
+/** Inicio del período de tipo `period` que contiene a `iso`. `weekStart`
+ * (0 = lunes … 6 = domingo, igual que el backend) sólo aplica al semanal. */
+export function periodStart(iso: ISODate, period: BudgetPeriod, weekStart = 0): ISODate {
   const d = toDate(iso);
   const y = d.getFullYear();
   const m = d.getMonth();
@@ -42,7 +43,7 @@ export function periodStart(iso: ISODate, period: BudgetPeriod): ISODate {
     case 'daily':
       return iso;
     case 'weekly': {
-      const dow = (d.getDay() + 6) % 7; // 0 = lunes
+      const dow = (((d.getDay() + 6) % 7) - weekStart + 7) % 7; // días desde el inicio de semana
       return addDays(iso, -dow);
     }
     case 'biweekly':
@@ -79,8 +80,8 @@ export function nextPeriodStart(start: ISODate, period: BudgetPeriod): ISODate {
 }
 
 /** `period_start` del período inmediatamente anterior a `start`. */
-export function previousPeriodStart(start: ISODate, period: BudgetPeriod): ISODate {
-  return periodStart(addDays(start, -1), period);
+export function previousPeriodStart(start: ISODate, period: BudgetPeriod, weekStart = 0): ISODate {
+  return periodStart(addDays(start, -1), period, weekStart);
 }
 
 const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -114,6 +115,16 @@ export function periodLabel(start: ISODate, period: BudgetPeriod): string {
       return String(d.getFullYear());
   }
 }
+
+export const WEEK_START_OPTIONS: { value: string; label: string }[] = [
+  { value: '0', label: 'Lunes' },
+  { value: '1', label: 'Martes' },
+  { value: '2', label: 'Miércoles' },
+  { value: '3', label: 'Jueves' },
+  { value: '4', label: 'Viernes' },
+  { value: '5', label: 'Sábado' },
+  { value: '6', label: 'Domingo' },
+];
 
 export const BUDGET_PERIOD_OPTIONS: { value: BudgetPeriod; label: string }[] = [
   { value: 'daily', label: 'Diario' },

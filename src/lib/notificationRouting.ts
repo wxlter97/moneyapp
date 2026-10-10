@@ -1,45 +1,185 @@
 /**
- * A dónde navegar al tocar una notificación -- un push tapeado (app en
+ * Qué se puede hacer con una notificación -- un push tapeado (app en
  * segundo plano o cerrada, ver `addNotificationTapListener`) o una fila del
  * centro de notificaciones (`(app)/notification-center.tsx`). Un solo lugar
- * para esta decisión: antes sólo vivía (a medias, sólo para
- * `budget_threshold`) en el listener de push de `(app)/_layout.tsx`.
+ * para esta decisión.
  *
  * `data` es el mismo payload que arma el backend en cada `Notification.data`
  * / el `data` de un push (ver `apps.notifications.services` y
  * `apps.notifications.models.Notification` del backend) -- siempre trae
- * `type` con el `kind` de la notificación.
+ * `type` con el `kind` de la notificación, y además el id del objeto al que
+ * se refiere (`wallet`, `category`, `source_id`, `log_id`...). Con eso cada
+ * aviso lleva directo a SU cosa (esta tarjeta, esta categoría, este correo)
+ * en vez de a una pantalla genérica, y puede ofrecer la acción que resuelve
+ * el aviso (registrar el recurrente, pagar la tarjeta...).
  */
 import type { Href } from 'expo-router';
 
-export function routeForNotification(data: Record<string, unknown>): Href {
+/** Una acción de una notificación. `route` navega; las otras necesitan datos
+ * del servidor o de la sesión (la regla recurrente, la cartera por defecto)
+ * y las resuelve quien las muestra -- ver `notification-center.tsx`. */
+export type NotificationAction =
+  | { kind: 'route'; label: string; href: Href }
+  /** Abre "Agregar transacción" precargada con la regla recurrente
+   * `recurringId` (mismo flujo que tocar un ítem "Programado"). */
+  | { kind: 'record-recurring'; label: string; recurringId: string }
+  /** Abre una transferencia hacia `walletId` (pagar la tarjeta, reponer una
+   * cartera con saldo bajo), con `amount` ya puesto si el aviso lo trae. */
+  | { kind: 'transfer-to'; label: string; walletId: string; amount?: string; note?: string };
+
+function str(v: unknown): string | null {
+  return typeof v === 'string' && v.length > 0 ? v : null;
+}
+
+function withQuery(path: string, params: Record<string, string>): Href {
+  const qs = Object.entries(params)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&');
+  return (qs ? `${path}?${qs}` : path) as Href;
+}
+
+/** `YYYY-MM` del mes anterior a `createdAt` -- respaldo para resúmenes
+ * mensuales viejos, de antes de que el aviso trajera su `month` (se mandan el
+ * día 1 y hablan del mes que acaba de cerrar). */
+function previousMonth(createdAt: string | undefined): string | null {
+  const d = createdAt ? new Date(createdAt) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  const prev = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Acciones de una notificación, la principal primero. Nunca vacía: sin
+ * nada específico, al menos "Ir al resumen". `createdAt` sólo se usa para
+ * resolver el mes de un resumen mensual viejo. */
+export function actionsForNotification(
+  data: Record<string, unknown>,
+  createdAt?: string,
+): NotificationAction[] {
+  const actions: NotificationAction[] = [];
+  const wallet = str(data.wallet);
+
   switch (data.type) {
-    case 'budget_threshold':
-      return '/budgets';
-    case 'invitation':
-      return '/invitations';
-    case 'email_import_pending':
-      return '/imports';
-    case 'recurring_due':
-      return '/recurring';
-    case 'installment_due':
-      return '/installments';
-    case 'statement_due':
-    case 'statement_cutoff':
-      return typeof data.wallet === 'string' ? `/statement/${data.wallet}` : '/statements';
+    case 'recurring_due': {
+      const id = str(data.source_id);
+      if (id) {
+        actions.push({ kind: 'record-recurring', label: 'Registrar ahora', recurringId: id });
+        actions.push({ kind: 'route', label: 'Ver recurrente', href: `/recurring/${id}` as Href });
+      } else {
+        actions.push({ kind: 'route', label: 'Ver recurrentes', href: '/recurring' });
+      }
+      break;
+    }
+    case 'installment_due': {
+      const id = str(data.source_id);
+      actions.push(
+        id
+          ? { kind: 'route', label: 'Ver compra a plazo', href: `/installment/${id}` as Href }
+          : { kind: 'route', label: 'Ver compras a plazo', href: '/installments' },
+      );
+      break;
+    }
+    case 'budget_threshold': {
+      const category = str(data.category);
+      if (category) {
+        actions.push({
+          kind: 'route',
+          label: 'Ver movimientos',
+          href: withQuery('/category-transactions', { category }),
+        });
+      }
+      actions.push({ kind: 'route', label: 'Ver presupuesto', href: '/budgets' });
+      actions.push({ kind: 'route', label: 'Ajustar', href: '/budget-edit' });
+      break;
+    }
     case 'low_balance':
-      return typeof data.wallet === 'string' ? `/wallet/${data.wallet}` : '/wallets';
+      if (wallet) {
+        actions.push({ kind: 'transfer-to', label: 'Transferir a esta cartera', walletId: wallet });
+        actions.push({
+          kind: 'route',
+          label: 'Ver movimientos',
+          href: withQuery('/wallet-transactions', { wallet }),
+        });
+      }
+      break;
+    case 'statement_due':
+    case 'statement_closed':
+    case 'statement_overdue':
+      if (wallet) {
+        actions.push({
+          kind: 'transfer-to',
+          label: 'Registrar pago',
+          walletId: wallet,
+          amount: str(data.amount) ?? undefined,
+          note: 'Pago de tarjeta',
+        });
+        // Con mínimo configurado, pagar sólo el mínimo es la otra opción real.
+        const minimum = str(data.minimum);
+        if (minimum && minimum !== str(data.amount)) {
+          actions.push({
+            kind: 'transfer-to',
+            label: 'Pagar el mínimo',
+            walletId: wallet,
+            amount: minimum,
+            note: 'Pago mínimo de tarjeta',
+          });
+        }
+        actions.push({ kind: 'route', label: 'Ver estado de cuenta', href: `/statement/${wallet}` as Href });
+      }
+      break;
+    case 'statement_cutoff':
+      actions.push(
+        wallet
+          ? { kind: 'route', label: 'Ver estado de cuenta', href: `/statement/${wallet}` as Href }
+          : { kind: 'route', label: 'Ver estados de cuenta', href: '/statements' },
+      );
+      break;
+    case 'weekly_summary':
+      actions.push({ kind: 'route', label: 'Ver resumen', href: '/dashboard' });
+      break;
+    case 'invitation':
+      actions.push({ kind: 'route', label: 'Ver invitación', href: '/invitations' });
+      break;
+    case 'email_import_pending': {
+      const logId = str(data.log_id);
+      actions.push(
+        logId
+          ? { kind: 'route', label: 'Revisar movimiento', href: `/import/${logId}` as Href }
+          : { kind: 'route', label: 'Ver correos', href: '/imports' },
+      );
+      break;
+    }
     case 'subscription_renewal_due':
     case 'subscription_expired':
-      return '/pro';
+      actions.push({ kind: 'route', label: 'Ver mi plan', href: '/pro' });
+      break;
+    case 'monthly_summary': {
+      // Se manda el día 1 y habla del mes que CERRÓ: abrir el dashboard sin
+      // más mostraba el mes nuevo, vacío. Se abre la lista de ese mes.
+      const month = str(data.month) ?? previousMonth(createdAt);
+      actions.push({
+        kind: 'route',
+        label: 'Ver movimientos del mes',
+        href: month ? withQuery('/dashboard', { month }) : '/dashboard',
+      });
+      actions.push({ kind: 'route', label: 'Ver presupuesto', href: '/budgets' });
+      break;
+    }
     case 'insight':
-    case 'monthly_summary':
-    case 'weekly_summary':
-      // Sin pantalla propia (ver `apps.reports.services.behavior_insights` en
-      // el backend) -- el dashboard ya muestra el resumen de gasto que le da
-      // contexto.
-      return '/dashboard';
-    default:
-      return '/dashboard';
+      // Sin pantalla propia todavía (ver `apps.reports.services.
+      // behavior_insights` en el backend) -- el dashboard ya muestra el
+      // resumen de gasto que le da contexto al patrón detectado.
+      actions.push({ kind: 'route', label: 'Ver resumen', href: '/dashboard' });
+      break;
   }
+
+  if (actions.length === 0) actions.push({ kind: 'route', label: 'Ir al resumen', href: '/dashboard' });
+  return actions;
+}
+
+/** A dónde navegar al tocar un push: la primera acción que sea sólo
+ * navegar -- abrir un formulario precargado desde un push, sin haber visto
+ * el aviso completo, sería sorprendente. */
+export function routeForNotification(data: Record<string, unknown>, createdAt?: string): Href {
+  const route = actionsForNotification(data, createdAt).find((a) => a.kind === 'route');
+  return route && route.kind === 'route' ? route.href : '/dashboard';
 }

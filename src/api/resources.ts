@@ -6,6 +6,9 @@
  */
 import { api } from './client';
 import type {
+  StatementCycles,
+  TransactionBreakdown,
+  WalletPeriodSummary,
   AIStatus,
   AppNotification,
   Bank,
@@ -57,6 +60,7 @@ import type {
   Plan,
   ParseCandidate,
   ReceiptCandidate,
+  StatementCandidate,
   RecurringExpense,
   RecurringExpenseInput,
   RecurringSuggestion,
@@ -135,6 +139,21 @@ export const workspaces = {
   setBudgetPeriod: (id: string, budget_period: BudgetPeriod) =>
     api
       .patch<Workspace>(`/workspaces/${id}/`, { budget_period }, { skipWorkspace: true })
+      .then((r) => r.data),
+  /** Día de inicio de la semana (0 = lunes … 6 = domingo). Solo owner. */
+  setWeekStartDay: (id: string, week_start_day: number) =>
+    api
+      .patch<Workspace>(`/workspaces/${id}/`, { week_start_day }, { skipWorkspace: true })
+      .then((r) => r.data),
+  /** Interruptor global de la provisión acumulada. Solo owner. */
+  setRolloverSurplus: (id: string, rollover_surplus: boolean) =>
+    api
+      .patch<Workspace>(`/workspaces/${id}/`, { rollover_surplus }, { skipWorkspace: true })
+      .then((r) => r.data),
+  /** Pone en cero lo acumulado de TODAS las categorías. Solo owner. */
+  resetProvisions: (id: string) =>
+    api
+      .post<{ reset: number }>(`/workspaces/${id}/reset-provisions/`, {}, { skipWorkspace: true })
       .then((r) => r.data),
   /** Renombra el presupuesto. Solo owner. */
   rename: (id: string, name: string) =>
@@ -412,6 +431,18 @@ export const wallets = {
     api
       .get<CreditCardStatement>(`/wallets/${id}/statement/`, { params: asOf ? { as_of: asOf } : undefined })
       .then((r) => r.data),
+  /** Últimos `count` estados por corte (el más reciente primero) + lo que va al próximo. */
+  statementCycles: (id: string, count = 6) =>
+    api
+      .get<StatementCycles>(`/wallets/${id}/statement-cycles/`, { params: { count } })
+      .then((r) => r.data),
+  /** Saldo inicial → entradas → salidas → saldo final entre dos fechas (inclusive). */
+  periodSummary: (id: string, dateAfter: string, dateBefore: string) =>
+    api
+      .get<WalletPeriodSummary>(`/wallets/${id}/period-summary/`, {
+        params: { date_after: dateAfter, date_before: dateBefore },
+      })
+      .then((r) => r.data),
   /** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
   statements: () =>
     api.get<CreditCardStatementSummary[]>('/wallets/statements/').then((r) => r.data),
@@ -447,6 +478,9 @@ export const categories = {
   /** Borrado definitivo de una categoría ya eliminada (soft-delete) --
    * sólo para vaciar "Eliminadas". */
   purge: (id: string) => api.delete(`/categories/${id}/purge/`).then(() => undefined),
+  /** Pone en cero lo acumulado (provisión) de una categoría. */
+  resetProvision: (id: string) =>
+    api.post<{ category: string; accumulated_amount: string }>(`/categories/${id}/reset-provision/`).then((r) => r.data),
   /** Fija `sort_order` según el orden de `ids`. */
   reorder: (ids: string[]) =>
     api.post<{ reordered: number }>('/categories/reorder/', { ids }).then((r) => r.data),
@@ -540,6 +574,12 @@ export const transactions = {
   totals: (params: TransactionListParams = {}) =>
     api
       .get<TransactionTotals[]>('/transactions/totals/', { params })
+      .then((r) => r.data),
+
+  /** Cantidad + ingresos/gastos por categoría de lo que cumple el filtro. */
+  breakdown: (params: TransactionListParams = {}) =>
+    api
+      .get<TransactionBreakdown>('/transactions/breakdown/', { params })
       .then((r) => r.data),
 
   /** Toda la colección que cumple el filtro. */
@@ -756,6 +796,21 @@ export const ai = {
     return api
       .post<ReceiptCandidate>('/ai/receipt/', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
+
+  /** Lee un estado de cuenta (PDF o foto). Devuelve candidata, no crea nada.
+   * Con `wallet`, cada movimiento trae sus posibles duplicados en esa cartera. */
+  scanStatement: async (file: { uri: string; name: string; type: string }, wallet?: string | null) => {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    const form = new FormData();
+    form.append('file', blob, file.name);
+    if (wallet) form.append('wallet', wallet);
+    return api
+      .post<StatementCandidate>('/ai/statement/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 90_000, // un PDF de varias páginas tarda bastante más que un recibo
       })
       .then((r) => r.data);
   },

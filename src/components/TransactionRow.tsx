@@ -15,8 +15,9 @@ import { Icon } from '@/components/ui/Icon';
 import { Money } from '@/components/ui/Money';
 import { walletLabel } from '@/api/queries/lookups';
 import { haptics } from '@/lib/haptics';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, formatNumber } from '@/lib/money';
 import { signedAmount } from '@/lib/transactions';
+import { useWorkspaceStore } from '@/store/workspace';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
 
@@ -67,6 +68,13 @@ export function TransactionRow({
   balanceAfter,
 }: TransactionRowProps) {
   const colors = useColors();
+  // La moneda del workspace no se repite en cada fila: "(USD 31.12)" a 20pt
+  // le comía medio ancho al título y a la cartera. Sólo se muestra el código
+  // cuando el movimiento está en OTRA moneda -- ahí sí es información.
+  const baseCurrency = useWorkspaceStore(
+    (s) => s.workspaces.find((w) => w.id === s.activeId)?.base_currency,
+  );
+  const hideCurrency = !!baseCurrency && txn.currency === baseCurrency;
   const press = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
 
@@ -76,8 +84,11 @@ export function TransactionRow({
 
   const signed = signedAmount(txn, perspectiveWalletId);
 
+  // El alias va primero: el tipo ya se lee por el color del monto y el
+  // ícono, pero una lista de "Transferencia", "Transferencia"... no dice
+  // cuál es cuál. "Transferencia" queda sólo como respaldo sin alias.
   const title = isTransfer
-    ? 'Transferencia'
+    ? txn.description || 'Transferencia'
     : txn.description || category?.name || 'Sin descripción';
 
   const subtitle = isTransfer
@@ -113,7 +124,9 @@ export function TransactionRow({
   const outOfBudget = txn.type === 'expense' && !txn.counts_toward_budget;
   const a11yLabel = [
     isTransfer ? 'Transferencia' : isIncome ? 'Ingreso' : 'Gasto',
-    isTransfer ? `${walletLabel(wallet)} a ${walletLabel(toWallet)}` : `${title}, ${walletLabel(wallet)}`,
+    isTransfer
+      ? [txn.description, `${walletLabel(wallet)} a ${walletLabel(toWallet)}`].filter(Boolean).join(', ')
+      : `${title}, ${walletLabel(wallet)}`,
     amountLabel,
     txn.split_group
       ? 'dividida entre categorías'
@@ -169,10 +182,11 @@ export function TransactionRow({
           </Text>
         </View>
 
-        <View className="items-end gap-1">
+        <View className="shrink-0 items-end gap-1" style={{ maxWidth: '45%' }}>
           <Money
             value={signed}
             currency={txn.currency}
+            hideCurrency={hideCurrency}
             parens
             tone={isTransfer ? 'muted' : isIncome ? 'income' : 'expense'}
             className="font-semibold"
@@ -183,7 +197,7 @@ export function TransactionRow({
           />
           {balanceAfter != null ? (
             <Text className="text-text-muted text-[11px]" numberOfLines={1}>
-              Saldo: {formatMoney(balanceAfter, txn.currency)}
+              Saldo: {hideCurrency ? formatNumber(balanceAfter) : formatMoney(balanceAfter, txn.currency)}
             </Text>
           ) : null}
           {txn.is_refundable && !txn.is_refunded ? (
