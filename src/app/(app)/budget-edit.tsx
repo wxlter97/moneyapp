@@ -125,8 +125,8 @@ export default function BudgetEditScreen() {
     return cur ? toNumber(cur.amount).toFixed(2) : '';
   }
 
-  // El grupo no tiene presupuesto propio (ver `CategoryBudgetSerializer`):
-  // su monto es siempre la suma de lo que llevan cargado sus subcategorías
+  // Un grupo CON subcategorías no tiene presupuesto propio (ver
+  // `CategoryBudgetSerializer`): su monto es siempre la suma de lo que llevan cargado sus subcategorías
   // visibles, en vivo (incluye lo que se está tipeando sin guardar todavía).
   function groupSumFor(groupId: string): number {
     const subcats = shownSubcatsByGroup.get(groupId) ?? [];
@@ -212,8 +212,8 @@ export default function BudgetEditScreen() {
               keyboardShouldPersistTaps="handled"
             >
               <Text className="text-text-muted px-1 pb-2 text-xs">
-                Monto por subcategoría (el grupo muestra la suma de las suyas, no se presupuesta
-                aparte). Se aplica también a los próximos períodos, hasta que edites uno distinto.
+                Monto por subcategoría (un grupo con subcategorías muestra la suma de las suyas;
+                uno sin subcategorías se presupuesta directo). Se aplica también a los próximos períodos, hasta que edites uno distinto.
                 Deja en blanco (o 0) para quitarlo de este período.
               </Text>
               {groups.map((g) => {
@@ -222,14 +222,27 @@ export default function BudgetEditScreen() {
                   (s) => !existingByCat.has(s.id) && !addedSubcats.has(s.id),
                 );
                 const groupSum = groupSumFor(g.id);
+                // Un grupo SIN subcategorías es su propia unidad: se presupuesta
+                // directo (el backend ya lo permite). Con subcategorías, su
+                // monto es la suma de las suyas.
+                const isLeafGroup = (subcatsByGroup.get(g.id) ?? []).length === 0;
                 return (
                   <View key={g.id}>
-                    <BudgetRow
-                      category={g}
-                      value={groupSum > 0 ? groupSum.toFixed(2) : ''}
-                      spent={spentByCat.get(g.id) ?? 0}
-                      readOnly
-                    />
+                    {isLeafGroup ? (
+                      <BudgetRow
+                        category={g}
+                        value={valueFor(g.id)}
+                        spent={spentByCat.get(g.id) ?? 0}
+                        onChange={(text) => setDraft((d) => ({ ...d, [g.id]: text }))}
+                      />
+                    ) : (
+                      <BudgetRow
+                        category={g}
+                        value={groupSum > 0 ? groupSum.toFixed(2) : ''}
+                        spent={spentByCat.get(g.id) ?? 0}
+                        readOnly
+                      />
+                    )}
                     {shownSubcats.map((s) => (
                       <BudgetRow
                         key={s.id}
