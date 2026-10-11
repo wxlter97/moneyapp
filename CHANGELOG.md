@@ -8,6 +8,11 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.12.2] - 2026-10-11
+
+### Corregido
+- Al instalar la app web (Android/Chrome) el nombre era «Budget»; ahora es «porksupuesto», igual que el título de las notificaciones push.
+
 ## [1.12.0] - 2026-10-11
 
 ### Agregado

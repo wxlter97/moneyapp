@@ -1,4 +1,4 @@
-/* Service worker de Budget (PWA).
+/* Service worker de porksupuesto (PWA).
  *
  * Estrategia:
  *  - navegaciones (HTML): stale-while-revalidate -- responde con el
@@ -122,10 +122,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: 'Budget', body: event.data ? event.data.text() : '' };
+    payload = { title: 'porksupuesto', body: event.data ? event.data.text() : '' };
   }
 
-  const title = payload.title || 'Budget';
+  const title = payload.title || 'porksupuesto';
   const options = {
     body: payload.body || '',
     data: payload.data || {},
