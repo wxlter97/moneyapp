@@ -8,7 +8,6 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { WalletRow, walletRowLabel } from '@/components/WalletRow';
 import { Card } from '@/components/ui/Card';
 import { DragList } from '@/components/ui/DragList';
-import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { Segmented } from '@/components/ui/Segmented';
@@ -126,13 +125,11 @@ export default function WalletsScreen() {
                   haptics.tap();
                   router.push('/pro');
                 }}
-                className="flex-row items-center gap-2 rounded-2xl bg-surface-2 px-4 py-3 active:opacity-70"
+                hitSlop={8}
+                className="self-center active:opacity-60"
                 accessibilityRole="button"
               >
-                <Icon name="star" size={16} color={colors.textMuted} />
-                <Text className="text-text-muted flex-1 text-sm">
-                  Patrimonio neto -- pasate a Plus para verlo
-                </Text>
+                <Text className="text-text-muted text-xs">Patrimonio neto con Plus ›</Text>
               </Pressable>
             ) : !reordering && netWorth.data ? (
               <NetWorthPager data={netWorth.data} currency={currency} maxWidth={contentWidth} />

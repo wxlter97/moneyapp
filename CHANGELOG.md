@@ -13,6 +13,11 @@ La versión visible en la app está en Ajustes → Acerca de.
 ### Corregido
 - iOS: la cabecera ya no se ve difuminada entre el borde del teléfono (notch / barra de estado) y el inicio de la app; ahora es un fondo liso, sin blur.
 
+## [1.12.3] - 2026-10-11
+
+### Cambiado
+- Plan gratis: el header de Inicio muestra el saldo de tus carteras en vez de un aviso grande para pasarse a Plus, y en Carteras el aviso es ahora una línea discreta.
+
 ## [1.12.2] - 2026-10-11
 
 ### Corregido
