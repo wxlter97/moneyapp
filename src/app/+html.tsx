@@ -13,7 +13,11 @@ export default function Root({ children }: PropsWithChildren) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+        {/* viewport-fit=cover: sin esto iOS (PWA con barra de estado translúcida)
+            deja una franja propia sobre la app, pintada con su degradado, y
+            `env(safe-area-inset-*)` vale 0; con él la cabecera llega hasta el
+            borde del teléfono y se acomoda con los insets reales. */}
         <meta name="theme-color" content="#0B0D10" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

@@ -11,7 +11,7 @@ La versión visible en la app está en Ajustes → Acerca de.
 ## [1.12.4] - 2026-10-11
 
 ### Corregido
-- iOS: la cabecera ya no se ve difuminada entre el borde del teléfono (notch / barra de estado) y el inicio de la app; ahora es un fondo liso, sin blur.
+- iOS: la cabecera ya no se ve difuminada entre el borde del teléfono (notch / barra de estado) y el inicio de la app; ahora es un fondo liso, sin blur, y en la app instalada (PWA) llega hasta el borde del teléfono en vez de dejar una franja propia arriba.
 
 ## [1.12.3] - 2026-10-11
 
