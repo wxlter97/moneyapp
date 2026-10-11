@@ -8,6 +8,11 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.12.3] - 2026-10-11
+
+### Cambiado
+- Plan gratis: el header de Inicio muestra el saldo de tus carteras en vez de un aviso grande para pasarse a Plus, y en Carteras el aviso es ahora una línea discreta.
+
 ## [1.12.2] - 2026-10-11
 
 ### Corregido

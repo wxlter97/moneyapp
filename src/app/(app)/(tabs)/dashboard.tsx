@@ -89,6 +89,12 @@ export default function OverviewScreen() {
   // que ni siquiera es la moneda correcta si hay más de una en uso.
   const activeWorkspace = useWorkspaceStore((s) => s.workspaces.find((w) => w.id === s.activeId));
   const currency = activeWorkspace?.base_currency ?? 'USD';
+  // Gratis: sin patrimonio neto, la cifra del header es el saldo de las
+  // carteras de gasto (todas en la misma moneda: sin "multi_currency").
+  const walletsQuery = useWallets();
+  const freeWalletsTotal = (walletsQuery.data ?? [])
+    .filter((w) => w.purpose === 'spending' && w.currency === currency)
+    .reduce((sum, w) => sum + toNumber(w.current_balance), 0);
 
   // Sin useUIStore persistiendo una pestaña que ya no existe para este plan
   // (p. ej. venía de Calendario antes de bajar a gratis): si el gratis no
@@ -128,19 +134,31 @@ export default function OverviewScreen() {
           // de arriba, chico y a propósito.
           <View className="w-full items-center">
             {canSeeNetWorth === false ? (
-              <Pressable
-                onPress={() => {
-                  haptics.tap();
-                  router.push('/pro');
-                }}
-                className="items-center gap-1 py-2 active:opacity-60"
-                accessibilityRole="button"
-              >
-                <Icon name="star" size={22} color={colors.textMuted} />
-                <Text className="text-text-muted text-sm">
-                  Patrimonio neto -- pasate a Plus para verlo
-                </Text>
-              </Pressable>
+              // Sin patrimonio neto (gratis) se muestra igual una cifra
+              // útil -- lo que hay en las carteras de gasto -- en vez de un
+              // aviso de upsell a pantalla completa; la mejora a Plus queda
+              // como una línea discreta debajo.
+              <>
+                <Text className="text-text-muted text-xs">Saldo en carteras</Text>
+                <Money
+                  value={freeWalletsTotal}
+                  currency={currency}
+                  masked={hideAmounts}
+                  hero
+                  className="text-center text-[52px] leading-[56px]"
+                />
+                <Pressable
+                  onPress={() => {
+                    haptics.tap();
+                    router.push('/pro');
+                  }}
+                  hitSlop={8}
+                  className="mt-0.5 active:opacity-60"
+                  accessibilityRole="button"
+                >
+                  <Text className="text-text-muted text-xs">Patrimonio neto con Plus ›</Text>
+                </Pressable>
+              </>
             ) : (
               <Money
                 value={netWorth.data?.net}
