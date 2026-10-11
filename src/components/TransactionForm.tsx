@@ -962,7 +962,7 @@ export function TransactionForm({ transactionId, duplicateFromId, prefill }: Tra
           </Pressable>
         ) : null}
 
-        <DateField label="Fecha" value={date} onChange={setDate} error={fields.date} />
+        <DateField label="Fecha" value={date} onChange={setDate} error={fields.date} quickStep />
 
         {showBudgetSwitch ? (
           <View className="flex-row items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">

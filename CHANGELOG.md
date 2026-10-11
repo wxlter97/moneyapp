@@ -8,6 +8,17 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.12.0] - 2026-10-11
+
+### Agregado
+- Inicio: gráfico de dona con los gastos por categoría del período (el mismo
+  tipo de período del presupuesto, con flechas para navegar). Tocá una porción
+  o una fila para resaltarla y ver su monto y porcentaje; tocala otra vez para
+  abrir sus movimientos.
+- Nueva transacción: la fecha dice «Hoy», «Ayer», «Mañana»… para días
+  cercanos, y tiene flechas para pasar al día anterior/siguiente sin abrir el
+  calendario (que sigue ahí).
+
 ## [1.11.0] - 2026-10-10
 
 Requiere el backend 1.11.0.
