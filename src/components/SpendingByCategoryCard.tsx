@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import Svg, { Circle, G } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 
 import { useTransactionBreakdown } from '@/api/queries';
 import { useCategoryMap } from '@/api/queries/lookups';
@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { PeriodSwitcher } from '@/components/PeriodSwitcher';
 import { todayISO } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
+import { currencySymbol, formatNumber } from '@/lib/money';
 import { periodEnd, periodStart } from '@/lib/periods';
 import { buildSpendingSlices, type SpendingSlice } from '@/lib/spendingSlices';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -21,7 +22,7 @@ import { fonts } from '@/theme/typography';
 // Colores bien distintos entre sí (no los de cada categoría, que pueden ser
 // casi iguales): el gráfico y la lista comparten el de su posición.
 const SLICE_COLORS = ['#3b82f6', '#f97316', '#10b981', '#a855f7', '#ef4444', '#eab308', '#14b8a6'];
-const SIZE = 168;
+const SIZE = 210;
 const STROKE = 26;
 const STROKE_SELECTED = 34;
 const GAP = 2; // px de separación entre porciones
@@ -95,7 +96,6 @@ export function SpendingByCategoryCard({ currency }: { currency: string }) {
             <View className="items-center">
               <View style={{ width: SIZE, height: SIZE }} className="items-center justify-center">
                 <Svg width={SIZE} height={SIZE}>
-                  <G rotation={-90} origin={`${SIZE / 2}, ${SIZE / 2}`}>
                     <Circle
                       cx={SIZE / 2}
                       cy={SIZE / 2}
@@ -116,7 +116,7 @@ export function SpendingByCategoryCard({ currency }: { currency: string }) {
                           strokeWidth={s.id === selected ? STROKE_SELECTED : STROKE}
                           strokeOpacity={selected === undefined || s.id === selected ? 1 : 0.35}
                           strokeDasharray={`${len} ${circumference - len}`}
-                          strokeDashoffset={-offset}
+                          strokeDashoffset={circumference / 4 - offset}
                           fill="none"
                           onPress={() => select(s)}
                         />
@@ -124,22 +124,24 @@ export function SpendingByCategoryCard({ currency }: { currency: string }) {
                       offset += s.share * circumference;
                       return el;
                     })}
-                  </G>
                 </Svg>
                 <View
                   pointerEvents="none"
-                  className="absolute items-center justify-center px-8"
+                  className="absolute items-center justify-center px-10"
                   style={{ width: SIZE, height: SIZE }}
                 >
                   <Text className="text-text-muted text-xs" numberOfLines={1}>
                     {active ? nameOf(active) : 'Total gastado'}
                   </Text>
-                  <Money
-                    value={active ? active.amount : total}
-                    currency={currency}
-                    tone="expense"
-                    className="text-lg font-bold"
-                  />
+                  <Text
+                    className="text-expense text-2xl font-bold"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.5}
+                  >
+                    {currencySymbol(currency)}
+                    {formatNumber(active ? active.amount : total, { compact: true })}
+                  </Text>
                   <Text className="text-text-muted text-xs">
                     {active ? `${Math.round(active.share * 100)}%` : ''}
                   </Text>
