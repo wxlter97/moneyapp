@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { ISODate } from '@/api/types';
+import { relativeDayLabel } from '@/lib/date';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
+import { fonts } from '@/theme/typography';
 import { FadeInView } from './FadeInView';
 import { Icon } from './Icon';
 import { IconButton } from './IconButton';
@@ -17,6 +19,8 @@ interface DateFieldProps {
   maxToday?: boolean;
   /** No permitir fechas pasadas (p. ej. próxima fecha de un recurrente). */
   minToday?: boolean;
+  /** Flechas para pasar al día anterior/siguiente sin abrir el calendario. */
+  quickStep?: boolean;
 }
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -52,6 +56,7 @@ export function DateField({
   error,
   maxToday = false,
   minToday = false,
+  quickStep = false,
 }: DateFieldProps) {
   const colors = useColors();
   const [open, setOpen] = useState(false);
@@ -91,6 +96,20 @@ export function DateField({
     setOpen(false);
   }
 
+  function step(delta: number) {
+    const d = parseISO(value);
+    d.setDate(d.getDate() + delta);
+    if (maxToday && d > today) return;
+    if (minToday && d < today) return;
+    haptics.selection();
+    onChange(toISO(d));
+  }
+
+  const rel = relativeDayLabel(value);
+  const cur = parseISO(value);
+  const canPrev = !(minToday && new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() - 1) < today);
+  const canNext = !(maxToday && new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1) > today);
+
   function openMonths() {
     haptics.tap();
     setYearRangeStart(view.getFullYear() - 5);
@@ -113,16 +132,45 @@ export function DateField({
     <View className="gap-1.5">
       <Text className="text-text-muted text-sm">{label}</Text>
 
-      <Pressable
-        onPress={toggle}
-        className={`h-12 flex-row items-center justify-between rounded-xl border px-3 ${
-          open ? 'border-primary' : error ? 'border-expense' : 'border-border'
-        } bg-surface active:opacity-80`}
-        accessibilityRole="button"
-      >
-        <Text className="text-text">{formatLong(value)}</Text>
-        <Icon name={open ? 'chevron-up' : 'calendar'} size={18} color={colors.textMuted} />
-      </Pressable>
+      <View className="flex-row items-center gap-2">
+        {quickStep ? (
+          <IconButton
+            icon="chevron-left"
+            size={48}
+            iconSize={18}
+            color={colors.text}
+            onPress={() => step(-1)}
+            disabled={!canPrev}
+            className={`rounded-xl border border-border bg-surface ${canPrev ? 'active:bg-surface-2' : 'opacity-30'}`}
+            accessibilityLabel="Día anterior"
+          />
+        ) : null}
+        <Pressable
+          onPress={toggle}
+          className={`h-12 flex-1 flex-row items-center justify-between rounded-xl border px-3 ${
+            open ? 'border-primary' : error ? 'border-expense' : 'border-border'
+          } bg-surface active:opacity-80`}
+          accessibilityRole="button"
+        >
+          <Text className="text-text flex-1" numberOfLines={1}>
+            {rel ? <Text style={{ fontFamily: fonts.semibold }}>{rel} · </Text> : null}
+            {rel ? <Text className="text-text-muted">{formatLong(value)}</Text> : formatLong(value)}
+          </Text>
+          <Icon name={open ? 'chevron-up' : 'calendar'} size={18} color={colors.textMuted} />
+        </Pressable>
+        {quickStep ? (
+          <IconButton
+            icon="chevron-right"
+            size={48}
+            iconSize={18}
+            color={colors.text}
+            onPress={() => step(1)}
+            disabled={!canNext}
+            className={`rounded-xl border border-border bg-surface ${canNext ? 'active:bg-surface-2' : 'opacity-30'}`}
+            accessibilityLabel="Día siguiente"
+          />
+        ) : null}
+      </View>
 
       {error ? <Text className="text-expense text-xs">{error}</Text> : null}
 

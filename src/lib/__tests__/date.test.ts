@@ -3,6 +3,7 @@ import {
   formatLongDateTime,
   formatShortDate,
   formatYearMonth,
+  relativeDayLabel,
   isFutureDay,
   isSameOrAfter,
   monthRange,
@@ -78,5 +79,20 @@ describe('isFutureDay', () => {
 
   it('una fecha de un mes más adelante es futuro', () => {
     expect(isFutureDay('2026-12-01', now)).toBe(true);
+  });
+});
+
+describe('relativeDayLabel', () => {
+  const now = new Date(2026, 9, 11, 15, 0);
+  it.each([
+    ['2026-10-09', 'Anteayer'],
+    ['2026-10-10', 'Ayer'],
+    ['2026-10-11', 'Hoy'],
+    ['2026-10-12', 'Mañana'],
+    ['2026-10-13', 'Pasado mañana'],
+    ['2026-10-14', null],
+    ['2026-10-08', null],
+  ])('%s -> %s', (iso, expected) => {
+    expect(relativeDayLabel(iso, now)).toBe(expected);
   });
 });

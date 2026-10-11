@@ -28,6 +28,7 @@ import { CalendarGrid, type DayMarker } from '@/components/CalendarGrid';
 import { DayHeader } from '@/components/DayHeader';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { SectionHeader } from '@/components/SectionHeader';
+import { SpendingByCategoryCard } from '@/components/SpendingByCategoryCard';
 import { SubTabs } from '@/components/SubTabs';
 import { FilteredBreakdown } from '@/components/FilteredBreakdown';
 import { SummaryTriple } from '@/components/SummaryTriple';
@@ -276,6 +277,8 @@ function ResumenTab({ currency }: { currency: string }) {
           ) : null}
         </View>
       ) : null}
+
+      <SpendingByCategoryCard currency={currency} />
 
       <Pressable
         onPress={() => {

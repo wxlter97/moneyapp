@@ -116,3 +116,25 @@ export function formatDayHeader(iso: ISODate, now = new Date()): string {
   const wd = WEEKDAYS_ES[new Date(y, m - 1, d).getDay()] ?? '';
   return `${wd} ${d} ${MONTHS_ES[m - 1]?.slice(0, 3) ?? ''}`;
 }
+
+/** «Hoy», «Ayer», «Mañana»… sólo para fechas a ±2 días de hoy; null para el resto. */
+export function relativeDayLabel(iso: ISODate, now = new Date()): string | null {
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.round((new Date(y, m - 1, d).getTime() - today.getTime()) / 86_400_000);
+  switch (diff) {
+    case -2:
+      return 'Anteayer';
+    case -1:
+      return 'Ayer';
+    case 0:
+      return 'Hoy';
+    case 1:
+      return 'Mañana';
+    case 2:
+      return 'Pasado mañana';
+    default:
+      return null;
+  }
+}
