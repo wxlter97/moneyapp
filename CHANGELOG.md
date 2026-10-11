@@ -8,6 +8,11 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.12.4] - 2026-10-11
+
+### Corregido
+- iOS: la cabecera ya no se ve difuminada entre el borde del teléfono (notch / barra de estado) y el inicio de la app; ahora es un fondo liso, sin blur.
+
 ## [1.12.2] - 2026-10-11
 
 ### Corregido
