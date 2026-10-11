@@ -8,10 +8,15 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
-## [1.12.1] - 2026-10-11
+## [1.12.3] - 2026-10-11
 
 ### Cambiado
 - Plan gratis: el header de Inicio muestra el saldo de tus carteras en vez de un aviso grande para pasarse a Plus, y en Carteras el aviso es ahora una línea discreta.
+
+## [1.12.2] - 2026-10-11
+
+### Corregido
+- Al instalar la app web (Android/Chrome) el nombre era «Budget»; ahora es «porksupuesto», igual que el título de las notificaciones push.
 
 ## [1.12.0] - 2026-10-11
 

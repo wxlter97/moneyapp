@@ -1,6 +1,6 @@
 {
-  "name": "Budget",
-  "short_name": "Budget",
+  "name": "porksupuesto",
+  "short_name": "porksupuesto",
   "description": "Presupuesto personal y compartido.",
   "start_url": "/",
   "scope": "/",
