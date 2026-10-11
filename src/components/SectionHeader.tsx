@@ -53,7 +53,7 @@ export function SectionHeader({
   const toggleHidden = useUIStore((s) => s.toggleHideAmounts);
 
   return (
-    <GlassSurface radius={0} border={false} className="border-b border-border/50">
+    <GlassSurface radius={0} border={false} solid className="border-b border-border/50">
       <View
         className="w-full self-center px-4 pb-3"
         style={{ paddingTop: insets.top + 8, maxWidth }}

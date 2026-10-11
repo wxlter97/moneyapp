@@ -16,6 +16,11 @@ interface GlassSurfaceProps {
   /** Borde de 1px alrededor de todo el panel (default true). La cabecera
    * fija pasa `false` y agrega ella misma sólo el de abajo, vía `className`. */
   border?: boolean;
+  /** Sin blur ni transparencia: color de superficie liso. Para la cabecera
+   * fija, que no tiene contenido detrás que desenfocar -- sólo mostraba un
+   * degradado borroso entre el borde del teléfono (notch/barra de estado) y
+   * el inicio de la app. */
+  solid?: boolean;
 }
 
 /**
@@ -32,8 +37,20 @@ export function GlassSurface({
   style,
   className,
   border = true,
+  solid = false,
 }: GlassSurfaceProps) {
   const colors = useColors();
+
+  if (solid) {
+    return (
+      <View
+        className={className}
+        style={[{ borderRadius: radius, backgroundColor: colors.surface }, style]}
+      >
+        {children}
+      </View>
+    );
+  }
 
   return (
     <View
