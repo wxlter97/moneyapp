@@ -7,6 +7,7 @@ import { useUIStore } from '@/store/ui';
 
 import {
   useBudgetReport,
+  useCardGuidanceMap,
   useDashboardSummary,
   useMemberSpending,
   useRecurringSuggestions,
@@ -233,6 +234,20 @@ function ResumenTab({ currency }: { currency: string }) {
   const cardDebt = creditWallets
     .filter((w) => w.currency === currency)
     .reduce((sum, w) => sum + Math.max(0, -toNumber(w.current_balance)), 0);
+  // «Toca pagar ahora»: lo que falta del último estado de cada tarjeta (con
+  // plan de estado de cuenta), no el saldo usado -- ése incluye compras que
+  // van al próximo estado y el total de las compras a plazo.
+  const cardPayments = useCardGuidanceMap();
+  const cardGuidance = creditWallets
+    .filter((w) => w.currency === currency)
+    .map((w) => cardPayments.get(w.id)?.guidance)
+    .filter((g) => g != null);
+  const cardDueNow = cardGuidance.reduce((sum, g) => sum + toNumber(g.amount), 0);
+  const cardOverdue = cardGuidance.some((g) => g.phase === 'overdue');
+  const nextCardDue = cardGuidance
+    .filter((g) => toNumber(g.amount) > 0.005 && g.due_date)
+    .map((g) => g.due_date!)
+    .sort()[0];
   const loading = summary.isLoading || wallets.isLoading || netWorth.isLoading;
   const refreshing =
     summary.isFetching || wallets.isFetching || budget.isFetching || scheduled.isFetching || netWorth.isFetching;
@@ -366,14 +381,30 @@ function ResumenTab({ currency }: { currency: string }) {
           {creditWallets.length > 0 ? (
             <GlanceTile
               icon="card"
-              label="Deuda en tarjetas"
+              label={cardGuidance.length > 0 ? 'Tarjetas: toca pagar' : 'Deuda en tarjetas'}
               wide
-              onPress={() => router.push('/wallets')}
+              onPress={() => router.push(cardGuidance.length > 0 ? '/statements' : '/wallets')}
             >
-              <Money value={cardDebt} currency={currency} tone="expense" className="text-lg font-bold" />
-              <Text className="text-text-muted text-[11px]" numberOfLines={1}>
-                {creditWallets.length === 1 ? '1 tarjeta' : `${creditWallets.length} tarjetas`}
-              </Text>
+              {cardGuidance.length > 0 ? (
+                <>
+                  {cardDueNow > 0.005 ? (
+                    <Money value={cardDueNow} currency={currency} tone="expense" className="text-lg font-bold" />
+                  ) : (
+                    <Text className="text-income text-lg font-bold">Al día ✓</Text>
+                  )}
+                  <Text className="text-text-muted text-[11px]" numberOfLines={1}>
+                    {cardOverdue ? 'Hay un pago vencido · ' : nextCardDue ? `Vence ${formatShortDate(nextCardDue)} · ` : ''}
+                    usado <Money value={cardDebt} currency={currency} tone="muted" className="text-[11px]" />
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Money value={cardDebt} currency={currency} tone="expense" className="text-lg font-bold" />
+                  <Text className="text-text-muted text-[11px]" numberOfLines={1}>
+                    {creditWallets.length === 1 ? '1 tarjeta' : `${creditWallets.length} tarjetas`}
+                  </Text>
+                </>
+              )}
             </GlanceTile>
           ) : null}
 

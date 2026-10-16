@@ -33,3 +33,25 @@ describe('walletRowLabel', () => {
     );
   });
 });
+
+describe('walletRowLabel con pago de tarjeta', () => {
+  it('agrega qué pagar y hasta cuándo', () => {
+    const card = { ...base, name: 'Visa', current_balance: '-330.00' } as Wallet;
+    const label = walletRowLabel(card, false, {
+      phase: 'due',
+      status: 'pending',
+      amount: '200.00',
+      statement_balance: '250.00',
+      minimum_remaining: null,
+      cutoff_date: '2026-10-03',
+      due_date: '2026-10-20',
+      days_left: 4,
+      next_cutoff_date: '2026-11-03',
+      next_statement_so_far: '80.00',
+      payoff_today: '280.00',
+    });
+    expect(label).toBe(
+      `Visa, ${formatMoney(-330, 'USD')}, Pagar antes del 20 oct: ${formatMoney(200, 'USD')}`,
+    );
+  });
+});

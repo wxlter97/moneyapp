@@ -326,7 +326,7 @@ export default function StatementScanScreen() {
             review={low('period_end')}
           />
           <ReadRow
-            label={w.purpose === 'debt' ? 'Saldo al corte (debes)' : 'Saldo al corte'}
+            label={w.purpose === 'debt' ? 'Total del estado (debes)' : 'Total del estado'}
             value={w.closing_balance != null ? formatMoney(w.closing_balance, w.currency) : null}
             review={low('closing_balance')}
           />

@@ -8,6 +8,25 @@ trae el cambio. Es independiente de la versión del backend
 
 La versión visible en la app está en Ajustes → Acerca de.
 
+## [1.13.0] - 2026-10-16
+
+### Agregado
+- Estado de cuenta: arriba, una sola frase con qué pagar y hasta cuándo («Paga $250 antes del 20 oct», «Vencido: paga $90 hoy», «Listo ✓ hasta el corte del 3 nov»), con una línea de tiempo del ciclo (corte → hoy → fecha límite → próximo corte).
+- «Pagar todo»: el monto para quedar al día por completo (el estado + lo comprado después del corte, sin adelantar cuotas de compras a plazo), con su propio botón.
+- «¿Cuánto puedes pagar?»: elige mínimo / el estado / todo o cualquier monto y ve cuánto quedaría sin pagar, los intereses estimados y si te alcanza con lo que tienes en tus cuentas de gasto.
+- Carteras: cada tarjeta muestra bajo el nombre qué toca («Pagar antes del 20 oct: $250», «Vencido · pagar hoy», «Al día»).
+- Inicio: la tarjeta de tarjetas de crédito dice cuánto toca pagar ahora (lo que falta de cada estado) y aparte el total usado.
+- Movimientos de una tarjeta: nueva vista «Por estado» (de corte a corte, la predeterminada en tarjetas) y, en «Todo», un separador donde empieza cada estado.
+- Compras a plazo en el estado de cuenta: la cuota que entra en el próximo corte y cuántas quedan, y por qué el disponible baja por el total.
+- «¿Qué significa cada cosa?»: glosario corto al final del estado de cuenta.
+
+### Cambiado
+- Textos más claros: «Pago de contado» → «Te falta … de …» / «Total del estado»; «Del corte / Después del corte» → «Este estado / Va al próximo estado». En el estado de cuenta se usa tuteo.
+
+### Corregido
+- Un pago hecho después de la fecha límite ya baja lo que falta (antes el estado seguía «vencido» por el monto completo hasta el siguiente corte); si lo cubre todo, queda «Pagado tarde».
+- El listado de estados de cuenta ya no corta el disponible de cada tarjeta.
+
 ## [1.12.4] - 2026-10-11
 
 ### Corregido

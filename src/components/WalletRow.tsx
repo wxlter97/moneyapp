@@ -1,8 +1,9 @@
 import { Text, View } from 'react-native';
 
-import type { Wallet } from '@/api/types';
+import type { PaymentGuidance, Wallet } from '@/api/types';
 import { Money } from '@/components/ui/Money';
 import { ProgressBar } from '@/components/ui/ProgressBar';
+import { compactPayment } from '@/lib/cardPayment';
 import { formatMoney, toNumber } from '@/lib/money';
 import { walletColor } from '@/lib/wallets';
 import { useColors } from '@/theme';
@@ -14,6 +15,8 @@ interface WalletRowProps {
   hasChildren?: boolean;
   /** Nivel de anidación (0 = raíz). */
   depth?: number;
+  /** Tarjetas con corte (plan con estado de cuenta): qué pagar hoy. */
+  payment?: PaymentGuidance;
 }
 
 /**
@@ -22,15 +25,19 @@ interface WalletRowProps {
  * duplicar el cálculo del saldo mostrado (agregado si tiene hijos, con el
  * mismo signo que `<Money>`).
  */
-export function walletRowLabel(wallet: Wallet, hasChildren = false): string {
+export function walletRowLabel(wallet: Wallet, hasChildren = false, payment?: PaymentGuidance): string {
   const balance = toNumber(hasChildren ? wallet.aggregated_balance : wallet.current_balance);
   const parts = [wallet.name, formatMoney(balance, wallet.currency)];
+  if (payment) {
+    const pay = compactPayment(payment);
+    parts.push(pay.amount != null ? `${pay.label}: ${formatMoney(pay.amount, wallet.currency)}` : pay.label);
+  }
   if (wallet.visibility === 'private') parts.push('privada');
   if (!wallet.is_active) parts.push('inactiva');
   return parts.join(', ');
 }
 
-export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowProps) {
+export function WalletRow({ wallet, hasChildren = false, depth = 0, payment }: WalletRowProps) {
   const colors = useColors();
   const balance = toNumber(hasChildren ? wallet.aggregated_balance : wallet.current_balance);
   const goal = toNumber(wallet.goal_amount);
@@ -93,6 +100,8 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
         />
       </View>
 
+      {payment ? <PaymentLine payment={payment} currency={wallet.currency} /> : null}
+
       {goal > 0 ? (
         <View className="mt-2 gap-1 pl-[18px]">
           <ProgressBar progress={contributed / goal} tone="income" />
@@ -131,6 +140,30 @@ export function WalletRow({ wallet, hasChildren = false, depth = 0 }: WalletRowP
           </Text>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/** «Pagar $200 antes del 20 oct» / «Al día» bajo el nombre de una tarjeta. */
+function PaymentLine({ payment, currency }: { payment: PaymentGuidance; currency: string }) {
+  const colors = useColors();
+  const pay = compactPayment(payment);
+  const color =
+    pay.tone === 'expense'
+      ? colors.expense
+      : pay.tone === 'income'
+        ? colors.income
+        : pay.tone === 'warning'
+          ? colors.warning
+          : colors.textMuted;
+  return (
+    <View className="mt-2 flex-row items-center gap-1.5 pl-[18px]">
+      <View className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+      <Text className="text-xs" style={{ color, fontFamily: fonts.semibold }}>
+        {pay.label}
+        {pay.amount != null ? ': ' : ''}
+        {pay.amount != null ? <Money value={pay.amount} currency={currency} tone="expense" className="text-xs" /> : null}
+      </Text>
     </View>
   );
 }

@@ -12,6 +12,7 @@ jest.mock('expo-router', () => ({
 }));
 jest.mock('@/components/WalletRewardsCard', () => ({ WalletRewardsCard: () => null }));
 
+let mockWallet: Record<string, unknown> = {};
 const mockInfinite = jest.fn();
 const mockTotals = jest.fn();
 const mockFetchNext = jest.fn();
@@ -20,7 +21,7 @@ const mockPeriod = jest.fn();
 jest.mock('@/api/queries', () => ({
   useInfiniteTransactions: (params: unknown) => mockInfinite(params),
   useTransactionTotals: (params: unknown) => mockTotals(params),
-  useWallet: () => ({ data: { id: 'w1', name: 'Cuenta', current_balance: '500.00', currency: 'USD' } }),
+  useWallet: () => ({ data: mockWallet }),
   useWalletPeriodSummary: (id: unknown, from: string, to: string) => mockPeriod(id, from, to),
   useTags: () => ({ data: [{ id: 'tag1', name: 'Viaje' }] }),
   useDeleteTransaction: () => ({ mutateAsync: jest.fn() }),
@@ -48,6 +49,7 @@ function pages(rows: Transaction[], more: boolean, extra: Record<string, unknown
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockWallet = { id: 'w1', name: 'Cuenta', current_balance: '500.00', currency: 'USD' };
   mockParams = { wallet: 'w1', tag: 'tag1', category: 'c1', from: '2026-08-01', to: '2026-08-31' };
   mockTotals.mockReturnValue({ data: [{ currency: 'USD', income: '3000.00', expenses: '1234.50' }] });
   mockPeriod.mockImplementation((_id: unknown, from: string, to: string) => ({
@@ -130,5 +132,22 @@ describe('cartera', () => {
     // saldo tras la más reciente = 500; tras la siguiente = 500 + 100 (gasto) = 600
     expect(await screen.findByText(/500\.00/)).toBeTruthy();
     expect(screen.getByText(/600\.00/)).toBeTruthy();
+  });
+
+  it('tarjeta con corte: arranca «Por estado» (corte a corte) y marca los cortes en «Todo»', async () => {
+    jest.useFakeTimers({ now: new Date(2026, 9, 16, 12), doNotFake: ['setTimeout', 'setImmediate', 'nextTick'] });
+    mockWallet = { id: 'w1', name: 'Visa', kind: 'credit', billing_cycle_day: 3, current_balance: '-100.00', currency: 'USD' };
+    mockInfinite.mockReturnValue(
+      pages([txn('a', { date: '2026-10-05' }), txn('b', { date: '2026-10-02' })], false),
+    );
+    await render(<WalletTransactionsScreen />);
+    expect(await screen.findByText('Va al corte del 3 nov')).toBeTruthy();
+    expect(mockInfinite).toHaveBeenLastCalledWith({ wallet: 'w1', date_after: '2026-10-04', date_before: '2026-11-03' });
+    await fireEvent.press(screen.getByLabelText('Estado anterior'));
+    expect(screen.getByText('Estado del corte 3 oct')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Todo'));
+    expect(screen.getByText('Va al corte del 3 nov')).toBeTruthy();
+    expect(screen.getByText('Estado del corte 3 oct')).toBeTruthy();
+    jest.useRealTimers();
   });
 });

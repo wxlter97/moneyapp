@@ -1210,9 +1210,12 @@ export interface StatementInstallmentLine {
   installments_pending: number;
   installments_total: number;
   amount_pending: Money;
+  /** La cuota que entra en el próximo corte. */
+  next_installment_amount: Money;
+  next_installment_cutoff: ISODate;
 }
 
-/** Pago de contado de una tarjeta de crédito -- ver `wallets/{id}/statement/`. */
+/** Saldo de una tarjeta de crédito a una fecha -- ver `wallets/{id}/statement/`. */
 export interface CreditCardStatement {
   cutoff_date: ISODate;
   next_cutoff_date: ISODate;
@@ -1225,12 +1228,44 @@ export interface CreditCardStatement {
   used: Money;
   /** Capital de compras a plazo cuyas cuotas aún no vencen (se resta). */
   installments_not_due: Money;
-  /** Pago de contado = used - installments_not_due. */
+  /** «Pagar todo»: el estado + lo comprado después del corte, sin las cuotas
+   * a plazo que todavía no vencen. Nunca negativo. */
+  payoff_today: Money;
+  /** Igual que `payoff_today` pero con signo (compatibilidad). NO es el saldo del estado. */
   total_due: Money;
   installment_lines: StatementInstallmentLine[];
 }
 
-export type StatementCycleStatus = 'paid' | 'minimum_paid' | 'pending' | 'overdue' | 'nothing_due';
+export type StatementCycleStatus =
+  | 'paid'
+  | 'paid_late'
+  | 'minimum_paid'
+  | 'pending'
+  | 'overdue'
+  | 'nothing_due';
+
+/** En qué momento del ciclo está una tarjeta -- decide la frase de «¿cuánto pago hoy?». */
+export type PaymentPhase = 'due' | 'overdue' | 'financed' | 'paid' | 'nothing_due';
+
+/** «¿Cuánto pago hoy?» de una tarjeta -- ver `services.payment_guidance`. */
+export interface PaymentGuidance {
+  phase: PaymentPhase;
+  status: StatementCycleStatus;
+  /** Lo que falta del último estado: pagarlo evita intereses. */
+  amount: Money;
+  /** Total del estado del último corte. */
+  statement_balance: Money;
+  minimum_remaining: Money | null;
+  cutoff_date: ISODate;
+  due_date: ISODate | null;
+  /** Días a la fecha límite (negativo si ya pasó). */
+  days_left: number | null;
+  next_cutoff_date: ISODate;
+  /** Lo que ya va al próximo estado (no se paga ahora). */
+  next_statement_so_far: Money;
+  /** «Pagar todo» sin cuotas a plazo futuras. */
+  payoff_today: Money;
+}
 
 /** Un estado de cuenta por corte, como lo imprime el banco -- ver
  * `wallets/{id}/statement-cycles/` y `apps.accounts.services.statement_cycle`:
@@ -1247,11 +1282,13 @@ export interface StatementCycle {
   payments: Money;
   /** 0 salvo casos raros -- lo que hace cuadrar con el saldo real. */
   adjustments: Money;
-  /** Pago de contado: pagándolo antes de la fecha límite no hay intereses. */
+  /** Total del estado: pagándolo antes de la fecha límite no hay intereses. */
   statement_balance: Money;
   minimum_payment: Money | null;
-  /** Pagos DESPUÉS del corte (hasta hoy o la fecha límite). */
+  /** Pagos DESPUÉS del corte y antes del siguiente (cuentan aunque sean tardíos). */
   paid_since_cutoff: Money;
+  /** La parte de esos pagos hecha hasta la fecha límite. */
+  paid_on_time: Money;
   remaining: Money;
   minimum_remaining: Money | null;
   status: StatementCycleStatus;
@@ -1273,6 +1310,7 @@ export interface UnbilledActivity {
 export interface StatementCycles {
   cycles: StatementCycle[];
   unbilled: UnbilledActivity;
+  guidance: PaymentGuidance;
 }
 
 /** Extracto de una cartera entre dos fechas -- `wallets/{id}/period-summary/`. */
@@ -1308,7 +1346,9 @@ export interface CreditCardStatementSummary extends CreditCardStatement {
   statement_balance: Money;
   remaining: Money;
   minimum_remaining: Money | null;
+  minimum_payment: Money | null;
   status: StatementCycleStatus;
+  guidance: PaymentGuidance;
   wallet_id: UUID;
   wallet_name: string;
   currency: string;
