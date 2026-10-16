@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { useHasFeature, useNetWorth, useReorderWallets, useWallets } from '@/api/queries';
+import { useCardGuidanceMap, useHasFeature, useNetWorth, useReorderWallets, useWallets } from '@/api/queries';
 import { NetWorthPager } from '@/components/NetWorthPager';
 import { SectionHeader } from '@/components/SectionHeader';
 import { WalletRow, walletRowLabel } from '@/components/WalletRow';
@@ -44,6 +44,7 @@ export default function WalletsScreen() {
   const canSeeNetWorth = useHasFeature('net_worth');
   const netWorth = useNetWorth({ enabled: canSeeNetWorth !== false });
   const wallets = useWallets();
+  const cardPayments = useCardGuidanceMap();
   // Sólo para saber si mostrar el acceso a las ocultas (antes únicamente en
   // Herramientas → Datos, lejos de donde uno las busca).
   const archived = useWallets({ is_archived: true });
@@ -182,12 +183,17 @@ export default function WalletsScreen() {
                     onPress={() => router.push(`/wallet-transactions?wallet=${node.wallet.id}`)}
                     className="active:opacity-70"
                     accessibilityRole="button"
-                    accessibilityLabel={walletRowLabel(node.wallet, node.hasChildren)}
+                    accessibilityLabel={walletRowLabel(
+                      node.wallet,
+                      node.hasChildren,
+                      cardPayments.get(node.wallet.id)?.guidance,
+                    )}
                   >
                     <WalletRow
                       wallet={node.wallet}
                       hasChildren={node.hasChildren}
                       depth={node.depth}
+                      payment={cardPayments.get(node.wallet.id)?.guidance}
                     />
                   </Pressable>
                 ))}

@@ -42,6 +42,11 @@ const SECTIONS: FaqSection[] = [
       'Un gasto o ingreso recurrente (alquiler, sueldo, una suscripción) genera su movimiento solo en cada fecha de vencimiento. Una compra a plazo reparte un monto grande en cuotas -- no genera un movimiento por cuota, pero sí calcula cuánto entra en cada estado de cuenta.',
   },
   {
+    title: 'Tarjetas: cuánto pagar',
+    body:
+      'Con el día de corte y la fecha límite configurados, cada tarjeta dice en una frase qué toca: "Paga $X antes del 20" (el total del estado: pagarlo a tiempo = 0 intereses), "Vencido: paga $X hoy", o "Listo hasta el próximo corte". Lo comprado después del corte va al estado siguiente. "Pagar todo" suma eso también, sin adelantar cuotas de compras a plazo: deja la tarjeta al día por completo. El mínimo solo evita el recargo; el resto genera intereses.',
+  },
+  {
     title: 'Presupuesto por categoría',
     body:
       'Ponele un límite mensual a cualquier categoría (o grupo) desde la pestaña Presupuesto, y seguí cuánto llevás gastado contra ese límite. Podés activar un aviso cuando una categoría se acerca a agotarlo (Herramientas → Notificaciones).',

@@ -10,7 +10,7 @@ import { Money } from '@/components/ui/Money';
 import { usePullRefresh } from '@/components/ui/PullRefresh';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { formatShortDate } from '@/lib/date';
-import { toNumber } from '@/lib/money';
+import { compactPayment, hasExtraPayoff } from '@/lib/cardPayment';
 import { haptics } from '@/lib/haptics';
 import { useColors } from '@/theme';
 import { fonts } from '@/theme/typography';
@@ -20,8 +20,9 @@ import { fonts } from '@/theme/typography';
  * que `app/(app)/statements.tsx` pueda cargarlo con `lazy()` sin que Expo
  * Router también lo registre como su propia ruta.
  *
- * "Cuánto debo en mis tarjetas" -- resumen de todas las tarjetas de crédito
- * con fecha de corte configurada. El detalle de cada una, con selector de
+ * "Cuánto pago en mis tarjetas" -- resumen de todas las tarjetas de crédito
+ * con fecha de corte configurada: por tarjeta, la misma respuesta corta a
+ * «¿cuánto pago hoy?» que el detalle (ver `lib/cardPayment`). El detalle de cada una, con selector de
  * fecha, vive en `/statement/[id]`. Función de Plus (ver
  * ECONOMIA-POR-PLAN.md) desde el 22-sep-2026.
  */
@@ -66,11 +67,9 @@ function StatementRow({
   first: boolean;
 }) {
   const colors = useColors();
-  // Lo que falta del último corte (no el saldo de hoy: las compras
-  // posteriores al corte van al próximo estado).
-  const due = toNumber(s.remaining);
-  const upToDate = due <= 0.005;
-  const overdue = s.status === 'overdue';
+  const pay = compactPayment(s.guidance);
+  const labelColor =
+    pay.tone === 'expense' ? colors.expense : pay.tone === 'income' ? colors.income : colors.textMuted;
 
   return (
     <Pressable
@@ -93,25 +92,23 @@ function StatementRow({
         </Text>
         <Text className="text-text-muted text-xs" numberOfLines={1}>
           Corte {formatShortDate(s.cutoff_date)}
-          {s.payment_due_date ? ` · vence ${formatShortDate(s.payment_due_date)}` : ''}
         </Text>
+        {s.available != null ? (
+          <Text className="text-text-muted text-[11px]" numberOfLines={1}>
+            <Money value={s.available} currency={s.currency} tone="muted" /> disponible
+          </Text>
+        ) : null}
       </View>
       <View className="items-end">
-        {upToDate ? (
-          <Text className="text-income text-sm" style={{ fontFamily: fonts.semibold }}>
-            Al día
-          </Text>
-        ) : (
-          <>
-            <Money value={due} currency={s.currency} tone="expense" className="text-sm font-semibold" />
-            {overdue ? (
-              <Text className="text-expense text-[10px] uppercase tracking-wide">Vencido</Text>
-            ) : null}
-          </>
-        )}
-        {s.available != null ? (
+        {pay.amount != null ? (
+          <Money value={pay.amount} currency={s.currency} tone="expense" className="text-sm font-semibold" />
+        ) : null}
+        <Text className="text-[11px]" style={{ color: labelColor, fontFamily: pay.amount == null ? fonts.semibold : undefined }}>
+          {pay.label}
+        </Text>
+        {hasExtraPayoff(s.guidance) ? (
           <Text className="text-text-muted text-[11px]">
-            <Money value={s.available} currency={s.currency} tone="muted" /> disponible
+            Todo: <Money value={s.guidance.payoff_today} currency={s.currency} tone="muted" />
           </Text>
         ) : null}
       </View>

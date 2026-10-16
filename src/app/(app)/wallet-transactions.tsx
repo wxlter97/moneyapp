@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { useInfiniteTransactions, useWallet, useWalletPeriodSummary } from '@/api/queries';
@@ -9,6 +9,7 @@ import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { WalletPeriodCard } from '@/components/WalletPeriodCard';
 import { TransactionRow } from '@/components/TransactionRow';
 import { WalletRewardsCard } from '@/components/WalletRewardsCard';
+import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { LoadMoreFooter } from '@/components/ui/LoadMoreFooter';
 import { ModalHeader } from '@/components/ui/ModalHeader';
@@ -17,27 +18,43 @@ import { Screen } from '@/components/ui/Screen';
 import { TransactionListSkeleton } from '@/components/ui/Skeleton';
 import { Segmented } from '@/components/ui/Segmented';
 import { EmptyState, ErrorState } from '@/components/ui/states';
-import { currentYearMonth, monthRange } from '@/lib/date';
+import { cutoffFor, cycleRange, formatCycleRange, type CycleRange } from '@/lib/cardPayment';
+import { currentYearMonth, formatShortDate, monthRange, todayISO } from '@/lib/date';
+import { haptics } from '@/lib/haptics';
 import { balanceAfterEach, groupByDay, useSwipeDeleteTransactions } from '@/lib/transactions';
 import { toNumber } from '@/lib/money';
 import { flattenPages, usePagedScroll } from '@/lib/pagedList';
 import { useColors } from '@/theme';
 
-type Scope = 'month' | 'all';
+type Scope = 'cycle' | 'month' | 'all';
 
 /** Historial de movimientos de una cartera: se llega acá tocando su fila
  * (Dashboard o Carteras). Por mes (default) muestra el extracto del mes --
  * saldo inicial → entradas → salidas → saldo final, vs. el mes anterior --
- * y sólo sus movimientos; "Todo" es el historial completo de siempre.
+ * y sólo sus movimientos; "Todo" es el historial completo de siempre. En
+ * una tarjeta con día de corte, el default es "Por estado": el ciclo de
+ * facturación (corte a corte) en vez del mes calendario, y en "Todo" cada
+ * tramo lleva el corte en el que cae.
  * Editar la cartera queda un toque más lejos, en el lápiz de la cabecera. */
 export default function WalletTransactionsScreen() {
   const colors = useColors();
   const { wallet: walletId } = useLocalSearchParams<{ wallet: string }>();
   const walletQ = useWallet(walletId);
-  const [scope, setScope] = useState<Scope>('month');
+  const billingDay = walletQ.data?.kind === 'credit' ? walletQ.data.billing_cycle_day : null;
+  const [chosenScope, setScope] = useState<Scope | null>(null);
+  // Mientras no se elige, una tarjeta con corte arranca "Por estado".
+  const scope: Scope = chosenScope ?? (billingDay ? 'cycle' : 'month');
   const [month, setMonth] = useState(currentYearMonth);
-  const range = useMemo(() => monthRange(month), [month]);
-  const byMonth = scope === 'month';
+  const [cycleOffset, setCycleOffset] = useState(0);
+  const cycle = useMemo(
+    () => (billingDay ? cycleRange(billingDay, cycleOffset) : null),
+    [billingDay, cycleOffset],
+  );
+  const range = useMemo(
+    () => (scope === 'cycle' && cycle ? { from: cycle.from, to: cycle.to } : monthRange(month)),
+    [scope, cycle, month],
+  );
+  const byMonth = scope !== 'all';
   const periodQ = useWalletPeriodSummary(byMonth ? walletId : undefined, range.from, range.to);
   const query = useInfiniteTransactions(
     byMonth ? { wallet: walletId, date_after: range.from, date_before: range.to } : { wallet: walletId },
@@ -129,13 +146,23 @@ export default function WalletTransactionsScreen() {
           value={scope}
           onChange={setScope}
           options={[
+            ...(billingDay ? [{ value: 'cycle' as const, label: 'Por estado' }] : []),
             { value: 'month', label: 'Por mes' },
             { value: 'all', label: 'Todo' },
           ]}
         />
         {byMonth ? (
           <>
-            <MonthSwitcher value={month} onChange={setMonth} />
+            {scope === 'cycle' && cycle ? (
+              <CycleSwitcher
+                cycle={cycle}
+                offset={cycleOffset}
+                onChange={setCycleOffset}
+                onOpenStatement={() => router.push(`/statement/${walletId}`)}
+              />
+            ) : (
+              <MonthSwitcher value={month} onChange={setMonth} />
+            )}
             {periodQ.data && walletQ.data ? (
               <WalletPeriodCard summary={periodQ.data} currency={walletQ.data.currency} />
             ) : null}
@@ -158,8 +185,14 @@ export default function WalletTransactionsScreen() {
             }
           />
         ) : (
-          days.map((day) => (
+          days.map((day, idx) => (
             <View key={day.date}>
+              {scope === 'all' && billingDay ? (
+                <CutoffDivider
+                  cutoff={cutoffFor(billingDay, day.date)}
+                  previous={idx > 0 ? cutoffFor(billingDay, days[idx - 1]!.date) : null}
+                />
+              ) : null}
               <DayHeader date={day.date} />
               <View className="overflow-hidden rounded-3xl border border-border/60 bg-surface/95 px-4">
                 {day.data.map((item, i) => (
@@ -188,5 +221,80 @@ export default function WalletTransactionsScreen() {
         />
       </ScrollView>
     </Screen>
+  );
+}
+
+/** Navega entre ciclos de facturación (corte a corte) de una tarjeta. */
+function CycleSwitcher({
+  cycle,
+  offset,
+  onChange,
+  onOpenStatement,
+}: {
+  cycle: CycleRange;
+  offset: number;
+  onChange: (offset: number) => void;
+  onOpenStatement: () => void;
+}) {
+  const colors = useColors();
+  const move = (delta: number) => {
+    haptics.selection();
+    onChange(offset + delta);
+  };
+  return (
+    <View className="gap-1.5">
+      <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-2 py-2">
+        <IconButton
+          icon="chevron-left"
+          size={32}
+          iconSize={14}
+          color={colors.textMuted}
+          onPress={() => move(-1)}
+          accessibilityLabel="Estado anterior"
+        />
+        <View className="items-center">
+          <Text className="text-text text-sm font-semibold">
+            {cycle.open ? `Va al corte del ${formatShortDate(cycle.to)}` : `Estado del corte ${formatShortDate(cycle.to)}`}
+          </Text>
+          <Text className="text-text-muted text-[11px]">
+            {formatCycleRange(cycle)}
+            {cycle.open ? ' · en curso' : ''}
+          </Text>
+        </View>
+        <IconButton
+          icon="chevron-right"
+          size={32}
+          iconSize={14}
+          color={offset >= 0 ? colors.border : colors.textMuted}
+          onPress={() => move(1)}
+          disabled={offset >= 0}
+          accessibilityLabel="Estado siguiente"
+        />
+      </View>
+      <Pressable
+        onPress={onOpenStatement}
+        accessibilityRole="button"
+        className="flex-row items-center justify-center gap-1 active:opacity-60"
+      >
+        <Icon name="receipt" size={12} color={colors.primary} />
+        <Text className="text-primary text-xs">Ver estado de cuenta y cuánto pagar</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/** En "Todo" de una tarjeta: marca dónde empieza cada estado (los días van
+ * del más reciente al más antiguo). */
+function CutoffDivider({ cutoff, previous }: { cutoff: string; previous: string | null }) {
+  if (cutoff === previous) return null;
+  const open = cutoff > todayISO();
+  return (
+    <View className="mb-1 mt-3 flex-row items-center gap-2">
+      <View className="h-px flex-1 bg-border" />
+      <Text className="text-text-muted text-[11px] uppercase tracking-wide">
+        {open ? `Va al corte del ${formatShortDate(cutoff)}` : `Estado del corte ${formatShortDate(cutoff)}`}
+      </Text>
+      <View className="h-px flex-1 bg-border" />
+    </View>
   );
 }

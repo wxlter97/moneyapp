@@ -11,6 +11,7 @@ import {
   type UseQueryOptions,
 } from '@tanstack/react-query';
 import { fromByteArray as encodeBase64 } from 'base64-js';
+import { useMemo } from 'react';
 
 import * as res from '@/api/resources';
 import type {
@@ -18,6 +19,7 @@ import type {
   CategoryBudgetInput,
   CategoryInput,
   ConfirmEmailImportInput,
+  CreditCardStatementSummary,
   EmailImportStatus,
   ISODate,
   InstallmentPurchaseInput,
@@ -790,13 +792,22 @@ export function useWalletPeriodSummary(id: string | undefined, from: string, to:
 }
 
 /** Estado de cuenta de todas las tarjetas de crédito del workspace, a hoy. */
-export function useCreditCardStatements() {
+export function useCreditCardStatements(enabled = true) {
   const ws = useActiveWs();
   return useQuery({
     queryKey: qk.ws(ws).walletStatements(),
     queryFn: () => res.wallets.statements(),
-    enabled: !!ws,
+    enabled: !!ws && enabled,
   });
+}
+
+/** «¿Cuánto pago hoy?» de cada tarjeta, por id de cartera -- para la fila
+ * de Carteras y el Resumen. Vacío (sin pedir nada) en un plan sin estado de
+ * cuenta: ahí se sigue mostrando el saldo de siempre. */
+export function useCardGuidanceMap(): Map<string, CreditCardStatementSummary> {
+  const has = useHasFeature('statements');
+  const q = useCreditCardStatements(has === true);
+  return useMemo(() => new Map((q.data ?? []).map((s) => [s.wallet_id, s])), [q.data]);
 }
 
 export function useDeleteWallet() {
